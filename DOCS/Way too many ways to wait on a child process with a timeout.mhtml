@@ -1,0 +1,2774 @@
+From: <Saved by Blink>
+Snapshot-Content-Location: https://gaultier.github.io/blog/way_too_many_ways_to_wait_for_a_child_process_with_a_timeout.html
+Subject: Way too many ways to wait on a child process with a timeout
+Date: Fri, 7 Feb 2025 06:04:46 -0000
+MIME-Version: 1.0
+Content-Type: multipart/related;
+	type="text/html";
+	boundary="----MultipartBoundary--fWHeR7jw7jPztHWjmc0IErBlQLE1BhFFeYxt7HXaq8----"
+
+
+------MultipartBoundary--fWHeR7jw7jPztHWjmc0IErBlQLE1BhFFeYxt7HXaq8----
+Content-Type: text/html
+Content-ID: <frame-A2896A069EBFDC6B052A9745A5FD3FAA@mhtml.blink>
+Content-Transfer-Encoding: quoted-printable
+Content-Location: https://gaultier.github.io/blog/way_too_many_ways_to_wait_for_a_child_process_with_a_timeout.html
+
+<!DOCTYPE html><html><head><meta http-equiv=3D"Content-Type" content=3D"tex=
+t/html; charset=3DUTF-8">
+<title>Way too many ways to wait on a child process with a timeout</title>
+
+<meta name=3D"viewport" content=3D"width=3Ddevice-width, initial-scale=3D1.=
+0">
+<link type=3D"application/atom+xml" href=3D"https://gaultier.github.io/blog=
+/feed.xml" rel=3D"self">
+<link rel=3D"shortcut icon" type=3D"image/ico" href=3D"https://gaultier.git=
+hub.io/blog/favicon.ico">
+<link rel=3D"stylesheet" type=3D"text/css" href=3D"https://gaultier.github.=
+io/blog/main.css">
+<link rel=3D"stylesheet" href=3D"https://unpkg.com/@highlightjs/cdn-assets@=
+11.8.0/styles/default.min.css">
+
+<!-- From https://github.com/odin-lang/odin-lang.org/blob/6f48c2cfb094a42df=
+fd34143884fa958bd9c0ba2/themes/odin/layouts/partials/head.html#L71 -->
+
+
+</head>
+<body>
+
+<div id=3D"banner">
+    <div id=3D"name">
+        <img id=3D"me" src=3D"https://gaultier.github.io/blog/me.jpeg">
+        <span>Philippe Gaultier</span>
+    </div>
+    <ul>
+      <li> <a href=3D"https://gaultier.github.io/blog/body_of_work.html">Bo=
+dy of work</a> </li>
+      <li> <a href=3D"https://gaultier.github.io/blog/articles-by-tag.html"=
+>Tags</a> </li>
+      <li> <a href=3D"https://github.com/gaultier/resume/raw/master/Philipp=
+e_Gaultier_resume_en.pdf">
+          Resume
+        </a> </li>
+
+      <li> <a href=3D"https://gaultier.github.io/blog/feed.xml">
+        <svg viewBox=3D"0 0 24 24" fill=3D"none" xmlns=3D"http://www.w3.org=
+/2000/svg">
+        <path fill-rule=3D"evenodd" clip-rule=3D"evenodd" d=3D"M5.5 3.5C4.3=
+9543 3.5 3.5 4.39543 3.5 5.5V18.5C3.5 19.6046 4.39543 20.5 5.5 20.5H18.5C19=
+.6046 20.5 20.5 19.6046 20.5 18.5V5.5C20.5 4.39543 19.6046 3.5 18.5 3.5H5.5=
+ZM7 19C8.10457 19 9 18.1046 9 17C9 15.8954 8.10457 15 7 15C5.89543 15 5 15.=
+8954 5 17C5 18.1046 5.89543 19 7 19ZM6.14863 10.5052C6.14863 10.0379 6.5274=
+6 9.65906 6.99478 9.65906C7.95949 9.65906 8.91476 9.84908 9.80603 10.2183C1=
+0.6973 10.5874 11.5071 11.1285 12.1893 11.8107C12.8715 12.4929 13.4126 13.3=
+027 13.7817 14.194C14.1509 15.0852 14.3409 16.0405 14.3409 17.0052C14.3409 =
+17.4725 13.9621 17.8514 13.4948 17.8514C13.0275 17.8514 12.6486 17.4725 12.=
+6486 17.0052C12.6486 16.2627 12.5024 15.5275 12.2183 14.8416C11.9341 14.155=
+6 11.5177 13.5324 10.9927 13.0073C10.4676 12.4823 9.84437 12.0659 9.15842 1=
+1.7817C8.47246 11.4976 7.73726 11.3514 6.99478 11.3514C6.52746 11.3514 6.14=
+863 10.9725 6.14863 10.5052ZM7 5.15385C6.53268 5.15385 6.15385 5.53268 6.15=
+385 6C6.15385 6.46732 6.53268 6.84615 7 6.84615C8.33342 6.84615 9.65379 7.1=
+0879 10.8857 7.61907C12.1176 8.12935 13.237 8.87728 14.1799 9.82015C15.1227=
+ 10.763 15.8707 11.8824 16.3809 13.1143C16.8912 14.3462 17.1538 15.6666 17.=
+1538 17C17.1538 17.4673 17.5327 17.8462 18 17.8462C18.4673 17.8462 18.8462 =
+17.4673 18.8462 17C18.8462 15.4443 18.5397 13.9039 17.9444 12.4667C17.3491 =
+11.0294 16.4765 9.72352 15.3765 8.6235C14.2765 7.52349 12.9706 6.65091 11.5=
+333 6.05558C10.0961 5.46026 8.55566 5.15385 7 5.15385Z" fill=3D"#000000"></=
+path>
+        </svg>
+        </a> </li>
+
+      <li> <a href=3D"https://www.linkedin.com/in/philippegaultier/">
+        <svg xmlns=3D"http://www.w3.org/2000/svg" viewBox=3D"0 0 24 24" dat=
+a-supported-dps=3D"24x24" fill=3D"currentColor" class=3D"mercado-match" wid=
+th=3D"24" height=3D"24" focusable=3D"false">
+              <path d=3D"M20.5 2h-17A1.5 1.5 0 002 3.5v17A1.5 1.5 0 003.5 2=
+2h17a1.5 1.5 0 001.5-1.5v-17A1.5 1.5 0 0020.5 2zM8 19H5v-9h3zM6.5 8.25A1.75=
+ 1.75 0 118.3 6.5a1.78 1.78 0 01-1.8 1.75zM19 19h-3v-4.74c0-1.42-.6-1.93-1.=
+38-1.93A1.74 1.74 0 0013 14.19a.66.66 0 000 .14V19h-3v-9h2.9v1.3a3.11 3.11 =
+0 012.7-1.4c1.55 0 3.36.86 3.36 3.66z"></path>
+            </svg>
+        </a> </li>
+      <li> <a href=3D"https://github.com/gaultier">
+        <svg height=3D"32" aria-hidden=3D"true" viewBox=3D"0 0 24 24" versi=
+on=3D"1.1" width=3D"32" data-view-component=3D"true" class=3D"octicon octic=
+on-mark-github v-align-middle">
+            <path d=3D"M12.5.75C6.146.75 1 5.896 1 12.25c0 5.089 3.292 9.38=
+7 7.863 10.91.575.101.79-.244.79-.546 0-.273-.014-1.178-.014-2.142-2.889.53=
+2-3.636-.704-3.866-1.35-.13-.331-.69-1.352-1.18-1.625-.402-.216-.977-.748-.=
+014-.762.906-.014 1.553.834 1.769 1.179 1.035 1.74 2.688 1.25 3.349.948.1-.=
+747.402-1.25.733-1.538-2.559-.287-5.232-1.279-5.232-5.678 0-1.25.445-2.285 =
+1.178-3.09-.115-.288-.517-1.467.115-3.048 0 0 .963-.302 3.163 1.179.92-.259=
+ 1.897-.388 2.875-.388.977 0 1.955.13 2.875.388 2.2-1.495 3.162-1.179 3.162=
+-1.179.633 1.581.23 2.76.115 3.048.733.805 1.179 1.825 1.179 3.09 0 4.413-2=
+.688 5.39-5.247 5.678.417.36.776 1.05.776 2.128 0 1.538-.014 2.774-.014 3.1=
+62 0 .302.216.662.79.547C20.709 21.637 24 17.324 24 12.25 24 5.896 18.854.7=
+5 12.5.75Z"></path>
+        </svg>
+        </a> </li>
+      <li> <a href=3D"https://hachyderm.io/@pg">
+        <svg width=3D"75" height=3D"79" viewBox=3D"0 0 75 79" fill=3D"none"=
+ xmlns=3D"http://www.w3.org/2000/svg">
+        <path d=3D"M73.8393 17.4898C72.6973 9.00165 65.2994 2.31235 56.5296=
+ 1.01614C55.05 0.797115 49.4441 0 36.4582 0H36.3612C23.3717 0 20.585 0.7971=
+15 19.1054 1.01614C10.5798 2.27644 2.79399 8.28712 0.904997 16.8758C-0.0035=
+8524 21.1056 -0.100549 25.7949 0.0682394 30.0965C0.308852 36.2651 0.355538 =
+42.423 0.91577 48.5665C1.30307 52.6474 1.97872 56.6957 2.93763 60.6812C4.73=
+325 68.042 12.0019 74.1676 19.1233 76.6666C26.7478 79.2728 34.9474 79.7055 =
+42.8039 77.9162C43.6682 77.7151 44.5217 77.4817 45.3645 77.216C47.275 76.60=
+92 49.5123 75.9305 51.1571 74.7385C51.1797 74.7217 51.1982 74.7001 51.2112 =
+74.6753C51.2243 74.6504 51.2316 74.6229 51.2325 74.5948V68.6416C51.2321 68.=
+6154 51.2259 68.5896 51.2142 68.5661C51.2025 68.5426 51.1858 68.522 51.1651=
+ 68.5058C51.1444 68.4896 51.1204 68.4783 51.0948 68.4726C51.0692 68.4669 51=
+.0426 68.467 51.0171 68.4729C45.9835 69.675 40.8254 70.2777 35.6502 70.2682=
+C26.7439 70.2682 24.3486 66.042 23.6626 64.2826C23.1113 62.762 22.7612 61.1=
+759 22.6212 59.5646C22.6197 59.5375 22.6247 59.5105 22.6357 59.4857C22.6466=
+ 59.4609 22.6633 59.4391 22.6843 59.422C22.7053 59.4048 22.73 59.3929 22.75=
+65 59.3871C22.783 59.3813 22.8104 59.3818 22.8367 59.3886C27.7864 60.5826 3=
+2.8604 61.1853 37.9522 61.1839C39.1768 61.1839 40.3978 61.1839 41.6224 61.1=
+516C46.7435 61.008 52.1411 60.7459 57.1796 59.7621C57.3053 59.7369 57.431 5=
+9.7154 57.5387 59.6831C65.4861 58.157 73.0493 53.3672 73.8178 41.2381C73.84=
+65 40.7606 73.9184 36.2364 73.9184 35.7409C73.9219 34.0569 74.4606 23.7949 =
+73.8393 17.4898Z" fill=3D"url(#paint0_linear_549_34)"></path>
+        <path d=3D"M61.2484 27.0263V48.114H52.8916V27.6475C52.8916 23.3388 =
+51.096 21.1413 47.4437 21.1413C43.4287 21.1413 41.4177 23.7409 41.4177 28.8=
+755V40.0782H33.1111V28.8755C33.1111 23.7409 31.0965 21.1413 27.0815 21.1413=
+C23.4507 21.1413 21.6371 23.3388 21.6371 27.6475V48.114H13.2839V27.0263C13.=
+2839 22.7176 14.384 19.2946 16.5843 16.7572C18.8539 14.2258 21.8311 12.926 =
+25.5264 12.926C29.8036 12.926 33.0357 14.5705 35.1905 17.8559L37.2698 21.34=
+6L39.3527 17.8559C41.5074 14.5705 44.7395 12.926 49.0095 12.926C52.7013 12.=
+926 55.6784 14.2258 57.9553 16.7572C60.1531 19.2922 61.2508 22.7152 61.2484=
+ 27.0263Z" fill=3D"white"></path>
+        <defs>
+        <linearGradient id=3D"paint0_linear_549_34" x1=3D"37.0692" y1=3D"0"=
+ x2=3D"37.0692" y2=3D"79" gradientUnits=3D"userSpaceOnUse">
+        <stop stop-color=3D"#6364FF"></stop>
+        <stop offset=3D"1" stop-color=3D"#563ACC"></stop>
+        </linearGradient>
+        </defs>
+        </svg>
+        </a> </li>
+      <li> <a href=3D"https://bsky.app/profile/pgaultier.bsky.social">
+        <svg fill=3D"none" viewBox=3D"0 0 64 57" width=3D"32" style=3D"widt=
+h: 32px; height: 28.5px;"><path fill=3D"#0085ff" d=3D"M13.873 3.805C21.21 9=
+.332 29.103 20.537 32 26.55v15.882c0-.338-.13.044-.41.867-1.512 4.456-7.418=
+ 21.847-20.923 7.944-7.111-7.32-3.819-14.64 9.125-16.85-7.405 1.264-15.73-.=
+825-18.014-9.015C1.12 23.022 0 8.51 0 6.55 0-3.268 8.579-.182 13.873 3.805Z=
+M50.127 3.805C42.79 9.332 34.897 20.537 32 26.55v15.882c0-.338.13.044.41.86=
+7 1.512 4.456 7.418 21.847 20.923 7.944 7.111-7.32 3.819-14.64-9.125-16.85 =
+7.405 1.264 15.73-.825 18.014-9.015C62.88 23.022 64 8.51 64 6.55c0-9.818-8.=
+578-6.732-13.873-2.745Z"></path></svg>
+        </a> </li>
+    </ul>
+</div>
+<div class=3D"body">
+
+		<div class=3D"article-prelude">
+			<p><a href=3D"https://gaultier.github.io/blog"> =E2=8F=B4 Back to all ar=
+ticles</a></p>
+
+			<p class=3D"publication-date">Published on 2024-11-10</p>
+		</div>
+		<div class=3D"article-title">
+		<h1>Way too many ways to wait on a child process with a timeout</h1>
+		  <div class=3D"tags"> <a href=3D"https://gaultier.github.io/blog/article=
+s-by-tag.html#unix" class=3D"tag">Unix</a> <a href=3D"https://gaultier.gith=
+ub.io/blog/articles-by-tag.html#signals" class=3D"tag">Signals</a> <a href=
+=3D"https://gaultier.github.io/blog/articles-by-tag.html#c" class=3D"tag">C=
+</a> <a href=3D"https://gaultier.github.io/blog/articles-by-tag.html#linux"=
+ class=3D"tag">Linux</a> <a href=3D"https://gaultier.github.io/blog/article=
+s-by-tag.html#freebsd" class=3D"tag">FreeBSD</a> <a href=3D"https://gaultie=
+r.github.io/blog/articles-by-tag.html#illumos" class=3D"tag">Illumos</a> <a=
+ href=3D"https://gaultier.github.io/blog/articles-by-tag.html#macos" class=
+=3D"tag">MacOS</a></div>
+ </div>
+ <strong>Table of contents</strong>
+<ul>
+
+<li>
+	<a href=3D"https://gaultier.github.io/blog/way_too_many_ways_to_wait_for_a=
+_child_process_with_a_timeout.html#what-are-we-building">What are we buildi=
+ng?</a>
+		</li>
+
+<li>
+	<a href=3D"https://gaultier.github.io/blog/way_too_many_ways_to_wait_for_a=
+_child_process_with_a_timeout.html#first-way-old-school-sigsuspend">First w=
+ay: old-school sigsuspend</a>
+		</li>
+
+<li>
+	<a href=3D"https://gaultier.github.io/blog/way_too_many_ways_to_wait_for_a=
+_child_process_with_a_timeout.html#second-way-sigtimedwait">Second way: sig=
+timedwait</a>
+		</li>
+
+<li>
+	<a href=3D"https://gaultier.github.io/blog/way_too_many_ways_to_wait_for_a=
+_child_process_with_a_timeout.html#third-approach-self-pipe-trick">Third ap=
+proach: Self-pipe trick</a>
+		<ul>
+
+<li>
+	<a href=3D"https://gaultier.github.io/blog/way_too_many_ways_to_wait_for_a=
+_child_process_with_a_timeout.html#a-simpler-self-pipe-trick">A simpler sel=
+f-pipe trick</a>
+		</li>
+</ul>
+</li>
+
+<li>
+	<a href=3D"https://gaultier.github.io/blog/way_too_many_ways_to_wait_for_a=
+_child_process_with_a_timeout.html#fourth-approach-linux-s-signalfd">Fourth=
+ approach: Linux's signalfd</a>
+		</li>
+
+<li>
+	<a href=3D"https://gaultier.github.io/blog/way_too_many_ways_to_wait_for_a=
+_child_process_with_a_timeout.html#fifth-approach-process-descriptors">Fift=
+h approach: process descriptors</a>
+		</li>
+
+<li>
+	<a href=3D"https://gaultier.github.io/blog/way_too_many_ways_to_wait_for_a=
+_child_process_with_a_timeout.html#sixth-approach-macos-s-and-bsd-s-kqueue"=
+>Sixth approach: MacOS's and BSD's kqueue</a>
+		<ul>
+
+<li>
+	<a href=3D"https://gaultier.github.io/blog/way_too_many_ways_to_wait_for_a=
+_child_process_with_a_timeout.html#a-parenthesis-libkqueue">A parenthesis: =
+libkqueue</a>
+		</li>
+
+<li>
+	<a href=3D"https://gaultier.github.io/blog/way_too_many_ways_to_wait_for_a=
+_child_process_with_a_timeout.html#another-parenthesis-solaris-illumos-s-po=
+rts">Another parenthesis: Solaris/illumos's ports</a>
+		</li>
+</ul>
+</li>
+
+<li>
+	<a href=3D"https://gaultier.github.io/blog/way_too_many_ways_to_wait_for_a=
+_child_process_with_a_timeout.html#seventh-approach-linux-s-io-uring">Seven=
+th approach: Linux's io_uring</a>
+		</li>
+
+<li>
+	<a href=3D"https://gaultier.github.io/blog/way_too_many_ways_to_wait_for_a=
+_child_process_with_a_timeout.html#eigth-approach-threads">Eigth approach: =
+Threads</a>
+		</li>
+
+<li>
+	<a href=3D"https://gaultier.github.io/blog/way_too_many_ways_to_wait_for_a=
+_child_process_with_a_timeout.html#ninth-approach-active-polling">Ninth app=
+roach: Active polling.</a>
+		</li>
+
+<li>
+	<a href=3D"https://gaultier.github.io/blog/way_too_many_ways_to_wait_for_a=
+_child_process_with_a_timeout.html#conclusion">Conclusion</a>
+		</li>
+
+<li>
+	<a href=3D"https://gaultier.github.io/blog/way_too_many_ways_to_wait_for_a=
+_child_process_with_a_timeout.html#addendum-the-code">Addendum: The code</a=
+>
+		</li>
+</ul>
+
+<p><em>Windows is not covered at all in this article.</em></p>
+<p><em>Discussions: <a href=3D"https://old.reddit.com/r/programming/comment=
+s/1godk0x/way_too_many_ways_to_wait_on_a_child_process_with/">/r/programmin=
+g</a>, <a href=3D"https://news.ycombinator.com/item?id=3D42103200">HN</a>, =
+<a href=3D"https://lobste.rs/s/2awfwc/way_too_many_ways_wait_on_child_proce=
+ss">Lobsters</a></em></p>
+<p>I often need to launch a program in the terminal in a retry loop. Maybe =
+because it's flaky, or because it tries to contact a remote service that is=
+ not available. A few scenarios:</p>
+<ul>
+<li>ssh to a (re)starting machine.</li>
+<li><code class=3D"code-no-line-numbers">psql</code> to a (re)starting data=
+base.</li>
+<li>Ensuring that a network service started fine with <code class=3D"code-n=
+o-line-numbers">netcat</code>.</li>
+<li>File system commands over NFS.</li>
+</ul>
+<p>It's a common problem, so much so that there are two utilities that I us=
+ually reach for:</p>
+<ul>
+<li><a href=3D"https://www.gnu.org/software/coreutils/manual/html_node/time=
+out-invocation.html">timeout</a> from GNU coreutils, which launches a comma=
+nd with a timeout (useful if the command itself does not have a <code class=
+=3D"code-no-line-numbers">--timeout</code> option).</li>
+<li><a href=3D"https://github.com/rye/eb">eb</a> which runs a command with =
+a certain number of times with an exponential backoff. That's useful to avo=
+id hammering a server with connection attempts for example.</li>
+</ul>
+<p>This will all sound familiar to people who develop distributed systems: =
+they have long known that this is <a href=3D"https://aws.amazon.com/blogs/a=
+rchitecture/exponential-backoff-and-jitter/">best practice</a> to retry an =
+operation:</p>
+<ul>
+<li>With a timeout (either constant or adaptive).</li>
+<li>A bounded number of times e.g. 10.</li>
+<li>With a waiting time between each retry, either a constant one or a incr=
+easing one e.g. with exponential backoff.</li>
+<li>With jitter, although this point also seemed the least important since =
+most of us use non real-time operating systems which introduce some jitter =
+anytime we sleep or wait on something with a timeout. The AWS article makes=
+ a point that in highly contended systems, the jitter parameter is very imp=
+ortant, but for the scope of this article I'll leave it out.</li>
+</ul>
+<p>This is best practice in distributed systems, and we often need to do th=
+e same on the command line. But the two aforementioned tools only do that p=
+artially:</p>
+<ul>
+<li><code class=3D"code-no-line-numbers">timeout</code> does not retry.</li=
+>
+<li><code class=3D"code-no-line-numbers">eb</code> does not have a timeout.=
+</li>
+</ul>
+<p>So let's implement our own that does both! As we'll see, it's much less =
+straightforward, and thus more interesting, than I thought. It's a whirlwin=
+d tour through Unix deeps. If you're interested in systems programming, Ope=
+rating Systems, multiplexed I/O, data races, weird historical APIs, and all=
+ the ways you can shoot yourself in the foot with just a few system calls, =
+you're in the right place!</p>
+<h2 id=3D"what-are-we-building">
+	<a class=3D"title" href=3D"https://gaultier.github.io/blog/way_too_many_wa=
+ys_to_wait_for_a_child_process_with_a_timeout.html#what-are-we-building">Wh=
+at are we building?</a>
+	<a class=3D"hash-anchor" href=3D"https://gaultier.github.io/blog/way_too_m=
+any_ways_to_wait_for_a_child_process_with_a_timeout.html#what-are-we-buildi=
+ng" aria-hidden=3D"true"></a>
+</h2>
+<p>I call the tool we are building <code class=3D"code-no-line-numbers">ueb=
+</code> for: micro exponential backoff. It does up to 10 retries, with a wa=
+iting period in between that starts at an arbitrary 128 ms and doubles ever=
+y retry. The timeout for the subprocess is the same as the sleep time, so t=
+hat it's adaptive and we give the subprocess a longer and longer time to fi=
+nish successfully. These numbers would probably be exposed as command line =
+options in a real polished program, but there's no time, what have to demo =
+it:</p>
+<pre><code class=3D"language-sh hljs language-bash code-no-line-numbers"><s=
+pan class=3D"hljs-comment"># This returns immediately since it succeeds on =
+the first try.</span>
+$ ueb <span class=3D"hljs-literal">true</span>
+
+<span class=3D"hljs-comment"># This retries 10 times since the command alwa=
+ys fails, waiting more and more time between each try, and finally returns =
+the last exit code of the command (1).</span>
+$ ueb <span class=3D"hljs-literal">false</span>
+
+<span class=3D"hljs-comment"># This retries a few times (~ 4 times), until =
+the waiting time exceeds the duration of the sub-program. It exits with `0`=
+ since from the POV of our program, the sub-program finally finished in its=
+ alloted time.</span>
+$ ueb <span class=3D"hljs-built_in">sleep</span> 1
+
+
+<span class=3D"hljs-comment"># Run a program that prints the date and time,=
+ and exits with a random status code, to see how it works.</span>
+$ ueb sh -c <span class=3D"hljs-string">'date --iso-8601=3Dns; export R=3D$=
+(($RANDOM % 5)); echo $R; exit $R'</span>
+2024-11-10T15:48:49,499172093+01:00
+4
+2024-11-10T15:48:49,628818472+01:00
+3
+2024-11-10T15:48:49,886557676+01:00
+4
+2024-11-10T15:48:50,400199626+01:00
+3
+2024-11-10T15:48:51,425937132+01:00
+2
+2024-11-10T15:48:53,475565645+01:00
+2
+2024-11-10T15:48:57,573278508+01:00
+1
+2024-11-10T15:49:05,767338611+01:00
+0
+
+<span class=3D"hljs-comment"># Some more practical examples.</span>
+$ ueb ssh &lt;some_ip&gt;
+$ ueb createdb my_great_database -h 0.0.0.0 -U postgres
+</code></pre>
+<p>If you want to monitor the retries and the sleeps, you can use <code cla=
+ss=3D"code-no-line-numbers">strace</code> or <code class=3D"code-no-line-nu=
+mbers">dtrace</code>:</p>
+<pre><code class=3D"language-sh hljs language-bash code-no-line-numbers">$ =
+strace ueb <span class=3D"hljs-built_in">sleep</span> 1
+</code></pre>
+<p>Note that the sub-command should be idempotent, otherwise we might creat=
+e a given resource twice, or the command might have succeeded right after o=
+ur timeout triggered but also right before we killed it, so our program thi=
+nks it timed out and thus need to be retried. There is this small data race=
+ window, which is completely fine if the command is idempotent but will err=
+oneously retry the command to the bitter end otherwise. There is also the c=
+ase where the sub-command does stuff over the network for example creating =
+a resource, it succeeds, but the ACK is never received due to network issue=
+s. The sub-command will think it failed and retry. Again, fairly standard s=
+tuff in distributed systems but I thought it was worth mentioning.</p>
+<p>So how do we implement it?</p>
+<p>Immediately, we notice something: even though there are a bazillion ways=
+ to wait on a child process to finish (<code class=3D"code-no-line-numbers"=
+>wait</code>, <code class=3D"code-no-line-numbers">wait3</code>, <code clas=
+s=3D"code-no-line-numbers">wait4</code>, <code class=3D"code-no-line-number=
+s">waitid</code>, <code class=3D"code-no-line-numbers">waitpid</code>), non=
+e of them take a timeout as an argument. This has sparked numerous question=
+s online (<a href=3D"https://stackoverflow.com/questions/18542089/how-to-wa=
+it-on-child-process-to-finish-with-time-limit">1</a>, <a href=3D"https://st=
+ackoverflow.com/questions/18476138/is-there-a-version-of-the-wait-system-ca=
+ll-that-sets-a-timeout">2</a>), with in my opinion unsatisfactory answers. =
+So let's explore this rabbit hole.</p>
+<p>We'd like the pseudo-code to be something like:</p>
+<pre><code class=3D"language-pseudocode"><span class=3D"line-number">1</spa=
+n> wait_ms :=3D 128
+<span class=3D"line-number">2</span>=20
+<span class=3D"line-number">3</span> for retry in 0..&lt;10:
+<span class=3D"line-number">4</span>     child_pid :=3D run_command_in_subp=
+rocess(cmd)
+<span class=3D"line-number">5</span>=20
+<span class=3D"line-number">6</span>     ret :=3D wait_for_process_to_finis=
+h_with_timeout_ms(child_pid, wait_ms)
+<span class=3D"line-number">7</span>     if (did_process_finish_successfull=
+y(ret)):
+<span class=3D"line-number">8</span>         exit(0)
+<span class=3D"line-number">9</span>        =20
+<span class=3D"line-number">10</span>     // In case of a timeout, we need =
+to kill the child process and retry.
+<span class=3D"line-number">11</span>     kill(child_pid, SIGKILL)
+<span class=3D"line-number">12</span>=20
+<span class=3D"line-number">13</span>     // Reap zombie process to avoid a=
+ resource leak.
+<span class=3D"line-number">14</span>     waitpid(child_pid)
+<span class=3D"line-number">15</span>=20
+<span class=3D"line-number">16</span>     sleep_ms(wait_ms);
+<span class=3D"line-number">17</span>=20
+<span class=3D"line-number">18</span>     wait_ms *=3D 2;
+<span class=3D"line-number">19</span>=20
+<span class=3D"line-number">20</span> // All retries exhausted, exit with a=
+n error code.
+<span class=3D"line-number">21</span> exit(1)</code></pre>
+<p><em>There is a degenerate case where the give command to run is wrong (e=
+.g. typo in the parameters) or the executable does not exist, and our progr=
+am will happily retry it to the bitter end. But there is solace: this is bo=
+unded by the number of retries (10). That's why we do not retry forever.</e=
+m></p>
+<h2 id=3D"first-way-old-school-sigsuspend">
+	<a class=3D"title" href=3D"https://gaultier.github.io/blog/way_too_many_wa=
+ys_to_wait_for_a_child_process_with_a_timeout.html#first-way-old-school-sig=
+suspend">First way: old-school sigsuspend</a>
+	<a class=3D"hash-anchor" href=3D"https://gaultier.github.io/blog/way_too_m=
+any_ways_to_wait_for_a_child_process_with_a_timeout.html#first-way-old-scho=
+ol-sigsuspend" aria-hidden=3D"true"></a>
+</h2>
+<p>That's how <code class=3D"code-no-line-numbers">timeout</code> from core=
+utils <a href=3D"https://git.savannah.gnu.org/gitweb/?p=3Dcoreutils.git;a=
+=3Dblob;f=3Dsrc/timeout.c;h=3D5600ce42957dcf117785f6a361ef72ac9c2df352;hb=
+=3DHEAD">implements</a> it. This is quite simple on paper:</p>
+<ol>
+<li>We opt-in to receive a <code class=3D"code-no-line-numbers">SIGCHLD</co=
+de> signal when the child processes finishes with: <code class=3D"code-no-l=
+ine-numbers">signal(SIGCHLD, on_chld_signal)</code> where <code class=3D"co=
+de-no-line-numbers">on_chld_signal</code> is a function pointer we provide.=
+ Even if the signal handler does not do anything in this case.</li>
+<li>We schedule a <code class=3D"code-no-line-numbers">SIGALARM</code> sign=
+al with <code class=3D"code-no-line-numbers">alarm</code> or more preferabl=
+y <code class=3D"code-no-line-numbers">setitimer</code> which can take a du=
+ration in microseconds whereas <code class=3D"code-no-line-numbers">alarm</=
+code> can only handle seconds. There's also <code class=3D"code-no-line-num=
+bers">timer_create/timer_settime</code> which handles nanoseconds. It depen=
+ds what the OS and hardware support.</li>
+<li>We wait for either signal with <code class=3D"code-no-line-numbers">sig=
+suspend</code> which suspends the program until a given set of signals arri=
+ve.</li>
+<li>We should not forget to <code class=3D"code-no-line-numbers">wait</code=
+> on the child process to avoid leaving zombie processes behind.</li>
+</ol>
+<p>The reality is grimmer, looking through the <code class=3D"code-no-line-=
+numbers">timeout</code> implementation:</p>
+<ul>
+<li>We could have inherited any signal mask from our parent so we need to e=
+xplicitly unblock the signals we are interested in.</li>
+<li>Signals can be sent to a process group we need to handle that case.</li=
+>
+<li>We have to avoid entering a 'signal loop'.</li>
+<li>Our process can be implicitly multi-threaded due to some <code class=3D=
+"code-no-line-numbers">timer_settime</code> implementations, therefore a <c=
+ode class=3D"code-no-line-numbers">SIGALRM</code> signal sent to a process =
+group, can be result in the signal being sent multiple times to a process (=
+I am directly quoting the code comments from the <code class=3D"code-no-lin=
+e-numbers">timeout</code> program here).</li>
+<li>When using <code class=3D"code-no-line-numbers">timer_create</code>, we=
+ need to take care of cleaning it up with <code class=3D"code-no-line-numbe=
+rs">timer_delete</code>, lest we have a resource leak when retrying.</li>
+<li>The signal handler may be called concurrently and we have to be aware o=
+f that.</li>
+<li>Depending on the timer implementation we chose, we are susceptible to c=
+lock adjustments for example going back. E.g. <code class=3D"code-no-line-n=
+umbers">setitimer</code> only offers the <code class=3D"code-no-line-number=
+s">CLOCK_REALTIME</code> clock option for counting time, which is just the =
+wall clock. We'd like something like <code class=3D"code-no-line-numbers">C=
+LOCK_MONOTONIC</code> or <code class=3D"code-no-line-numbers">CLOCK_MONOTON=
+IC_RAW</code> (the latter being Linux specific).</li>
+</ul>
+<p>So... I don't <em>love</em> this approach:</p>
+<ul>
+<li>I find signals hard. It's basically a global <code class=3D"code-no-lin=
+e-numbers">goto</code> to a completely different location.</li>
+<li>A signal handler is forced to use global mutable state, which is better=
+ avoided if possible, and it does not play nice with threads.</li>
+<li>Lots of functions are not 'signal-safe', and that has led to security v=
+ulnerabilities in the past e.g. in <a href=3D"https://www.qualys.com/2024/0=
+7/01/cve-2024-6387/regresshion.txt">ssh</a>. In short, non-atomic operation=
+s are not signal safe because they might be suspended in the middle, thus l=
+eaving an inconsistent state behind. Thus, we have to read documentation ve=
+ry carefully to ensure that we only call signal safe functions in our signa=
+l handler, and cherry on the cake, that varies from platform to platform, o=
+r even between libc versions on the same platform.</li>
+<li>Signals do not compose well with other Unix entities such as file descr=
+iptors and sockets. For example, we cannot <code class=3D"code-no-line-numb=
+ers">poll</code> on signals. There are platform specific solutions though, =
+keep on reading.</li>
+<li>Different signals have different default behaviors, and this gets inher=
+ited in child processes, so you cannot assume anything in your program and =
+have to be very defensive. Who knows what the parent process, e.g. the shel=
+l, set as the signal mask? If you read through the whole implementation of =
+the <code class=3D"code-no-line-numbers">timeout</code> program, a lot of t=
+he code is dedicated to setting signal masks in the parent, forking, immedi=
+ately changing the signal mask in the child and the parent, etc. Now, I bel=
+ieve modern Unices offer more control than <code class=3D"code-no-line-numb=
+ers">fork()</code> about what signal mask the child should be created with,=
+ so maybe it got better. Still, it's a lot of stuff to know.</li>
+<li>They are many libc functions and system calls relating to signals and t=
+hat's a lot to learn. A non-exhaustive list e.g. on Linux: <code class=3D"c=
+ode-no-line-numbers">kill(1), alarm(2), kill(2), pause(2), sigaction(2), si=
+gnalfd(2),  sigpending(2),  sigprocmask(2),   sigsuspend(2),  bsd_signal(3)=
+,  killpg(3),  raise(3),  siginterrupt(3), sigqueue(3), sigsetops(3), sigve=
+c(3), sysv_signal(3), signal(7)</code>. Oh wait, I forgot <code class=3D"co=
+de-no-line-numbers">sigemptyset(3)</code> and  <code class=3D"code-no-line-=
+numbers">sigaddset(3)</code>. And I'm sure I forgot about a few!</li>
+</ul>
+<p>So, let's stick with signals for a bit but simplify our current approach=
+.</p>
+<h2 id=3D"second-way-sigtimedwait">
+	<a class=3D"title" href=3D"https://gaultier.github.io/blog/way_too_many_wa=
+ys_to_wait_for_a_child_process_with_a_timeout.html#second-way-sigtimedwait"=
+>Second way: sigtimedwait</a>
+	<a class=3D"hash-anchor" href=3D"https://gaultier.github.io/blog/way_too_m=
+any_ways_to_wait_for_a_child_process_with_a_timeout.html#second-way-sigtime=
+dwait" aria-hidden=3D"true"></a>
+</h2>
+<p>Wouldn't it be great if we could wait on a signal, say, <code class=3D"c=
+ode-no-line-numbers">SIGCHLD</code>, with a timeout? Oh look, a system call=
+ that does exactly that <em>and</em> is standardized by POSIX 2001. Cool! I=
+ am not quite sure why the <code class=3D"code-no-line-numbers">timeout</co=
+de> program does not use it, but we sure as hell can. My only guess would b=
+e that they want to support old Unices pre 2001, or non POSIX systems.</p>
+<p>Anyways, here's a very straightforward implementation:</p>
+<pre><code class=3D"language-c hljs"><span class=3D"line-number">1</span> <=
+span class=3D"hljs-meta">#<span class=3D"hljs-keyword">define</span> _GNU_S=
+OURCE</span>
+<span class=3D"line-number">2</span> <span class=3D"hljs-meta">#<span class=
+=3D"hljs-keyword">include</span> <span class=3D"hljs-string">&lt;errno.h&gt=
+;</span></span>
+<span class=3D"line-number">3</span> <span class=3D"hljs-meta">#<span class=
+=3D"hljs-keyword">include</span> <span class=3D"hljs-string">&lt;signal.h&g=
+t;</span></span>
+<span class=3D"line-number">4</span> <span class=3D"hljs-meta">#<span class=
+=3D"hljs-keyword">include</span> <span class=3D"hljs-string">&lt;stdint.h&g=
+t;</span></span>
+<span class=3D"line-number">5</span> <span class=3D"hljs-meta">#<span class=
+=3D"hljs-keyword">include</span> <span class=3D"hljs-string">&lt;sys/wait.h=
+&gt;</span></span>
+<span class=3D"line-number">6</span> <span class=3D"hljs-meta">#<span class=
+=3D"hljs-keyword">include</span> <span class=3D"hljs-string">&lt;unistd.h&g=
+t;</span></span>
+<span class=3D"line-number">7</span>=20
+<span class=3D"line-number">8</span> <span class=3D"hljs-type">void</span> =
+<span class=3D"hljs-title function_">on_sigchld</span><span class=3D"hljs-p=
+arams">(<span class=3D"hljs-type">int</span> sig)</span> { (<span class=3D"=
+hljs-type">void</span>)sig; }
+<span class=3D"line-number">9</span>=20
+<span class=3D"line-number">10</span> <span class=3D"hljs-type">int</span> =
+<span class=3D"hljs-title function_">main</span><span class=3D"hljs-params"=
+>(<span class=3D"hljs-type">int</span> argc, <span class=3D"hljs-type">char=
+</span> *argv[])</span> {
+<span class=3D"line-number">11</span>   (<span class=3D"hljs-type">void</sp=
+an>)argc;
+<span class=3D"line-number">12</span>   signal(SIGCHLD, on_sigchld);
+<span class=3D"line-number">13</span>=20
+<span class=3D"line-number">14</span>   <span class=3D"hljs-type">uint32_t<=
+/span> wait_ms =3D <span class=3D"hljs-number">128</span>;
+<span class=3D"line-number">15</span>=20
+<span class=3D"line-number">16</span>   <span class=3D"hljs-keyword">for</s=
+pan> (<span class=3D"hljs-type">int</span> retry =3D <span class=3D"hljs-nu=
+mber">0</span>; retry &lt; <span class=3D"hljs-number">10</span>; retry +=
+=3D <span class=3D"hljs-number">1</span>) {
+<span class=3D"line-number">17</span>     <span class=3D"hljs-type">int</sp=
+an> child_pid =3D fork();
+<span class=3D"line-number">18</span>     <span class=3D"hljs-keyword">if</=
+span> (<span class=3D"hljs-number">-1</span> =3D=3D child_pid) {
+<span class=3D"line-number">19</span>       <span class=3D"hljs-keyword">re=
+turn</span> errno;
+<span class=3D"line-number">20</span>     }
+<span class=3D"line-number">21</span>=20
+<span class=3D"line-number">22</span>     <span class=3D"hljs-keyword">if</=
+span> (<span class=3D"hljs-number">0</span> =3D=3D child_pid) { <span class=
+=3D"hljs-comment">// Child</span>
+<span class=3D"line-number">23</span>       argv +=3D <span class=3D"hljs-n=
+umber">1</span>;
+<span class=3D"line-number">24</span>       <span class=3D"hljs-keyword">if=
+</span> (<span class=3D"hljs-number">-1</span> =3D=3D execvp(argv[<span cla=
+ss=3D"hljs-number">0</span>], argv)) {
+<span class=3D"line-number">25</span>         <span class=3D"hljs-keyword">=
+return</span> errno;
+<span class=3D"line-number">26</span>       }
+<span class=3D"line-number">27</span>       __builtin_unreachable();
+<span class=3D"line-number">28</span>     }
+<span class=3D"line-number">29</span>=20
+<span class=3D"line-number">30</span>     <span class=3D"hljs-type">sigset_=
+t</span> sigset =3D {<span class=3D"hljs-number">0</span>};
+<span class=3D"line-number">31</span>     sigemptyset(&amp;sigset);
+<span class=3D"line-number">32</span>     sigaddset(&amp;sigset, SIGCHLD);
+<span class=3D"line-number">33</span>=20
+<span class=3D"line-number">34</span>     <span class=3D"hljs-type">siginfo=
+_t</span> siginfo =3D {<span class=3D"hljs-number">0</span>};
+<span class=3D"line-number">35</span>=20
+<span class=3D"line-number">36</span>     <span class=3D"hljs-class"><span =
+class=3D"hljs-keyword">struct</span> <span class=3D"hljs-title">timespec</s=
+pan> <span class=3D"hljs-title">timeout</span> =3D</span> {
+<span class=3D"line-number">37</span>         .tv_sec =3D wait_ms / <span c=
+lass=3D"hljs-number">1000</span>,
+<span class=3D"line-number">38</span>         .tv_nsec =3D (wait_ms % <span=
+ class=3D"hljs-number">1000</span>) * <span class=3D"hljs-number">1000</spa=
+n> * <span class=3D"hljs-number">1000</span>,
+<span class=3D"line-number">39</span>     };
+<span class=3D"line-number">40</span>=20
+<span class=3D"line-number">41</span>     <span class=3D"hljs-type">int</sp=
+an> sig =3D sigtimedwait(&amp;sigset, &amp;siginfo, &amp;timeout);
+<span class=3D"line-number">42</span>     <span class=3D"hljs-keyword">if</=
+span> (<span class=3D"hljs-number">-1</span> =3D=3D sig &amp;&amp; EAGAIN !=
+=3D errno) { <span class=3D"hljs-comment">// Error</span>
+<span class=3D"line-number">43</span>       <span class=3D"hljs-keyword">re=
+turn</span> errno;
+<span class=3D"line-number">44</span>     }
+<span class=3D"line-number">45</span>     <span class=3D"hljs-keyword">if</=
+span> (<span class=3D"hljs-number">-1</span> !=3D sig) { <span class=3D"hlj=
+s-comment">// Child finished.</span>
+<span class=3D"line-number">46</span>       <span class=3D"hljs-keyword">if=
+</span> (WIFEXITED(siginfo.si_status) &amp;&amp; <span class=3D"hljs-number=
+">0</span> =3D=3D WEXITSTATUS(siginfo.si_status)) {
+<span class=3D"line-number">47</span>         <span class=3D"hljs-keyword">=
+return</span> <span class=3D"hljs-number">0</span>;
+<span class=3D"line-number">48</span>       }
+<span class=3D"line-number">49</span>     }
+<span class=3D"line-number">50</span>=20
+<span class=3D"line-number">51</span>     <span class=3D"hljs-keyword">if</=
+span> (<span class=3D"hljs-number">-1</span> =3D=3D kill(child_pid, SIGKILL=
+)) {
+<span class=3D"line-number">52</span>       <span class=3D"hljs-keyword">re=
+turn</span> errno;
+<span class=3D"line-number">53</span>     }
+<span class=3D"line-number">54</span>=20
+<span class=3D"line-number">55</span>     <span class=3D"hljs-keyword">if</=
+span> (<span class=3D"hljs-number">-1</span> =3D=3D wait(<span class=3D"hlj=
+s-literal">NULL</span>)) {
+<span class=3D"line-number">56</span>       <span class=3D"hljs-keyword">re=
+turn</span> errno;
+<span class=3D"line-number">57</span>     }
+<span class=3D"line-number">58</span>=20
+<span class=3D"line-number">59</span>     usleep(wait_ms * <span class=3D"h=
+ljs-number">1000</span>);
+<span class=3D"line-number">60</span>     wait_ms *=3D <span class=3D"hljs-=
+number">2</span>;
+<span class=3D"line-number">61</span>   }
+<span class=3D"line-number">62</span>   <span class=3D"hljs-keyword">return=
+</span> <span class=3D"hljs-number">1</span>;
+<span class=3D"line-number">63</span> }</code></pre>
+<p>I like this implementation. It's pretty easy to convince ourselves looki=
+ng at the code that it is obviously correct, and that's a very important fa=
+ctor for me.</p>
+<p>We still have to deal with signals though. Could we reduce their imprint=
+ on our code?</p>
+<h2 id=3D"third-approach-self-pipe-trick">
+	<a class=3D"title" href=3D"https://gaultier.github.io/blog/way_too_many_wa=
+ys_to_wait_for_a_child_process_with_a_timeout.html#third-approach-self-pipe=
+-trick">Third approach: Self-pipe trick</a>
+	<a class=3D"hash-anchor" href=3D"https://gaultier.github.io/blog/way_too_m=
+any_ways_to_wait_for_a_child_process_with_a_timeout.html#third-approach-sel=
+f-pipe-trick" aria-hidden=3D"true"></a>
+</h2>
+<p>This is a really nifty, quite well known <a href=3D"https://cr.yp.to/doc=
+s/selfpipe.html">trick</a> at this point, where we bridge the world of sign=
+als with the world of file descriptors with the <code class=3D"code-no-line=
+-numbers">pipe(2)</code> system call.</p>
+<p>Usually, pipes are a form of inter-process communication, and here we do=
+ not want to communicate with the child process (since it could be any prog=
+ram, and most programs do not get chatty with their parent process). What w=
+e do is: in the signal handler for <code class=3D"code-no-line-numbers">SIG=
+CHLD</code>, we simply write (anything) to our own pipe. We know this is si=
+gnal-safe so it's good.</p>
+<p>And you know what's cool with pipes? They are simply a file descriptor w=
+hich we can <code class=3D"code-no-line-numbers">poll</code>. With a timeou=
+t. Nice! Here goes:</p>
+<pre><code class=3D"language-c hljs"><span class=3D"line-number">1</span> <=
+span class=3D"hljs-meta">#<span class=3D"hljs-keyword">define</span> _GNU_S=
+OURCE</span>
+<span class=3D"line-number">2</span> <span class=3D"hljs-meta">#<span class=
+=3D"hljs-keyword">include</span> <span class=3D"hljs-string">&lt;errno.h&gt=
+;</span></span>
+<span class=3D"line-number">3</span> <span class=3D"hljs-meta">#<span class=
+=3D"hljs-keyword">include</span> <span class=3D"hljs-string">&lt;poll.h&gt;=
+</span></span>
+<span class=3D"line-number">4</span> <span class=3D"hljs-meta">#<span class=
+=3D"hljs-keyword">include</span> <span class=3D"hljs-string">&lt;signal.h&g=
+t;</span></span>
+<span class=3D"line-number">5</span> <span class=3D"hljs-meta">#<span class=
+=3D"hljs-keyword">include</span> <span class=3D"hljs-string">&lt;stdint.h&g=
+t;</span></span>
+<span class=3D"line-number">6</span> <span class=3D"hljs-meta">#<span class=
+=3D"hljs-keyword">include</span> <span class=3D"hljs-string">&lt;sys/wait.h=
+&gt;</span></span>
+<span class=3D"line-number">7</span> <span class=3D"hljs-meta">#<span class=
+=3D"hljs-keyword">include</span> <span class=3D"hljs-string">&lt;unistd.h&g=
+t;</span></span>
+<span class=3D"line-number">8</span>=20
+<span class=3D"line-number">9</span> <span class=3D"hljs-type">static</span=
+> <span class=3D"hljs-type">int</span> pipe_fd[<span class=3D"hljs-number">=
+2</span>] =3D {<span class=3D"hljs-number">0</span>};
+<span class=3D"line-number">10</span> <span class=3D"hljs-type">void</span>=
+ <span class=3D"hljs-title function_">on_sigchld</span><span class=3D"hljs-=
+params">(<span class=3D"hljs-type">int</span> sig)</span> {
+<span class=3D"line-number">11</span>   (<span class=3D"hljs-type">void</sp=
+an>)sig;
+<span class=3D"line-number">12</span>   <span class=3D"hljs-type">char</spa=
+n> dummy =3D <span class=3D"hljs-number">0</span>;
+<span class=3D"line-number">13</span>   write(pipe_fd[<span class=3D"hljs-n=
+umber">1</span>], &amp;dummy, <span class=3D"hljs-number">1</span>);
+<span class=3D"line-number">14</span> }
+<span class=3D"line-number">15</span>=20
+<span class=3D"line-number">16</span> <span class=3D"hljs-type">int</span> =
+<span class=3D"hljs-title function_">main</span><span class=3D"hljs-params"=
+>(<span class=3D"hljs-type">int</span> argc, <span class=3D"hljs-type">char=
+</span> *argv[])</span> {
+<span class=3D"line-number">17</span>   (<span class=3D"hljs-type">void</sp=
+an>)argc;
+<span class=3D"line-number">18</span>=20
+<span class=3D"line-number">19</span>   <span class=3D"hljs-keyword">if</sp=
+an> (<span class=3D"hljs-number">-1</span> =3D=3D pipe(pipe_fd)) {
+<span class=3D"line-number">20</span>     <span class=3D"hljs-keyword">retu=
+rn</span> errno;
+<span class=3D"line-number">21</span>   }
+<span class=3D"line-number">22</span>=20
+<span class=3D"line-number">23</span>   signal(SIGCHLD, on_sigchld);
+<span class=3D"line-number">24</span>=20
+<span class=3D"line-number">25</span>   <span class=3D"hljs-type">uint32_t<=
+/span> wait_ms =3D <span class=3D"hljs-number">128</span>;
+<span class=3D"line-number">26</span>=20
+<span class=3D"line-number">27</span>   <span class=3D"hljs-keyword">for</s=
+pan> (<span class=3D"hljs-type">int</span> retry =3D <span class=3D"hljs-nu=
+mber">0</span>; retry &lt; <span class=3D"hljs-number">10</span>; retry +=
+=3D <span class=3D"hljs-number">1</span>) {
+<span class=3D"line-number">28</span>     <span class=3D"hljs-type">int</sp=
+an> child_pid =3D fork();
+<span class=3D"line-number">29</span>     <span class=3D"hljs-keyword">if</=
+span> (<span class=3D"hljs-number">-1</span> =3D=3D child_pid) {
+<span class=3D"line-number">30</span>       <span class=3D"hljs-keyword">re=
+turn</span> errno;
+<span class=3D"line-number">31</span>     }
+<span class=3D"line-number">32</span>=20
+<span class=3D"line-number">33</span>     <span class=3D"hljs-keyword">if</=
+span> (<span class=3D"hljs-number">0</span> =3D=3D child_pid) { <span class=
+=3D"hljs-comment">// Child</span>
+<span class=3D"line-number">34</span>       argv +=3D <span class=3D"hljs-n=
+umber">1</span>;
+<span class=3D"line-number">35</span>       <span class=3D"hljs-keyword">if=
+</span> (<span class=3D"hljs-number">-1</span> =3D=3D execvp(argv[<span cla=
+ss=3D"hljs-number">0</span>], argv)) {
+<span class=3D"line-number">36</span>         <span class=3D"hljs-keyword">=
+return</span> errno;
+<span class=3D"line-number">37</span>       }
+<span class=3D"line-number">38</span>       __builtin_unreachable();
+<span class=3D"line-number">39</span>     }
+<span class=3D"line-number">40</span>=20
+<span class=3D"line-number">41</span>     <span class=3D"hljs-class"><span =
+class=3D"hljs-keyword">struct</span> <span class=3D"hljs-title">pollfd</spa=
+n> <span class=3D"hljs-title">poll_fd</span> =3D</span> {
+<span class=3D"line-number">42</span>         .fd =3D pipe_fd[<span class=
+=3D"hljs-number">0</span>],
+<span class=3D"line-number">43</span>         .events =3D POLLIN,
+<span class=3D"line-number">44</span>     };
+<span class=3D"line-number">45</span>=20
+<span class=3D"line-number">46</span>     <span class=3D"hljs-comment">// W=
+ait for the child to finish with a timeout.</span>
+<span class=3D"line-number">47</span>     poll(&amp;poll_fd, <span class=3D=
+"hljs-number">1</span>, (<span class=3D"hljs-type">int</span>)wait_ms);
+<span class=3D"line-number">48</span>=20
+<span class=3D"line-number">49</span>     kill(child_pid, SIGKILL);
+<span class=3D"line-number">50</span>     <span class=3D"hljs-type">int</sp=
+an> status =3D <span class=3D"hljs-number">0</span>;
+<span class=3D"line-number">51</span>     wait(&amp;status);
+<span class=3D"line-number">52</span>     <span class=3D"hljs-keyword">if</=
+span> (WIFEXITED(status) &amp;&amp; <span class=3D"hljs-number">0</span> =
+=3D=3D WEXITSTATUS(status)) {
+<span class=3D"line-number">53</span>       <span class=3D"hljs-keyword">re=
+turn</span> <span class=3D"hljs-number">0</span>;
+<span class=3D"line-number">54</span>     }
+<span class=3D"line-number">55</span>=20
+<span class=3D"line-number">56</span>     <span class=3D"hljs-type">char</s=
+pan> dummy =3D <span class=3D"hljs-number">0</span>;
+<span class=3D"line-number">57</span>     read(pipe_fd[<span class=3D"hljs-=
+number">0</span>], &amp;dummy, <span class=3D"hljs-number">1</span>);
+<span class=3D"line-number">58</span>=20
+<span class=3D"line-number">59</span>     usleep(wait_ms * <span class=3D"h=
+ljs-number">1000</span>);
+<span class=3D"line-number">60</span>     wait_ms *=3D <span class=3D"hljs-=
+number">2</span>;
+<span class=3D"line-number">61</span>   }
+<span class=3D"line-number">62</span>   <span class=3D"hljs-keyword">return=
+</span> <span class=3D"hljs-number">1</span>;
+<span class=3D"line-number">63</span> }</code></pre>
+<p>So we still have one signal handler but the rest of our program does not=
+ deal with signals in any way (well, except to kill the child when the time=
+out triggers, but that's invisible).</p>
+<p>There are a few catches with this implementation:</p>
+<ul>
+<li>Contrary to <code class=3D"code-no-line-numbers">sigtimedwait</code>, <=
+code class=3D"code-no-line-numbers">poll</code> does not give us the exit s=
+tatus of the child, we have to get it with <code class=3D"code-no-line-numb=
+ers">wait</code>. Which is fine.</li>
+<li>In the case that the timeout fired, we <code class=3D"code-no-line-numb=
+ers">kill</code> the child process. However, the child process, being force=
+fully ended, will result in a <code class=3D"code-no-line-numbers">SIGCHLD<=
+/code> signal being sent to our program. Which will then trigger our signal=
+ handler, which will then write a value to the pipe. So we need to uncondit=
+ionally read from the pipe after killing the child and before retrying. If =
+we only read from the pipe if the child ended by itself, that will result i=
+n the pipe and the child process being desynced.</li>
+<li>In some complex programs, we'd have to use <code class=3D"code-no-line-=
+numbers">ppoll</code> instead of <code class=3D"code-no-line-numbers">poll<=
+/code>. <code class=3D"code-no-line-numbers">ppoll</code> prevents a set of=
+ signals from interrupting the polling. That's to avoid some data races (ag=
+ain, more data races!). Quoting from the man page for <code class=3D"code-n=
+o-line-numbers">pselect</code> which is analogous to <code class=3D"code-no=
+-line-numbers">ppoll</code>:
+<blockquote>
+<p>The  reason  that pselect() is needed is that if one wants to wait for e=
+ither a signal
+or for a file descriptor to become ready, then an atomic test  is  needed  =
+to  prevent
+race  conditions.  (Suppose the signal handler sets a global flag and retur=
+ns.  Then a
+test of this global flag followed by a call of select() could hang indefini=
+tely if the
+signal arrived just after the test but just before the call.  By  contrast,=
+  pselect()
+allows one to first block signals, handle the signals that have come in, th=
+en call pselect()
+with the desired sigmask, avoiding the race.)</p>
+</blockquote>
+</li>
+</ul>
+<p>So, this trick is clever, but wouldn't it be nice if we could avoid sign=
+als <em>entirely</em>?</p>
+<h3 id=3D"a-simpler-self-pipe-trick">
+	<a class=3D"title" href=3D"https://gaultier.github.io/blog/way_too_many_wa=
+ys_to_wait_for_a_child_process_with_a_timeout.html#a-simpler-self-pipe-tric=
+k">A simpler self-pipe trick</a>
+	<a class=3D"hash-anchor" href=3D"https://gaultier.github.io/blog/way_too_m=
+any_ways_to_wait_for_a_child_process_with_a_timeout.html#a-simpler-self-pip=
+e-trick" aria-hidden=3D"true"></a>
+</h3>
+<p>An astute reader <a href=3D"https://hachyderm.io/@markd/1134613018921526=
+67">pointed out</a> that this trick can be simplified to not deal with sign=
+als at all and instead leverage two facts:</p>
+<ul>
+<li>A child inherits the open file descriptors of the parent (including the=
+ ones from a pipe)</li>
+<li>When a process exits, the OS automatically closes its file descriptors<=
+/li>
+</ul>
+<p>Behind the scenes, at the OS level, there is a reference count for a fil=
+e descriptor shared by multiple processes. It gets decremented when doing <=
+code class=3D"code-no-line-numbers">close(fd)</code> or by a process termin=
+ating. When this count reaches 0, it is closed for real. And you know what =
+system call can watch for a file descriptor closing? Good old <code class=
+=3D"code-no-line-numbers">poll</code>!</p>
+<p>So the improved approach is as follows:</p>
+<ol>
+<li>Each retry, we create a new pipe.</li>
+<li>We fork.</li>
+<li>The parent closes the write end pipe and the child closes the read end =
+pipe. Effectively, the parent owns the read end and the child owns the writ=
+e end.</li>
+<li>The parent polls on the read end.</li>
+<li>When the child finishes, it automatically closes the write end which in=
+ turn triggers an event in <code class=3D"code-no-line-numbers">poll</code>=
+.</li>
+<li>We cleanup before retrying (if needed)</li>
+</ol>
+<p>So in a way, it's not really a <em>self</em>-pipe, it's more precisely a=
+ pipe between the parent and the child, and nothing gets written or read, i=
+t's just used by the child to signal it's done when it closes its end. Whic=
+h is a useful approach for many cases outside of our little program.</p>
+<p>Here is the code:</p>
+<pre><code class=3D"language-c hljs"><span class=3D"line-number">1</span> <=
+span class=3D"hljs-meta">#<span class=3D"hljs-keyword">define</span> _GNU_S=
+OURCE</span>
+<span class=3D"line-number">2</span> <span class=3D"hljs-meta">#<span class=
+=3D"hljs-keyword">include</span> <span class=3D"hljs-string">&lt;errno.h&gt=
+;</span></span>
+<span class=3D"line-number">3</span> <span class=3D"hljs-meta">#<span class=
+=3D"hljs-keyword">include</span> <span class=3D"hljs-string">&lt;poll.h&gt;=
+</span></span>
+<span class=3D"line-number">4</span> <span class=3D"hljs-meta">#<span class=
+=3D"hljs-keyword">include</span> <span class=3D"hljs-string">&lt;stdint.h&g=
+t;</span></span>
+<span class=3D"line-number">5</span> <span class=3D"hljs-meta">#<span class=
+=3D"hljs-keyword">include</span> <span class=3D"hljs-string">&lt;sys/wait.h=
+&gt;</span></span>
+<span class=3D"line-number">6</span> <span class=3D"hljs-meta">#<span class=
+=3D"hljs-keyword">include</span> <span class=3D"hljs-string">&lt;unistd.h&g=
+t;</span></span>
+<span class=3D"line-number">7</span>=20
+<span class=3D"line-number">8</span> <span class=3D"hljs-type">int</span> <=
+span class=3D"hljs-title function_">main</span><span class=3D"hljs-params">=
+(<span class=3D"hljs-type">int</span> argc, <span class=3D"hljs-type">char<=
+/span> *argv[])</span> {
+<span class=3D"line-number">9</span>   (<span class=3D"hljs-type">void</spa=
+n>)argc;
+<span class=3D"line-number">10</span>=20
+<span class=3D"line-number">11</span>   <span class=3D"hljs-type">uint32_t<=
+/span> wait_ms =3D <span class=3D"hljs-number">128</span>;
+<span class=3D"line-number">12</span>=20
+<span class=3D"line-number">13</span>   <span class=3D"hljs-keyword">for</s=
+pan> (<span class=3D"hljs-type">int</span> retry =3D <span class=3D"hljs-nu=
+mber">0</span>; retry &lt; <span class=3D"hljs-number">10</span>; retry +=
+=3D <span class=3D"hljs-number">1</span>) {
+<span class=3D"line-number">14</span>     <span class=3D"hljs-type">int</sp=
+an> pipe_fd[<span class=3D"hljs-number">2</span>] =3D {<span class=3D"hljs-=
+number">0</span>};
+<span class=3D"line-number">15</span>     <span class=3D"hljs-keyword">if</=
+span> (<span class=3D"hljs-number">-1</span> =3D=3D pipe(pipe_fd)) {
+<span class=3D"line-number">16</span>       <span class=3D"hljs-keyword">re=
+turn</span> errno;
+<span class=3D"line-number">17</span>     }
+<span class=3D"line-number">18</span>=20
+<span class=3D"line-number">19</span>     <span class=3D"hljs-type">int</sp=
+an> child_pid =3D fork();
+<span class=3D"line-number">20</span>     <span class=3D"hljs-keyword">if</=
+span> (<span class=3D"hljs-number">-1</span> =3D=3D child_pid) {
+<span class=3D"line-number">21</span>       <span class=3D"hljs-keyword">re=
+turn</span> errno;
+<span class=3D"line-number">22</span>     }
+<span class=3D"line-number">23</span>=20
+<span class=3D"line-number">24</span>     <span class=3D"hljs-keyword">if</=
+span> (<span class=3D"hljs-number">0</span> =3D=3D child_pid) { <span class=
+=3D"hljs-comment">// Child</span>
+<span class=3D"line-number">25</span>       <span class=3D"hljs-comment">//=
+ Close the read end of the pipe.</span>
+<span class=3D"line-number">26</span>       close(pipe_fd[<span class=3D"hl=
+js-number">0</span>]);
+<span class=3D"line-number">27</span>=20
+<span class=3D"line-number">28</span>       argv +=3D <span class=3D"hljs-n=
+umber">1</span>;
+<span class=3D"line-number">29</span>       <span class=3D"hljs-keyword">if=
+</span> (<span class=3D"hljs-number">-1</span> =3D=3D execvp(argv[<span cla=
+ss=3D"hljs-number">0</span>], argv)) {
+<span class=3D"line-number">30</span>         <span class=3D"hljs-keyword">=
+return</span> errno;
+<span class=3D"line-number">31</span>       }
+<span class=3D"line-number">32</span>       __builtin_unreachable();
+<span class=3D"line-number">33</span>     }
+<span class=3D"line-number">34</span>=20
+<span class=3D"line-number">35</span>     <span class=3D"hljs-comment">// C=
+lose the write end of the pipe.</span>
+<span class=3D"line-number">36</span>     close(pipe_fd[<span class=3D"hljs=
+-number">1</span>]);
+<span class=3D"line-number">37</span>=20
+<span class=3D"line-number">38</span>     <span class=3D"hljs-class"><span =
+class=3D"hljs-keyword">struct</span> <span class=3D"hljs-title">pollfd</spa=
+n> <span class=3D"hljs-title">poll_fd</span> =3D</span> {
+<span class=3D"line-number">39</span>         .fd =3D pipe_fd[<span class=
+=3D"hljs-number">0</span>],
+<span class=3D"line-number">40</span>         .events =3D POLLHUP | POLLIN,
+<span class=3D"line-number">41</span>     };
+<span class=3D"line-number">42</span>=20
+<span class=3D"line-number">43</span>     <span class=3D"hljs-comment">// W=
+ait for the child to finish with a timeout.</span>
+<span class=3D"line-number">44</span>     poll(&amp;poll_fd, <span class=3D=
+"hljs-number">1</span>, (<span class=3D"hljs-type">int</span>)wait_ms);
+<span class=3D"line-number">45</span>=20
+<span class=3D"line-number">46</span>     kill(child_pid, SIGKILL);
+<span class=3D"line-number">47</span>     <span class=3D"hljs-type">int</sp=
+an> status =3D <span class=3D"hljs-number">0</span>;
+<span class=3D"line-number">48</span>     wait(&amp;status);
+<span class=3D"line-number">49</span>     <span class=3D"hljs-keyword">if</=
+span> (WIFEXITED(status) &amp;&amp; <span class=3D"hljs-number">0</span> =
+=3D=3D WEXITSTATUS(status)) {
+<span class=3D"line-number">50</span>       <span class=3D"hljs-keyword">re=
+turn</span> <span class=3D"hljs-number">0</span>;
+<span class=3D"line-number">51</span>     }
+<span class=3D"line-number">52</span>=20
+<span class=3D"line-number">53</span>     close(pipe_fd[<span class=3D"hljs=
+-number">0</span>]);
+<span class=3D"line-number">54</span>=20
+<span class=3D"line-number">55</span>     usleep(wait_ms * <span class=3D"h=
+ljs-number">1000</span>);
+<span class=3D"line-number">56</span>     wait_ms *=3D <span class=3D"hljs-=
+number">2</span>;
+<span class=3D"line-number">57</span>   }
+<span class=3D"line-number">58</span>   <span class=3D"hljs-keyword">return=
+</span> <span class=3D"hljs-number">1</span>;
+<span class=3D"line-number">59</span> }</code></pre>
+<p>Voila, no signals and no global state!</p>
+<h2 id=3D"fourth-approach-linux-s-signalfd">
+	<a class=3D"title" href=3D"https://gaultier.github.io/blog/way_too_many_wa=
+ys_to_wait_for_a_child_process_with_a_timeout.html#fourth-approach-linux-s-=
+signalfd">Fourth approach: Linux's signalfd</a>
+	<a class=3D"hash-anchor" href=3D"https://gaultier.github.io/blog/way_too_m=
+any_ways_to_wait_for_a_child_process_with_a_timeout.html#fourth-approach-li=
+nux-s-signalfd" aria-hidden=3D"true"></a>
+</h2>
+<p>This is a short one: on Linux, there is a system call that does exactly =
+the same as the self-pipe trick: from a signal, it gives us a file descript=
+or that we can <code class=3D"code-no-line-numbers">poll</code>. So, we can=
+ entirely remove our pipe and signal handler and instead <code class=3D"cod=
+e-no-line-numbers">poll</code> the file descriptor that <code class=3D"code=
+-no-line-numbers">signalfd</code> gives us.</p>
+<p>Cool, but also....Was it really necessary to introduce a system call for=
+ that? I guess the advantage is clarity.</p>
+<p>I would prefer extending <code class=3D"code-no-line-numbers">poll</code=
+> to support things other than file descriptors, instead of converting ever=
+ything a file descriptor to be able to use <code class=3D"code-no-line-numb=
+ers">poll</code>.</p>
+<p>Ok, next!</p>
+<h2 id=3D"fifth-approach-process-descriptors">
+	<a class=3D"title" href=3D"https://gaultier.github.io/blog/way_too_many_wa=
+ys_to_wait_for_a_child_process_with_a_timeout.html#fifth-approach-process-d=
+escriptors">Fifth approach: process descriptors</a>
+	<a class=3D"hash-anchor" href=3D"https://gaultier.github.io/blog/way_too_m=
+any_ways_to_wait_for_a_child_process_with_a_timeout.html#fifth-approach-pro=
+cess-descriptors" aria-hidden=3D"true"></a>
+</h2>
+<p><em>Recommended reading about this topic: <a href=3D"https://lwn.net/Art=
+icles/801319/">1</a> and <a href=3D"https://lwn.net/Articles/794707/">2</a>=
+.</em></p>
+<p>In the recent years (starting with Linux 5.3 and FreeBSD 9), people real=
+ized that process identifiers (<code class=3D"code-no-line-numbers">pid</co=
+de>s) have a number of problems:</p>
+<ul>
+<li>PIDs are recycled and the space is small, so collisions will happen. Ty=
+pically, a process spawns a child process, some work happens, and then the =
+parent decides to send a signal to the PID of the child. But it turns out t=
+hat the child already terminated (unbeknownst to the parent) and another pr=
+ocess took its place with the same PID. So now the parent is sending signal=
+s, or communicating with, a process that it thinks is its original child bu=
+t is in fact something completely different. Chaos and security issues ensu=
+e. Now, in our very simple case, that would not really happen, but perhaps =
+the root user is running our program, or, imagine that you are implementing=
+ the init process with PID 1, e.g. systemd: you can kill any process on the=
+ machine! Or think of the case of re-parenting a process. Or sending a cert=
+ain PID to another process and they send a signal to it at some point in th=
+e future. It becomes hairy and it's a very real problem.</li>
+<li>Data races are hard to escape (see the previous point).</li>
+<li>It's easy to accidentally send a signal to all processes with <code cla=
+ss=3D"code-no-line-numbers">kill(0, SIGKILL)</code> or <code class=3D"code-=
+no-line-numbers">kill(-1, SIGKILL)</code> if the developer has not checked =
+that all previous operations succeeded. This is a classic mistake:
+<pre><code class=3D"language-c hljs"><span class=3D"line-number">1</span> <=
+span class=3D"hljs-type">int</span> child_pid =3D fork();  <span class=3D"h=
+ljs-comment">// This fork fails and returns -1.</span>
+<span class=3D"line-number">2</span> ... <span class=3D"hljs-comment">// (d=
+o not check that fork succeeded);</span>
+<span class=3D"line-number">3</span> kill(child_pid, SIGKILL); <span class=
+=3D"hljs-comment">// Effectively: kill(-1, SIGKILL)</span></code></pre>
+</li>
+</ul>
+<p>And the kernel developers have worked hard to introduce a better concept=
+: process descriptors, which are (almost) bog-standard file descriptors, li=
+ke files or sockets. After all, that's what sparked our whole investigation=
+: we wanted to use <code class=3D"code-no-line-numbers">poll</code> and it =
+did not work on a PID. PIDs and signals do not compose well, but file descr=
+iptors do. Also, just like file descriptors, process descriptors are per-pr=
+ocess. If I open a file with <code class=3D"code-no-line-numbers">open()</c=
+ode> and get the file descriptor <code class=3D"code-no-line-numbers">3</co=
+de>, it is scoped to my process. Another process can <code class=3D"code-no=
+-line-numbers">close(3)</code> and it will refer to their own file descript=
+or, and not affect my file descriptor. That's great, we get isolation, so b=
+ugs in our code do not affect other processes.</p>
+<p>So, Linux and FreeBSD have introduced the same concepts but with slightl=
+y different APIs (unfortunately), and I have no idea about other OSes:</p>
+<ul>
+<li>A child process can be created with <code class=3D"code-no-line-numbers=
+">clone3(..., CLONE_PIDFD)</code> (Linux) or <code class=3D"code-no-line-nu=
+mbers">pdfork()</code> (FreeBSD) which returns a process descriptor which i=
+s almost like a normal file descriptor. On Linux, a process descriptor can =
+also be obtained from a PID with <code class=3D"code-no-line-numbers">pidfd=
+_open(pid)</code> e.g. after a normal <code class=3D"code-no-line-numbers">=
+fork</code> was done (but there is a risk of a data race in some cases!). O=
+nce we have the process descriptor, we do not need the PID anymore.</li>
+<li>We wait on the process descriptor with <code class=3D"code-no-line-numb=
+ers">poll(..., timeout)</code> (or <code class=3D"code-no-line-numbers">sel=
+ect</code>, or <code class=3D"code-no-line-numbers">epoll</code>, etc).</li=
+>
+<li>We kill the child process using the process descriptor with <code class=
+=3D"code-no-line-numbers">pidfd_send_signal</code> (Linux) or <code class=
+=3D"code-no-line-numbers">close</code> (FreeBSD) or <code class=3D"code-no-=
+line-numbers">pdkill</code> (FreeBSD).</li>
+<li>We wait on the zombie child process again using the process descriptor =
+to get its exit status.</li>
+</ul>
+<p>And voila, no signals! Isolation! Composability! (Almost) No PIDs in our=
+ program! Life can be nice sometimes. It's just unfortunate that there isn'=
+t a cross-platform API for that.</p>
+<p>Here's the Linux implementation:</p>
+<pre><code class=3D"language-c hljs"><span class=3D"line-number">1</span> <=
+span class=3D"hljs-meta">#<span class=3D"hljs-keyword">define</span> _GNU_S=
+OURCE</span>
+<span class=3D"line-number">2</span> <span class=3D"hljs-meta">#<span class=
+=3D"hljs-keyword">include</span> <span class=3D"hljs-string">&lt;errno.h&gt=
+;</span></span>
+<span class=3D"line-number">3</span> <span class=3D"hljs-meta">#<span class=
+=3D"hljs-keyword">include</span> <span class=3D"hljs-string">&lt;poll.h&gt;=
+</span></span>
+<span class=3D"line-number">4</span> <span class=3D"hljs-meta">#<span class=
+=3D"hljs-keyword">include</span> <span class=3D"hljs-string">&lt;stdint.h&g=
+t;</span></span>
+<span class=3D"line-number">5</span> <span class=3D"hljs-meta">#<span class=
+=3D"hljs-keyword">include</span> <span class=3D"hljs-string">&lt;sys/syscal=
+l.h&gt;</span></span>
+<span class=3D"line-number">6</span> <span class=3D"hljs-meta">#<span class=
+=3D"hljs-keyword">include</span> <span class=3D"hljs-string">&lt;sys/wait.h=
+&gt;</span></span>
+<span class=3D"line-number">7</span> <span class=3D"hljs-meta">#<span class=
+=3D"hljs-keyword">include</span> <span class=3D"hljs-string">&lt;unistd.h&g=
+t;</span></span>
+<span class=3D"line-number">8</span>=20
+<span class=3D"line-number">9</span> <span class=3D"hljs-type">int</span> <=
+span class=3D"hljs-title function_">main</span><span class=3D"hljs-params">=
+(<span class=3D"hljs-type">int</span> argc, <span class=3D"hljs-type">char<=
+/span> *argv[])</span> {
+<span class=3D"line-number">10</span>   (<span class=3D"hljs-type">void</sp=
+an>)argc;
+<span class=3D"line-number">11</span>=20
+<span class=3D"line-number">12</span>   <span class=3D"hljs-type">uint32_t<=
+/span> wait_ms =3D <span class=3D"hljs-number">128</span>;
+<span class=3D"line-number">13</span>=20
+<span class=3D"line-number">14</span>   <span class=3D"hljs-keyword">for</s=
+pan> (<span class=3D"hljs-type">int</span> retry =3D <span class=3D"hljs-nu=
+mber">0</span>; retry &lt; <span class=3D"hljs-number">10</span>; retry +=
+=3D <span class=3D"hljs-number">1</span>) {
+<span class=3D"line-number">15</span>     <span class=3D"hljs-type">int</sp=
+an> child_pid =3D fork();
+<span class=3D"line-number">16</span>     <span class=3D"hljs-keyword">if</=
+span> (<span class=3D"hljs-number">-1</span> =3D=3D child_pid) {
+<span class=3D"line-number">17</span>       <span class=3D"hljs-keyword">re=
+turn</span> errno;
+<span class=3D"line-number">18</span>     }
+<span class=3D"line-number">19</span>=20
+<span class=3D"line-number">20</span>     <span class=3D"hljs-keyword">if</=
+span> (<span class=3D"hljs-number">0</span> =3D=3D child_pid) { <span class=
+=3D"hljs-comment">// Child</span>
+<span class=3D"line-number">21</span>       argv +=3D <span class=3D"hljs-n=
+umber">1</span>;
+<span class=3D"line-number">22</span>       <span class=3D"hljs-keyword">if=
+</span> (<span class=3D"hljs-number">-1</span> =3D=3D execvp(argv[<span cla=
+ss=3D"hljs-number">0</span>], argv)) {
+<span class=3D"line-number">23</span>         <span class=3D"hljs-keyword">=
+return</span> errno;
+<span class=3D"line-number">24</span>       }
+<span class=3D"line-number">25</span>       __builtin_unreachable();
+<span class=3D"line-number">26</span>     }
+<span class=3D"line-number">27</span>=20
+<span class=3D"line-number">28</span>     <span class=3D"hljs-comment">// P=
+arent.</span>
+<span class=3D"line-number">29</span>=20
+<span class=3D"line-number">30</span>     <span class=3D"hljs-type">int</sp=
+an> child_fd =3D (<span class=3D"hljs-type">int</span>)syscall(SYS_pidfd_op=
+en, child_pid, <span class=3D"hljs-number">0</span>);
+<span class=3D"line-number">31</span>     <span class=3D"hljs-keyword">if</=
+span> (<span class=3D"hljs-number">-1</span> =3D=3D child_fd) {
+<span class=3D"line-number">32</span>       <span class=3D"hljs-keyword">re=
+turn</span> errno;
+<span class=3D"line-number">33</span>     }
+<span class=3D"line-number">34</span>=20
+<span class=3D"line-number">35</span>     <span class=3D"hljs-class"><span =
+class=3D"hljs-keyword">struct</span> <span class=3D"hljs-title">pollfd</spa=
+n> <span class=3D"hljs-title">poll_fd</span> =3D</span> {
+<span class=3D"line-number">36</span>         .fd =3D child_fd,
+<span class=3D"line-number">37</span>         .events =3D POLLHUP | POLLIN,
+<span class=3D"line-number">38</span>     };
+<span class=3D"line-number">39</span>     <span class=3D"hljs-comment">// W=
+ait for the child to finish with a timeout.</span>
+<span class=3D"line-number">40</span>     <span class=3D"hljs-keyword">if</=
+span> (<span class=3D"hljs-number">-1</span> =3D=3D poll(&amp;poll_fd, <spa=
+n class=3D"hljs-number">1</span>, (<span class=3D"hljs-type">int</span>)wai=
+t_ms)) {
+<span class=3D"line-number">41</span>       <span class=3D"hljs-keyword">re=
+turn</span> errno;
+<span class=3D"line-number">42</span>     }
+<span class=3D"line-number">43</span>=20
+<span class=3D"line-number">44</span>     <span class=3D"hljs-keyword">if</=
+span> (<span class=3D"hljs-number">-1</span> =3D=3D syscall(SYS_pidfd_send_=
+signal, child_fd, SIGKILL, <span class=3D"hljs-literal">NULL</span>, <span =
+class=3D"hljs-number">0</span>)) {
+<span class=3D"line-number">45</span>       <span class=3D"hljs-keyword">re=
+turn</span> errno;
+<span class=3D"line-number">46</span>     }
+<span class=3D"line-number">47</span>=20
+<span class=3D"line-number">48</span>     <span class=3D"hljs-type">siginfo=
+_t</span> siginfo =3D {<span class=3D"hljs-number">0</span>};
+<span class=3D"line-number">49</span>     <span class=3D"hljs-comment">// G=
+et exit status of child &amp; reap zombie.</span>
+<span class=3D"line-number">50</span>     <span class=3D"hljs-keyword">if</=
+span> (<span class=3D"hljs-number">-1</span> =3D=3D waitid(P_PIDFD, (<span =
+class=3D"hljs-type">id_t</span>)child_fd, &amp;siginfo, WEXITED)) {
+<span class=3D"line-number">51</span>       <span class=3D"hljs-keyword">re=
+turn</span> errno;
+<span class=3D"line-number">52</span>     }
+<span class=3D"line-number">53</span>=20
+<span class=3D"line-number">54</span>     <span class=3D"hljs-keyword">if</=
+span> (WIFEXITED(siginfo.si_status) &amp;&amp; <span class=3D"hljs-number">=
+0</span> =3D=3D WEXITSTATUS(siginfo.si_status)) {
+<span class=3D"line-number">55</span>       <span class=3D"hljs-keyword">re=
+turn</span> <span class=3D"hljs-number">0</span>;
+<span class=3D"line-number">56</span>     }
+<span class=3D"line-number">57</span>=20
+<span class=3D"line-number">58</span>     wait_ms *=3D <span class=3D"hljs-=
+number">2</span>;
+<span class=3D"line-number">59</span>     usleep(wait_ms * <span class=3D"h=
+ljs-number">1000</span>);
+<span class=3D"line-number">60</span>=20
+<span class=3D"line-number">61</span>     close(child_fd);
+<span class=3D"line-number">62</span>   }
+<span class=3D"line-number">63</span> }</code></pre>
+<p>A small note: To <code class=3D"code-no-line-numbers">poll</code> a proc=
+ess descriptor, Linux wants us to use <code class=3D"code-no-line-numbers">=
+POLLIN</code> whereas FreeBSD wants us to use <code class=3D"code-no-line-n=
+umbers">POLLHUP</code>. So we use <code class=3D"code-no-line-numbers">POLL=
+HUP | POLLIN</code> since there are no side-effects to use both.</p>
+<p>Another small note: a process descriptor, just like a file descriptor, t=
+akes up resources on the kernel side and we can reach some system limits (o=
+r even the memory limit), so it's good practice to <code class=3D"code-no-l=
+ine-numbers">close</code> it as soon as possible to free up resources. For =
+us, that's right before retrying. On FreeBSD, closing the process descripto=
+r also kills the process, so it's very short, just one system call. On Linu=
+x, we need to do both.</p>
+<h2 id=3D"sixth-approach-macos-s-and-bsd-s-kqueue">
+	<a class=3D"title" href=3D"https://gaultier.github.io/blog/way_too_many_wa=
+ys_to_wait_for_a_child_process_with_a_timeout.html#sixth-approach-macos-s-a=
+nd-bsd-s-kqueue">Sixth approach: MacOS's and BSD's kqueue</a>
+	<a class=3D"hash-anchor" href=3D"https://gaultier.github.io/blog/way_too_m=
+any_ways_to_wait_for_a_child_process_with_a_timeout.html#sixth-approach-mac=
+os-s-and-bsd-s-kqueue" aria-hidden=3D"true"></a>
+</h2>
+<p>It feels like cheating, but MacOS and the BSDs have had <code class=3D"c=
+ode-no-line-numbers">kqueue</code> for decades which works out of the box w=
+ith PIDs. It's a bit similar to <code class=3D"code-no-line-numbers">poll</=
+code> or <code class=3D"code-no-line-numbers">epoll</code> on Linux:</p>
+<pre><code class=3D"language-c hljs"><span class=3D"line-number">1</span> <=
+span class=3D"hljs-meta">#<span class=3D"hljs-keyword">include</span> <span=
+ class=3D"hljs-string">&lt;errno.h&gt;</span></span>
+<span class=3D"line-number">2</span> <span class=3D"hljs-meta">#<span class=
+=3D"hljs-keyword">include</span> <span class=3D"hljs-string">&lt;signal.h&g=
+t;</span></span>
+<span class=3D"line-number">3</span> <span class=3D"hljs-meta">#<span class=
+=3D"hljs-keyword">include</span> <span class=3D"hljs-string">&lt;stdint.h&g=
+t;</span></span>
+<span class=3D"line-number">4</span> <span class=3D"hljs-meta">#<span class=
+=3D"hljs-keyword">include</span> <span class=3D"hljs-string">&lt;sys/event.=
+h&gt;</span></span>
+<span class=3D"line-number">5</span> <span class=3D"hljs-meta">#<span class=
+=3D"hljs-keyword">include</span> <span class=3D"hljs-string">&lt;sys/wait.h=
+&gt;</span></span>
+<span class=3D"line-number">6</span> <span class=3D"hljs-meta">#<span class=
+=3D"hljs-keyword">include</span> <span class=3D"hljs-string">&lt;unistd.h&g=
+t;</span></span>
+<span class=3D"line-number">7</span>=20
+<span class=3D"line-number">8</span> <span class=3D"hljs-type">int</span> <=
+span class=3D"hljs-title function_">main</span><span class=3D"hljs-params">=
+(<span class=3D"hljs-type">int</span> argc, <span class=3D"hljs-type">char<=
+/span> *argv[])</span> {
+<span class=3D"line-number">9</span>   (<span class=3D"hljs-type">void</spa=
+n>)argc;
+<span class=3D"line-number">10</span>=20
+<span class=3D"line-number">11</span>   <span class=3D"hljs-type">uint32_t<=
+/span> wait_ms =3D <span class=3D"hljs-number">128</span>;
+<span class=3D"line-number">12</span>   <span class=3D"hljs-type">int</span=
+> <span class=3D"hljs-built_in">queue</span> =3D kqueuex(KQUEUE_CLOEXEC);
+<span class=3D"line-number">13</span>=20
+<span class=3D"line-number">14</span>   <span class=3D"hljs-keyword">for</s=
+pan> (<span class=3D"hljs-type">int</span> retry =3D <span class=3D"hljs-nu=
+mber">0</span>; retry &lt; <span class=3D"hljs-number">10</span>; retry +=
+=3D <span class=3D"hljs-number">1</span>) {
+<span class=3D"line-number">15</span>     <span class=3D"hljs-type">int</sp=
+an> child_pid =3D fork();
+<span class=3D"line-number">16</span>     <span class=3D"hljs-keyword">if</=
+span> (<span class=3D"hljs-number">-1</span> =3D=3D child_pid) {
+<span class=3D"line-number">17</span>       <span class=3D"hljs-keyword">re=
+turn</span> errno;
+<span class=3D"line-number">18</span>     }
+<span class=3D"line-number">19</span>=20
+<span class=3D"line-number">20</span>     <span class=3D"hljs-keyword">if</=
+span> (<span class=3D"hljs-number">0</span> =3D=3D child_pid) { <span class=
+=3D"hljs-comment">// Child</span>
+<span class=3D"line-number">21</span>       argv +=3D <span class=3D"hljs-n=
+umber">1</span>;
+<span class=3D"line-number">22</span>       <span class=3D"hljs-keyword">if=
+</span> (<span class=3D"hljs-number">-1</span> =3D=3D execvp(argv[<span cla=
+ss=3D"hljs-number">0</span>], argv)) {
+<span class=3D"line-number">23</span>         <span class=3D"hljs-keyword">=
+return</span> errno;
+<span class=3D"line-number">24</span>       }
+<span class=3D"line-number">25</span>       __builtin_unreachable();
+<span class=3D"line-number">26</span>     }
+<span class=3D"line-number">27</span>=20
+<span class=3D"line-number">28</span>     <span class=3D"hljs-class"><span =
+class=3D"hljs-keyword">struct</span> <span class=3D"hljs-title">kevent</spa=
+n> <span class=3D"hljs-title">change_list</span> =3D</span> {
+<span class=3D"line-number">29</span>         .ident =3D child_pid,
+<span class=3D"line-number">30</span>         .filter =3D EVFILT_PROC,
+<span class=3D"line-number">31</span>         .fflags =3D NOTE_EXIT,
+<span class=3D"line-number">32</span>         .flags =3D EV_ADD | EV_CLEAR,
+<span class=3D"line-number">33</span>     };
+<span class=3D"line-number">34</span>=20
+<span class=3D"line-number">35</span>     <span class=3D"hljs-class"><span =
+class=3D"hljs-keyword">struct</span> <span class=3D"hljs-title">kevent</spa=
+n> <span class=3D"hljs-title">event_list</span> =3D</span> {<span class=3D"=
+hljs-number">0</span>};
+<span class=3D"line-number">36</span>=20
+<span class=3D"line-number">37</span>     <span class=3D"hljs-class"><span =
+class=3D"hljs-keyword">struct</span> <span class=3D"hljs-title">timespec</s=
+pan> <span class=3D"hljs-title">timeout</span> =3D</span> {
+<span class=3D"line-number">38</span>         .tv_sec =3D wait_ms / <span c=
+lass=3D"hljs-number">1000</span>,
+<span class=3D"line-number">39</span>         .tv_nsec =3D (wait_ms % <span=
+ class=3D"hljs-number">1000</span>) * <span class=3D"hljs-number">1000</spa=
+n> * <span class=3D"hljs-number">1000</span>,
+<span class=3D"line-number">40</span>     };
+<span class=3D"line-number">41</span>=20
+<span class=3D"line-number">42</span>     <span class=3D"hljs-type">int</sp=
+an> ret =3D kevent(<span class=3D"hljs-built_in">queue</span>, &amp;change_=
+list, <span class=3D"hljs-number">1</span>, &amp;event_list, <span class=3D=
+"hljs-number">1</span>, &amp;timeout);
+<span class=3D"line-number">43</span>     <span class=3D"hljs-keyword">if</=
+span> (<span class=3D"hljs-number">-1</span> =3D=3D ret) { <span class=3D"h=
+ljs-comment">// Error</span>
+<span class=3D"line-number">44</span>       <span class=3D"hljs-keyword">re=
+turn</span> errno;
+<span class=3D"line-number">45</span>     }
+<span class=3D"line-number">46</span>     <span class=3D"hljs-keyword">if</=
+span> (<span class=3D"hljs-number">1</span> =3D=3D ret) { <span class=3D"hl=
+js-comment">// Child finished.</span>
+<span class=3D"line-number">47</span>       <span class=3D"hljs-type">int</=
+span> status =3D <span class=3D"hljs-number">0</span>;
+<span class=3D"line-number">48</span>       <span class=3D"hljs-keyword">if=
+</span> (<span class=3D"hljs-number">-1</span> =3D=3D wait(&amp;status)) {
+<span class=3D"line-number">49</span>         <span class=3D"hljs-keyword">=
+return</span> errno;
+<span class=3D"line-number">50</span>       }
+<span class=3D"line-number">51</span>       <span class=3D"hljs-keyword">if=
+</span> (WIFEXITED(status) &amp;&amp; <span class=3D"hljs-number">0</span> =
+=3D=3D WEXITSTATUS(status)) {
+<span class=3D"line-number">52</span>         <span class=3D"hljs-keyword">=
+return</span> <span class=3D"hljs-number">0</span>;
+<span class=3D"line-number">53</span>       }
+<span class=3D"line-number">54</span>     }
+<span class=3D"line-number">55</span>=20
+<span class=3D"line-number">56</span>     kill(child_pid, SIGKILL);
+<span class=3D"line-number">57</span>     wait(<span class=3D"hljs-literal"=
+>NULL</span>);
+<span class=3D"line-number">58</span>=20
+<span class=3D"line-number">59</span>     change_list =3D (<span class=3D"h=
+ljs-keyword">struct</span> kevent){
+<span class=3D"line-number">60</span>         .ident =3D child_pid,
+<span class=3D"line-number">61</span>         .filter =3D EVFILT_PROC,
+<span class=3D"line-number">62</span>         .fflags =3D NOTE_EXIT,
+<span class=3D"line-number">63</span>         .flags =3D EV_DELETE,
+<span class=3D"line-number">64</span>     };
+<span class=3D"line-number">65</span>     kevent(<span class=3D"hljs-built_=
+in">queue</span>, &amp;change_list, <span class=3D"hljs-number">1</span>, <=
+span class=3D"hljs-literal">NULL</span>, <span class=3D"hljs-number">0</spa=
+n>, <span class=3D"hljs-literal">NULL</span>);
+<span class=3D"line-number">66</span>=20
+<span class=3D"line-number">67</span>     usleep(wait_ms * <span class=3D"h=
+ljs-number">1000</span>);
+<span class=3D"line-number">68</span>     wait_ms *=3D <span class=3D"hljs-=
+number">2</span>;
+<span class=3D"line-number">69</span>   }
+<span class=3D"line-number">70</span>   <span class=3D"hljs-keyword">return=
+</span> <span class=3D"hljs-number">1</span>;
+<span class=3D"line-number">71</span> }</code></pre>
+<p>The only surprising thing, perhaps, is that a <code class=3D"code-no-lin=
+e-numbers">kqueue</code> is stateful, so once the child process exited by i=
+tself or was killed, we have to remove the watcher on its PID, since the ne=
+xt time we spawn a child process, the PID will very likely be different. <c=
+ode class=3D"code-no-line-numbers">kqueue</code> offers the flag <code clas=
+s=3D"code-no-line-numbers">EV_ONESHOT</code>, which automatically deletes t=
+he event from the queue once it has been consumed by us. However, it would =
+not help in all cases: if the timeout triggers, no event was consumed, and =
+we have to kill the child process, which creates an event in the queue! So =
+we have to always consume/delete the event from the queue right before we r=
+etry, with a second <code class=3D"code-no-line-numbers">kevent</code> call=
+. That's the same situation as with the self-pipe approach where we uncondi=
+tionally <code class=3D"code-no-line-numbers">read</code> from the pipe to =
+'clear' it before retrying.</p>
+<p>I love that <code class=3D"code-no-line-numbers">kqueue</code> works wit=
+h every kind of Unix entity: file descriptor, pipes, PIDs, Vnodes, sockets,=
+ etc. Even signals! However, I am not sure that I love its statefulness. I =
+find the <code class=3D"code-no-line-numbers">poll</code> API simpler, sinc=
+e it's stateless. But perhaps this behavior is necessary for some corner ca=
+ses or for performance to avoid the linear scanning that <code class=3D"cod=
+e-no-line-numbers">poll</code> entails? It's interesting to observe that Li=
+nux's <code class=3D"code-no-line-numbers">epoll</code> went the same route=
+ as <code class=3D"code-no-line-numbers">kqueue</code> with a similar API, =
+however, <code class=3D"code-no-line-numbers">epoll</code> can only watch p=
+lain file descriptors.</p>
+<h3 id=3D"a-parenthesis-libkqueue">
+	<a class=3D"title" href=3D"https://gaultier.github.io/blog/way_too_many_wa=
+ys_to_wait_for_a_child_process_with_a_timeout.html#a-parenthesis-libkqueue"=
+>A parenthesis: libkqueue</a>
+	<a class=3D"hash-anchor" href=3D"https://gaultier.github.io/blog/way_too_m=
+any_ways_to_wait_for_a_child_process_with_a_timeout.html#a-parenthesis-libk=
+queue" aria-hidden=3D"true"></a>
+</h3>
+<p><code class=3D"code-no-line-numbers">kqueue</code> is only for MacOS and=
+ BSDs....Or is it?</p>
+<p>There is this library, <a href=3D"https://github.com/mheily/libkqueue">l=
+ibkqueue</a>, that acts as a compatibility layer to be able to use <code cl=
+ass=3D"code-no-line-numbers">kqueue</code> on all major operating systems, =
+mainly Windows, Linux, and even Solaris/illumos!</p>
+<p>So...How do they do it then? How can we, on an OS like Linux, watch a PI=
+D with the <code class=3D"code-no-line-numbers">kqueue</code> API, when the=
+ OS does not support that functionality (neither with <code class=3D"code-n=
+o-line-numbers">poll</code> or <code class=3D"code-no-line-numbers">epoll</=
+code>)? Well, the solution is actually very simple:</p>
+<ul>
+<li>On Linux 5.3+, they use <code class=3D"code-no-line-numbers">pidfd_open=
+</code> + <code class=3D"code-no-line-numbers">poll/epoll</code>. Hey, we j=
+ust did that a few sections above!</li>
+<li>On older versions of Linux, they handle the signals, like GNU's <code c=
+lass=3D"code-no-line-numbers">timeout</code>. It has a number of known shor=
+tcomings which is testament to the hardships of using signals. To just quot=
+e one piece:
+<blockquote>
+<p>Because the Linux kernel coalesces SIGCHLD (and other signals), the only=
+ way to reliably determine if a monitored process has exited, is to loop th=
+rough all PIDs registered by any kqueue when we receive a SIGCHLD. This inv=
+olves many calls to waitid(2) and may have a negative performance impact.</=
+p>
+</blockquote>
+</li>
+</ul>
+<h3 id=3D"another-parenthesis-solaris-illumos-s-ports">
+	<a class=3D"title" href=3D"https://gaultier.github.io/blog/way_too_many_wa=
+ys_to_wait_for_a_child_process_with_a_timeout.html#another-parenthesis-sola=
+ris-illumos-s-ports">Another parenthesis: Solaris/illumos's ports</a>
+	<a class=3D"hash-anchor" href=3D"https://gaultier.github.io/blog/way_too_m=
+any_ways_to_wait_for_a_child_process_with_a_timeout.html#another-parenthesi=
+s-solaris-illumos-s-ports" aria-hidden=3D"true"></a>
+</h3>
+<p>So, if it was not enough that each major OS has its own way to watch man=
+y different kinds of entities (Windows has its own thing called <a href=3D"=
+https://learn.microsoft.com/en-us/windows/win32/fileio/i-o-completion-ports=
+">I/O completion ports</a>, MacOS &amp; BSDs have <code class=3D"code-no-li=
+ne-numbers">kqueue</code>, Linux has <code class=3D"code-no-line-numbers">e=
+poll</code>), Solaris/illumos shows up and says: Watch me do my own thing. =
+Well actually I do not know the chronology, they might in fact have been fi=
+rst, and some illumos kernel developers (namely Brian Cantrill in the fabul=
+ous <a href=3D"https://www.youtube.com/watch?v=3DwTVfAMRj-7E">Cantrillogy</=
+a>) have admitted that it would have been better for everyone if they also =
+had adopted <code class=3D"code-no-line-numbers">kqueue</code>.</p>
+<p>Anyways, their own system is called <a href=3D"https://www.illumos.org/m=
+an/3C/port_create">port</a> (or is it ports?) and it looks so similar to <c=
+ode class=3D"code-no-line-numbers">kqueue</code> it's almost painful. And w=
+eirdly, they support all the different kinds of entities that <code class=
+=3D"code-no-line-numbers">kqueue</code> supports <em>except</em> PIDs! And =
+I am not sure that they support process descriptors either e.g. <code class=
+=3D"code-no-line-numbers">pidfd_open</code>. However, they have an extensiv=
+e compatibility layer for Linux so perhaps they do there.</p>
+<p><em>EDIT: illumos has <a href=3D"https://illumos.org/man/3PROC/Pctlfd">P=
+ctlfd</a> which seems to give a file descriptor for a given process, and th=
+is file descriptor could then be used <code class=3D"code-no-line-numbers">=
+port_create</code> or <code class=3D"code-no-line-numbers">poll</code>.</em=
+></p>
+<h2 id=3D"seventh-approach-linux-s-io-uring">
+	<a class=3D"title" href=3D"https://gaultier.github.io/blog/way_too_many_wa=
+ys_to_wait_for_a_child_process_with_a_timeout.html#seventh-approach-linux-s=
+-io-uring">Seventh approach: Linux's io_uring</a>
+	<a class=3D"hash-anchor" href=3D"https://gaultier.github.io/blog/way_too_m=
+any_ways_to_wait_for_a_child_process_with_a_timeout.html#seventh-approach-l=
+inux-s-io-uring" aria-hidden=3D"true"></a>
+</h2>
+<p><code class=3D"code-no-line-numbers">io_uring</code> is the last candida=
+te to enter the already packed ring (eh) of different-yet-similar ways to d=
+o 'I/O multiplexing', meaning to wait with a timeout on various kinds of en=
+tities to do interesting 'stuff'. We queue a system call e.g. <code class=
+=3D"code-no-line-numbers">wait</code>, as well as a timeout, and we wait fo=
+r either to complete. If <code class=3D"code-no-line-numbers">wait</code> c=
+ompleted first and the exit status is a success, we exit. Otherwise, we ret=
+ry. Familiar stuff at this point. <code class=3D"code-no-line-numbers">io_u=
+ring</code> essentially makes every system call asynchronous with a uniform=
+ API. That's exactly what we want! <code class=3D"code-no-line-numbers">io_=
+uring</code> only exposes <code class=3D"code-no-line-numbers">waitid</code=
+> and only in very recent versions, which is completely fine.</p>
+<p>Incidentally, this approach is exactly what <code class=3D"code-no-line-=
+numbers">liburing</code> does in a <a href=3D"https://github.com/axboe/libu=
+ring/blob/fd3e498/test/waitid.c#L58">unit test</a>.</p>
+<p>Alternatively, we can only queue the <code class=3D"code-no-line-numbers=
+">waitid</code> and use <code class=3D"code-no-line-numbers">io_uring_wait_=
+cqe_timeout</code> to mimick <code class=3D"code-no-line-numbers">poll(...,=
+ timeout)</code>:</p>
+<pre><code class=3D"language-c hljs"><span class=3D"line-number">1</span> <=
+span class=3D"hljs-meta">#<span class=3D"hljs-keyword">define</span> _DEFAU=
+LT_SOURCE</span>
+<span class=3D"line-number">2</span> <span class=3D"hljs-meta">#<span class=
+=3D"hljs-keyword">include</span> <span class=3D"hljs-string">&lt;liburing.h=
+&gt;</span></span>
+<span class=3D"line-number">3</span> <span class=3D"hljs-meta">#<span class=
+=3D"hljs-keyword">include</span> <span class=3D"hljs-string">&lt;sys/wait.h=
+&gt;</span></span>
+<span class=3D"line-number">4</span> <span class=3D"hljs-meta">#<span class=
+=3D"hljs-keyword">include</span> <span class=3D"hljs-string">&lt;unistd.h&g=
+t;</span></span>
+<span class=3D"line-number">5</span>=20
+<span class=3D"line-number">6</span> <span class=3D"hljs-type">int</span> <=
+span class=3D"hljs-title function_">main</span><span class=3D"hljs-params">=
+(<span class=3D"hljs-type">int</span> argc, <span class=3D"hljs-type">char<=
+/span> *argv[])</span> {
+<span class=3D"line-number">7</span>   (<span class=3D"hljs-type">void</spa=
+n>)argc;
+<span class=3D"line-number">8</span>=20
+<span class=3D"line-number">9</span>   <span class=3D"hljs-class"><span cla=
+ss=3D"hljs-keyword">struct</span> <span class=3D"hljs-title">io_uring</span=
+> <span class=3D"hljs-title">ring</span> =3D</span> {<span class=3D"hljs-nu=
+mber">0</span>};
+<span class=3D"line-number">10</span>   <span class=3D"hljs-keyword">if</sp=
+an> (io_uring_queue_init(<span class=3D"hljs-number">2</span>, &amp;ring,
+<span class=3D"line-number">11</span>                           IORING_SETU=
+P_SINGLE_ISSUER |
+<span class=3D"line-number">12</span>                               IORING_=
+SETUP_DEFER_TASKRUN) &lt; <span class=3D"hljs-number">0</span>) {
+<span class=3D"line-number">13</span>     <span class=3D"hljs-keyword">retu=
+rn</span> <span class=3D"hljs-number">1</span>;
+<span class=3D"line-number">14</span>   }
+<span class=3D"line-number">15</span>=20
+<span class=3D"line-number">16</span>   <span class=3D"hljs-type">uint32_t<=
+/span> wait_ms =3D <span class=3D"hljs-number">128</span>;
+<span class=3D"line-number">17</span>=20
+<span class=3D"line-number">18</span>   <span class=3D"hljs-keyword">for</s=
+pan> (<span class=3D"hljs-type">int</span> retry =3D <span class=3D"hljs-nu=
+mber">0</span>; retry &lt; <span class=3D"hljs-number">10</span>; retry +=
+=3D <span class=3D"hljs-number">1</span>) {
+<span class=3D"line-number">19</span>     <span class=3D"hljs-type">int</sp=
+an> child_pid =3D fork();
+<span class=3D"line-number">20</span>     <span class=3D"hljs-keyword">if</=
+span> (<span class=3D"hljs-number">-1</span> =3D=3D child_pid) {
+<span class=3D"line-number">21</span>       <span class=3D"hljs-keyword">re=
+turn</span> errno;
+<span class=3D"line-number">22</span>     }
+<span class=3D"line-number">23</span>=20
+<span class=3D"line-number">24</span>     <span class=3D"hljs-keyword">if</=
+span> (<span class=3D"hljs-number">0</span> =3D=3D child_pid) { <span class=
+=3D"hljs-comment">// Child</span>
+<span class=3D"line-number">25</span>       argv +=3D <span class=3D"hljs-n=
+umber">1</span>;
+<span class=3D"line-number">26</span>       <span class=3D"hljs-keyword">if=
+</span> (<span class=3D"hljs-number">-1</span> =3D=3D execvp(argv[<span cla=
+ss=3D"hljs-number">0</span>], argv)) {
+<span class=3D"line-number">27</span>         <span class=3D"hljs-keyword">=
+return</span> errno;
+<span class=3D"line-number">28</span>       }
+<span class=3D"line-number">29</span>       __builtin_unreachable();
+<span class=3D"line-number">30</span>     }
+<span class=3D"line-number">31</span>=20
+<span class=3D"line-number">32</span>     <span class=3D"hljs-class"><span =
+class=3D"hljs-keyword">struct</span> <span class=3D"hljs-title">io_uring_sq=
+e</span> *<span class=3D"hljs-title">sqe</span> =3D</span> <span class=3D"h=
+ljs-literal">NULL</span>;
+<span class=3D"line-number">33</span>=20
+<span class=3D"line-number">34</span>     <span class=3D"hljs-comment">// Q=
+ueue `waitid`.</span>
+<span class=3D"line-number">35</span>     sqe =3D io_uring_get_sqe(&amp;rin=
+g);
+<span class=3D"line-number">36</span>     <span class=3D"hljs-type">siginfo=
+_t</span> si =3D {<span class=3D"hljs-number">0</span>};
+<span class=3D"line-number">37</span>     io_uring_prep_waitid(sqe, P_PID, =
+(<span class=3D"hljs-type">id_t</span>)child_pid, &amp;si, WEXITED, <span c=
+lass=3D"hljs-number">0</span>);
+<span class=3D"line-number">38</span>     sqe-&gt;user_data =3D <span class=
+=3D"hljs-number">1</span>;
+<span class=3D"line-number">39</span>=20
+<span class=3D"line-number">40</span>     io_uring_submit(&amp;ring);
+<span class=3D"line-number">41</span>=20
+<span class=3D"line-number">42</span>     <span class=3D"hljs-class"><span =
+class=3D"hljs-keyword">struct</span> __<span class=3D"hljs-title">kernel_ti=
+mespec</span> <span class=3D"hljs-title">ts</span> =3D</span> {
+<span class=3D"line-number">43</span>         .tv_sec =3D wait_ms / <span c=
+lass=3D"hljs-number">1000</span>,
+<span class=3D"line-number">44</span>         .tv_nsec =3D (wait_ms % <span=
+ class=3D"hljs-number">1000</span>) * <span class=3D"hljs-number">1000</spa=
+n> * <span class=3D"hljs-number">1000</span>,
+<span class=3D"line-number">45</span>     };
+<span class=3D"line-number">46</span>     <span class=3D"hljs-class"><span =
+class=3D"hljs-keyword">struct</span> <span class=3D"hljs-title">io_uring_cq=
+e</span> *<span class=3D"hljs-title">cqe</span> =3D</span> <span class=3D"h=
+ljs-literal">NULL</span>;
+<span class=3D"line-number">47</span>=20
+<span class=3D"line-number">48</span>     <span class=3D"hljs-type">int</sp=
+an> ret =3D io_uring_wait_cqe_timeout(&amp;ring, &amp;cqe, &amp;ts);
+<span class=3D"line-number">49</span>=20
+<span class=3D"line-number">50</span>     <span class=3D"hljs-comment">// I=
+f child exited successfully: the end.</span>
+<span class=3D"line-number">51</span>     <span class=3D"hljs-keyword">if</=
+span> (ret =3D=3D <span class=3D"hljs-number">0</span> &amp;&amp; cqe-&gt;r=
+es &gt;=3D <span class=3D"hljs-number">0</span> &amp;&amp; cqe-&gt;user_dat=
+a =3D=3D <span class=3D"hljs-number">1</span> &amp;&amp;
+<span class=3D"line-number">52</span>         WIFEXITED(si.si_status) &amp;=
+&amp; <span class=3D"hljs-number">0</span> =3D=3D WEXITSTATUS(si.si_status)=
+) {
+<span class=3D"line-number">53</span>       <span class=3D"hljs-keyword">re=
+turn</span> <span class=3D"hljs-number">0</span>;
+<span class=3D"line-number">54</span>     }
+<span class=3D"line-number">55</span>     <span class=3D"hljs-keyword">if</=
+span> (ret =3D=3D <span class=3D"hljs-number">0</span>) {
+<span class=3D"line-number">56</span>       io_uring_cqe_seen(&amp;ring, cq=
+e);
+<span class=3D"line-number">57</span>     } <span class=3D"hljs-keyword">el=
+se</span> {
+<span class=3D"line-number">58</span>       kill(child_pid, SIGKILL);
+<span class=3D"line-number">59</span>       <span class=3D"hljs-comment">//=
+ Drain the CQE.</span>
+<span class=3D"line-number">60</span>       ret =3D io_uring_wait_cqe(&amp;=
+ring, &amp;cqe);
+<span class=3D"line-number">61</span>       io_uring_cqe_seen(&amp;ring, cq=
+e);
+<span class=3D"line-number">62</span>     }
+<span class=3D"line-number">63</span>=20
+<span class=3D"line-number">64</span>     wait(<span class=3D"hljs-literal"=
+>NULL</span>);
+<span class=3D"line-number">65</span>=20
+<span class=3D"line-number">66</span>     wait_ms *=3D <span class=3D"hljs-=
+number">2</span>;
+<span class=3D"line-number">67</span>     usleep(wait_ms * <span class=3D"h=
+ljs-number">1000</span>);
+<span class=3D"line-number">68</span>   }
+<span class=3D"line-number">69</span>   <span class=3D"hljs-keyword">return=
+</span> <span class=3D"hljs-number">1</span>;
+<span class=3D"line-number">70</span> }</code></pre>
+<p>The only difficulty here is in case of timeout: we kill the child direct=
+ly, and we need to consume and discard the <code class=3D"code-no-line-numb=
+ers">waitid</code> entry in the completion queue. Just like <code class=3D"=
+code-no-line-numbers">kqueue</code>.</p>
+<p>One caveat for io_uring: it's only supported on modern kernels (5.1+).</=
+p>
+<p>Another caveat: some cloud providers e.g. Google Cloud disable <code cla=
+ss=3D"code-no-line-numbers">io_uring</code> due to security concerns when r=
+unning untrusted code. So it's not ubiquitous.</p>
+<h2 id=3D"eigth-approach-threads">
+	<a class=3D"title" href=3D"https://gaultier.github.io/blog/way_too_many_wa=
+ys_to_wait_for_a_child_process_with_a_timeout.html#eigth-approach-threads">=
+Eigth approach: Threads</a>
+	<a class=3D"hash-anchor" href=3D"https://gaultier.github.io/blog/way_too_m=
+any_ways_to_wait_for_a_child_process_with_a_timeout.html#eigth-approach-thr=
+eads" aria-hidden=3D"true"></a>
+</h2>
+<p>Readers have <a href=3D"https://news.ycombinator.com/vote?id=3D42107420&=
+amp;how=3Dup&amp;auth=3D20ac3216e63a60ca250d82b6a051d7dfaa9f18c9&amp;goto=
+=3Ditem%3Fid%3D42103200#42107420">pointed out</a> that threads are also a s=
+olution, albeit a suboptimal one. Here's the approach:</p>
+<ol>
+<li>Spawn a thread, it will be in charge of spawning the child process, sto=
+ring the child PID in a global thread-safe variable (e.g. protected by a mu=
+tex). It then <code class=3D"code-no-line-numbers">wait</code>s on the chil=
+d in a blocking way.</li>
+<li>If the child exits, <code class=3D"code-no-line-numbers">wait</code> wi=
+ll return the status, which is also written in a global thread-safe variabl=
+e, and the thread ends.</li>
+<li>In the main thread, wait on the other thread with a timeout, e.g. with =
+<code class=3D"code-no-line-numbers">pthread_timedjoin_np</code>.</li>
+<li>If the child did not exit successfully, this is the same as usual: kill=
+, wait, sleep, and retry.</li>
+</ol>
+<p>If the threads library supports returning a value from a thread, like <c=
+ode class=3D"code-no-line-numbers">pthread</code> or C11 threads do, that c=
+ould be used to return the exit status of the child to simplify the code a =
+bit.</p>
+<p>Also, we could make the thread spawning logic a bit more efficient by no=
+t spawning a new thread for each retry, if we wanted to. Instead, we commun=
+icate with the other thread with a queue or such to instruct it to spawn th=
+e child again. It's more complex though.</p>
+<p>Now, this approach works but is kind of cumbersome (as noted by the read=
+ers), because threads interact in surprising ways with signals (yay, anothe=
+r thing to watch out for!) so we may have to set up signal masks to block/i=
+gnore some, and we must take care of not introducing data-races due to the =
+global variables.</p>
+<p>Unless the problem is embarassingly parallel and the threads share nothi=
+ng (e.g.: dividing an array into pieces and each thread gets its own piece =
+to work on), I am reminded of the adage: "You had two problems. You reach o=
+ut for X. You now have 3 problems". And threads are often the X.</p>
+<p>Still, it's a useful tool in the toolbox.</p>
+<h2 id=3D"ninth-approach-active-polling">
+	<a class=3D"title" href=3D"https://gaultier.github.io/blog/way_too_many_wa=
+ys_to_wait_for_a_child_process_with_a_timeout.html#ninth-approach-active-po=
+lling">Ninth approach: Active polling.</a>
+	<a class=3D"hash-anchor" href=3D"https://gaultier.github.io/blog/way_too_m=
+any_ways_to_wait_for_a_child_process_with_a_timeout.html#ninth-approach-act=
+ive-polling" aria-hidden=3D"true"></a>
+</h2>
+<p>That's looping in user code with micro-sleeping to actively poll on the =
+child status in a non-blocking way, for example using <code class=3D"code-n=
+o-line-numbers">wait(..., WNOHANG)</code>. Unless you have a very bizzare u=
+se case and you know what you are doing, please do not do this. This is unn=
+ecessary, bad for power consumption, and all we achieve is noticing late th=
+at the child ended. This approach is just here for completeness.</p>
+<h2 id=3D"conclusion">
+	<a class=3D"title" href=3D"https://gaultier.github.io/blog/way_too_many_wa=
+ys_to_wait_for_a_child_process_with_a_timeout.html#conclusion">Conclusion</=
+a>
+	<a class=3D"hash-anchor" href=3D"https://gaultier.github.io/blog/way_too_m=
+any_ways_to_wait_for_a_child_process_with_a_timeout.html#conclusion" aria-h=
+idden=3D"true"></a>
+</h2>
+<p>I find signals and spawning child process to be the hardest parts of Uni=
+x. Evidently this is not a rare opinion, looking at the development in thes=
+e areas: process descriptors, the various expansions to the venerable <code=
+ class=3D"code-no-line-numbers">fork</code> with <code class=3D"code-no-lin=
+e-numbers">vfork</code>, <code class=3D"code-no-line-numbers">clone</code>,=
+ <code class=3D"code-no-line-numbers">clone3</code>, <code class=3D"code-no=
+-line-numbers">clone6</code>, a bazillion different ways to do I/O multiple=
+xing, etc.</p>
+<p>So what's the best approach then in a complex program? Let's recap:</p>
+<ul>
+<li>If you need maximum portability and are a Unix wizard, you can use <cod=
+e class=3D"code-no-line-numbers">sigsuspend</code>.</li>
+<li>If you are not afraid of signals, want a simpler API that still widely =
+supported, and the use case is very specific (like ours), you can use <code=
+ class=3D"code-no-line-numbers">sigtimedwait</code>.</li>
+<li>If you favor correctness and work with recent Linux and FreeBSD version=
+s, you can use process descriptors with shims to get the same API on both O=
+Ses. That's probably my favorite option if it's applicable.</li>
+<li>If you only care about MacOS and BSDs (or accept to use <code class=3D"=
+code-no-line-numbers">libkqueue</code> on Linux), you can use <code class=
+=3D"code-no-line-numbers">kqueue</code> because it works out of the box wit=
+h PIDs, you avoid signals completely, and it's used in all the big librarie=
+s out of there e.g. <code class=3D"code-no-line-numbers">libuv</code>.</li>
+<li>If you only care about bleeding edge Linux, are already using <code cla=
+ss=3D"code-no-line-numbers">io_uring</code> in your code, and are bold enou=
+gh to add <code class=3D"code-no-line-numbers">wait</code> support to <code=
+ class=3D"code-no-line-numbers">io_uring</code>, you can use <code class=3D=
+"code-no-line-numbers">io_uring</code> (once you have merged it in mainline=
+ Linux!).</li>
+<li>If you only care about Linux and are afraid of using <code class=3D"cod=
+e-no-line-numbers">io_uring</code>, you can use <code class=3D"code-no-line=
+-numbers">signalfd</code> + <code class=3D"code-no-line-numbers">poll</code=
+>.</li>
+</ul>
+<p>I often look at complex code and think: what are the chances that this i=
+s correct? What are the chances that I missed something? Is there a way to =
+make it simplistic that it is obviously correct? And how can I limit the bl=
+ast of a bug I wrote? Will I understand this code in 3 months? When dealing=
+ with signals, I was constantly finding weird corner cases and timing issue=
+s leading to data races. You would not believe how many times I got my syst=
+em completely frozen while writing this article, because I accidentally for=
+k-bombed myself or simply forgot to reap zombie processes.</p>
+<p>And to be fair to the OS developers that have to implement them: I do no=
+t think they did a bad job! I am sure it's super hard to implement! It's ju=
+st that the whole concept and the available APIs are very easy to misuse. I=
+t's a good illustration of how a good API, the right abstraction, can enabl=
+e great programs, and a poor API, the wrong abstraction, can be the root ca=
+use of various bugs in many programs for decades.</p>
+<p>And OS developers have noticed and are working on new, better abstractio=
+ns!</p>
+<p>Process descriptors seem to me so straightforward, so obviously correct,=
+ that I would definitely favor them over signals. They simply remove entire=
+ classes of bugs. If these are not available to me, I would perhaps use <co=
+de class=3D"code-no-line-numbers">kqueue</code> instead (with <code class=
+=3D"code-no-line-numbers">libkqueue</code> emulation when necessary), becau=
+se it means my program can be extended easily to watch for over types of en=
+tities and I like that the API is very straightforward: one call to create =
+the queue and one call to use it.</p>
+<p>Finally, I regret that there is so much fragmentation across all operati=
+ng systems. Perhaps <code class=3D"code-no-line-numbers">io_uring</code> wi=
+ll become more than a Linuxism and spread to Windows, MacOS, the BSDs, and =
+illumos in the future?</p>
+<h2 id=3D"addendum-the-code">
+	<a class=3D"title" href=3D"https://gaultier.github.io/blog/way_too_many_wa=
+ys_to_wait_for_a_child_process_with_a_timeout.html#addendum-the-code">Adden=
+dum: The code</a>
+	<a class=3D"hash-anchor" href=3D"https://gaultier.github.io/blog/way_too_m=
+any_ways_to_wait_for_a_child_process_with_a_timeout.html#addendum-the-code"=
+ aria-hidden=3D"true"></a>
+</h2>
+<p>The code is available <a href=3D"https://github.com/gaultier/c/tree/mast=
+er/ueb">here</a>. It does not have any dependencies except libc (well, and =
+libkqueue for <code class=3D"code-no-line-numbers">kqueue.c</code>). All of=
+ these programs are in the worst case 27 KiB in size, with debug symbols en=
+abled and linking statically to musl. They do not allocate any memory thems=
+elves.
+For comparison, <a href=3D"https://github.com/rye/eb">eb</a> has 24 depende=
+ncies and is 1.2 MiB! That's roughly 50x times more.</p>
+<p><a href=3D"https://gaultier.github.io/blog"> =E2=8F=B4 Back to all artic=
+les</a></p>
+
+<blockquote id=3D"donate">
+  <p>If you enjoy what you're reading, you want to support me, and can affo=
+rd it: <a href=3D"https://paypal.me/philigaultier?country.x=3DDE&amp;locale=
+.x=3Den_US">Support me</a>. That allows me to write more cool articles!</p>
+</blockquote>
+
+<blockquote>
+  <p>
+    This blog is <a href=3D"https://github.com/gaultier/blog">open-source</=
+a>!
+    If you find a problem, please open a Github issue.
+    The content of this blog as well as the code snippets are under the <a =
+href=3D"https://en.wikipedia.org/wiki/BSD_licenses#3-clause_license_(%22BSD=
+_License_2.0%22,_%22Revised_BSD_License%22,_%22New_BSD_License%22,_or_%22Mo=
+dified_BSD_License%22)">BSD-3 License</a> which I also usually use for all =
+my personal projects. It's basically free for every use but you have to men=
+tion me as the original author.
+  </p>
+</blockquote>
+
+</div>
+
+
+</body></html>
+------MultipartBoundary--fWHeR7jw7jPztHWjmc0IErBlQLE1BhFFeYxt7HXaq8----
+Content-Type: text/css
+Content-Transfer-Encoding: quoted-printable
+Content-Location: https://gaultier.github.io/blog/main.css
+
+@charset "utf-8";
+
+.publication-date { font-style: italic; color: gray; }
+
+.article-title { display: inline-flex; justify-content: space-between; widt=
+h: 100%; align-items: center; }
+
+.article-prelude { display: inline-flex; justify-content: space-between; wi=
+dth: 100%; }
+
+p { padding: 0.5rem; }
+
+#banner { background-color: rgb(251, 140, 0); display: inline-flex; width: =
+100%; justify-content: space-between; align-items: center; }
+
+#banner > ul { list-style: none; padding: 0px 0.5rem; display: inline-flex;=
+ flex-wrap: wrap; justify-content: space-evenly; gap: 0.5rem; }
+
+#banner > ul > li { display: inline-flex; align-items: center; }
+
+#banner > ul > li > a:hover { background-color: rgb(255, 167, 38); }
+
+#banner > ul > li > a { text-decoration: none; border-radius: 8px; border: =
+15px; display: inline-block; padding: 0.2rem; }
+
+#banner > ul > li > a > svg { width: 2rem; height: 2rem; }
+
+#me { border-radius: 231px; border: 15px; padding: 0.5rem; max-width: 6rem;=
+ margin: 0px 1rem 0px 0px; }
+
+.body { font-size: 1.2rem; line-height: 2rem; margin: 0.7rem; }
+
+.articles > ul { list-style: none; width: 100%; padding: 0px; }
+
+.articles > ul > li { display: inline-flex; align-items: center; width: 100=
+%; }
+
+.home-link { margin-right: 1rem; }
+
+.home-link > a { text-decoration: none; color: rgb(230, 81, 0); font-weight=
+: bold; }
+
+.tag { border-radius: 10px; background-color: rgb(189, 189, 189); padding: =
+0.1rem 0.5rem; color: white; text-decoration: none; margin: 0.2rem; }
+
+.tags { display: inline-flex; flex-wrap: wrap; flex-shrink: 5; }
+
+.date { color: rgb(158, 158, 158); }
+
+#name { font-weight: bolder; display: inline-flex; flex-wrap: wrap; align-i=
+tems: center; margin: 0px; color: black; border-radius: 8px; border: 15px; =
+padding: 0px 0.5rem 0.5rem; }
+
+figure { display: flex; justify-content: center; flex-wrap: wrap; }
+
+figure > figcaption { width: 100%; text-align: center; }
+
+img, video { max-width: 90%; padding: 1rem; display: block; margin: auto; }
+
+hr { max-width: 30%; margin-top: 3rem; margin-bottom: 3rem; }
+
+body { margin: 0px 0px 5rem; font-family: monospace, sans-serif; }
+
+li { margin: 0.5rem; }
+
+blockquote { border-bottom: 1px solid gray; border-top: 1px solid gray; mar=
+gin: 3rem auto; max-width: 80%; color: rgb(76, 86, 106); padding: 0.1rem; }
+
+pre { white-space: pre-wrap; border: 1px solid grey; background: rgb(255, 2=
+43, 224) !important; }
+
+code { overflow-wrap: break-word; padding: 0rem 0.3rem 0rem 0rem !important=
+; background: rgb(255, 243, 224) !important; }
+
+pre > code.code-no-line-numbers { padding: 0.5rem !important; }
+
+code.code-no-line-numbers { padding: 0.1rem; }
+
+table { border-collapse: collapse; word-break: break-word; }
+
+figcaption { font-style: italic; font-weight: lighter; opacity: 0.8; }
+
+td, th { border: 1px solid black; padding: 0.5rem; text-align: center; }
+
+th { background: rgb(255, 250, 240); }
+
+h1 { margin: 3rem 2rem 3rem 0px; flex-basis: 90%; }
+
+h2, h3, h4, h5, h6 { margin: 3rem 2rem 1rem 0px; }
+
+a.title { color: initial; text-decoration: none !important; }
+
+details { display: inline-flex; }
+
+details:hover { cursor: pointer; }
+
+a.title:hover { cursor: pointer; color: blue; text-decoration: underline !i=
+mportant; }
+
+.hash-anchor { opacity: 0; color: blue; }
+
+.title:hover + .hash-anchor { opacity: 1; }
+
+.hash-anchor:hover { opacity: 1; }
+
+.hash-anchor::before { margin-left: 0.5rem; content: "#"; }
+
+#donate { margin-top: 8rem; text-align: center; }
+
+.line-number { background-color: rgb(255, 224, 178); width: 1.9rem; display=
+: inline-block; text-align: center; padding: 0.2rem; }
+
+@media only screen and (max-width: 450px) {
+  .line-number { display: none; }
+  code { padding-left: 0.3rem !important; }
+}
+
+details { width: 100%; }
+
+summary { width: 100%; text-align: center; font-weight: bold; }
+
+.footnotes { border-top: 1px solid grey; margin: 1rem; }
+------MultipartBoundary--fWHeR7jw7jPztHWjmc0IErBlQLE1BhFFeYxt7HXaq8----
+Content-Type: text/css
+Content-Transfer-Encoding: quoted-printable
+Content-Location: https://unpkg.com/@highlightjs/cdn-assets@11.8.0/styles/default.min.css
+
+@charset "utf-8";
+
+pre code.hljs { display: block; overflow-x: auto; padding: 1em; }
+
+code.hljs { padding: 3px 5px; }
+
+.hljs { background: rgb(243, 243, 243); color: rgb(68, 68, 68); }
+
+.hljs-comment { color: rgb(105, 112, 112); }
+
+.hljs-punctuation, .hljs-tag { color: rgba(68, 68, 68, 0.667); }
+
+.hljs-tag .hljs-attr, .hljs-tag .hljs-name { color: rgb(68, 68, 68); }
+
+.hljs-attribute, .hljs-doctag, .hljs-keyword, .hljs-meta .hljs-keyword, .hl=
+js-name, .hljs-selector-tag { font-weight: 700; }
+
+.hljs-deletion, .hljs-number, .hljs-quote, .hljs-selector-class, .hljs-sele=
+ctor-id, .hljs-string, .hljs-template-tag, .hljs-type { color: rgb(136, 0, =
+0); }
+
+.hljs-section, .hljs-title { color: rgb(136, 0, 0); font-weight: 700; }
+
+.hljs-link, .hljs-operator, .hljs-regexp, .hljs-selector-attr, .hljs-select=
+or-pseudo, .hljs-symbol, .hljs-template-variable, .hljs-variable { color: r=
+gb(171, 86, 86); }
+
+.hljs-literal { color: rgb(102, 153, 85); }
+
+.hljs-addition, .hljs-built_in, .hljs-bullet, .hljs-code { color: rgb(57, 1=
+15, 0); }
+
+.hljs-meta { color: rgb(31, 113, 153); }
+
+.hljs-meta .hljs-string { color: rgb(51, 136, 170); }
+
+.hljs-emphasis { font-style: italic; }
+
+.hljs-strong { font-weight: 700; }
+------MultipartBoundary--fWHeR7jw7jPztHWjmc0IErBlQLE1BhFFeYxt7HXaq8----
+Content-Type: image/jpeg
+Content-Transfer-Encoding: base64
+Content-Location: https://gaultier.github.io/blog/me.jpeg
+
+/9j/2wCEAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAx
+NDQ0Hyc5PTgyPC4zNDIBCQkJDAsMGA0NGDIhHCEyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIy
+MjIyMjIyMjIyMjIyMjIyMjIyMjIyMv/AABEIAZABkAMBIgACEQEDEQH/xAGiAAABBQEBAQEBAQAA
+AAAAAAAAAQIDBAUGBwgJCgsQAAIBAwMCBAMFBQQEAAABfQECAwAEEQUSITFBBhNRYQcicRQygZGh
+CCNCscEVUtHwJDNicoIJChYXGBkaJSYnKCkqNDU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hp
+anN0dXZ3eHl6g4SFhoeIiYqSk5SVlpeYmZqio6Slpqeoqaqys7S1tre4ubrCw8TFxsfIycrS09TV
+1tfY2drh4uPk5ebn6Onq8fLz9PX29/j5+gEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoLEQAC
+AQIEBAMEBwUEBAABAncAAQIDEQQFITEGEkFRB2FxEyIygQgUQpGhscEJIzNS8BVictEKFiQ04SXx
+FxgZGiYnKCkqNTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqCg4SFhoeIiYqS
+k5SVlpeYmZqio6Slpqeoqaqys7S1tre4ubrCw8TFxsfIycrS09TV1tfY2dri4+Tl5ufo6ery8/T1
+9vf4+fr/2gAMAwEAAhEDEQA/AMl5LtrZZRHFCYNqAITlRj+fH8q7jwqZ7nT7fbNA+DvYkkuyjrkd
+Pf8ACuetDCqNMqpJHt/vA5PQ8HtW74cmtLGIeWyLKcgMTkcnIHp1Jr52q0lqhxaUtTsRcw+Hit2W
+YQTsWZSMjnvkdK1ry+tL3TkAkIW4XEcikcE9OQfeuNi1K8vLabfb+dGoIjQAMuemBg5xWKyzadcx
+QZmS2eQ7FJ4yNvP6j869OnXjGkmgclJ3PVdKaRLOOCZmeVFG5j3qdbuMttbCtkgAn0OKwDdKm/yp
+gJWhjbg8r0P+NaNjZYm89jvYsfmHT610Rq81rILGbdfvrydiuAwwPcc4/rWLbazHJrEOnmZg4yBj
+HLAdKs+PLqTSxbvaI3myo6Lg8BsjHH515zp7Xc+sxT+V5ckLfvmB79AK8TEYaSqSlJ+hcZOx7Il8
+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
+SqUnuZJMkExFhn+8e/5U1daDP//Z
+
+------MultipartBoundary--fWHeR7jw7jPztHWjmc0IErBlQLE1BhFFeYxt7HXaq8------

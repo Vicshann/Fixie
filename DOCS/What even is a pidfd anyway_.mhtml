@@ -1,0 +1,981 @@
+From: <Saved by Blink>
+Snapshot-Content-Location: https://www.corsix.org/content/what-is-a-pidfd
+Subject: What even is a pidfd anyway?
+Date: Fri, 7 Feb 2025 20:49:27 -0000
+MIME-Version: 1.0
+Content-Type: multipart/related;
+	type="text/html";
+	boundary="----MultipartBoundary--ru991gQC3XeN4I0E1SjIQobIjQlxZDfyw68viGtBN7----"
+
+
+------MultipartBoundary--ru991gQC3XeN4I0E1SjIQobIjQlxZDfyw68viGtBN7----
+Content-Type: text/html
+Content-ID: <frame-33588DA2BFC5D18C482FD7B8C7F58B34@mhtml.blink>
+Content-Transfer-Encoding: quoted-printable
+Content-Location: https://www.corsix.org/content/what-is-a-pidfd
+
+<!DOCTYPE html><html lang=3D"en"><head><meta http-equiv=3D"Content-Type" co=
+ntent=3D"text/html; charset=3DUTF-8">
+   =20
+    <meta http-equiv=3D"X-UA-Compatible" content=3D"IE=3Dedge,chrome=3D1">
+    <title>What even is a pidfd anyway?</title>
+    <meta http-equiv=3D"cleartype" content=3D"on">
+    <link rel=3D"stylesheet" type=3D"text/css" href=3D"https://fonts.google=
+apis.com/css?family=3DMerriweather:300,700,700italic,300italic|Open+Sans:70=
+0,400">
+    <link rel=3D"stylesheet" href=3D"https://www.corsix.org/content/all.css=
+">
+    <meta name=3D"twitter:card" content=3D"summary">
+    <meta name=3D"twitter:creator" content=3D"@corsix">
+    <meta property=3D"og:url" content=3D"https://www.corsix.org/content/wha=
+t-is-a-pidfd">
+    <meta property=3D"og:title" content=3D"What even is a pidfd anyway?">
+</head>
+<body>
+  <div class=3D"post">
+    <div class=3D"post-header">
+        <div class=3D"prev-post"><a title=3D"Older: C23 stdbit.h quick refe=
+rence, posted May 6, 2024" href=3D"https://www.corsix.org/content/stdbit-qu=
+ick-reference">&lt;</a></div>
+        <div class=3D"next-post"><a title=3D"Newer: (Ab)using gf2p8affineqb=
+ to turn indices into bits, posted May 22, 2024" href=3D"https://www.corsix=
+.org/content/abusing-gf2p8affineqb-indices-into-bits">&gt;</a></div>
+      <h1 class=3D"post-title">What even is a pidfd anyway?</h1>
+      <div class=3D"post-meta">
+        Posted at <a href=3D"https://www.corsix.org/">corsix.org</a> on May=
+ 16, 2024
+      </div>
+    </div>
+    <div class=3D"post-content">
+      <p>In recent versions of the Linux kernel, a pidfd is a special type =
+of file that holds a reference to a process. Notably, a pidfd allows for ce=
+rtain process-related operations to be performed in a race-free manner, and=
+ it allows <code>poll</code> / <code>select</code> / <code>epoll</code> to =
+be used to detect process termination.</p>
+<p>Before you get too excited:</p>
+<ul>
+<li>A pidfd does not let you hold a reference to an individual thread, only=
+ to a process (or in kernel terminology, a thread group leader).</li>
+<li>A pidfd does not hold a reference to a pid number, nor does holding ope=
+n a pidfd prevent the pid number of the underlying process from being reuse=
+d.</li>
+<li>A pidfd cannot circumvent the at-most-once semantics of retreiving the =
+exit code / status of a process via <code>wait</code> / <code>waitpid</code=
+> / <code>waitid</code>.</li>
+<li>Closing a pidfd does not terminate the underlying process.</li>
+</ul>
+<p>There are various ways of obtaining a pidfd:</p>
+<table><tbody><tr><th>Kernel version</th><th>glibc version</th><th>Function=
+</th></tr>
+<tr><td>5.2</td><td>2.2.5 / 2.31</td><td><a href=3D"https://www.corsix.org/=
+content/what-is-a-pidfd#pidfd-clone"><code>clone</code> with <code>CLONE_PI=
+DFD</code> flag</a></td></tr>
+<tr><td>5.3</td><td>N/A</td><td><a href=3D"https://www.corsix.org/content/w=
+hat-is-a-pidfd#pidfd-clone3"><code>clone3</code> with <code>CLONE_PIDFD</co=
+de> flag</a></td></tr>
+<tr><td>5.3 / 5.10</td><td>2.36</td><td><a href=3D"https://www.corsix.org/c=
+ontent/what-is-a-pidfd#pidfd-pidfd_open"><code>pidfd_open</code></a></td></=
+tr>
+<tr><td>5.4</td><td>2.39</td><td><a href=3D"https://www.corsix.org/content/=
+what-is-a-pidfd#pidfd-pidfd_spawn"><code>pidfd_spawn</code> / <code>pidfd_s=
+pawnp</code></a></td></tr>
+<tr><td>6.5</td><td>2.2.5 / N/A</td><td><a href=3D"https://www.corsix.org/c=
+ontent/what-is-a-pidfd#pidfd-SO_PEERPIDFD"><code>getsockopt</code> with <co=
+de>SO_PEERPIDFD</code> optname</a></td></tr>
+<tr><td>6.5</td><td>2.2.5 / 2.39</td><td><a href=3D"https://www.corsix.org/=
+content/what-is-a-pidfd#pidfd-SCM_PIDFD"><code>recvmsg</code> with <code>SC=
+M_PIDFD</code> cmsg_type</a></td></tr>
+</tbody></table>
+<p>Once you have a pidfd, there are a bunch of things you can do with it:</=
+p>
+<table><tbody><tr><th>Kernel version</th><th>glibc version</th><th>Function=
+</th></tr>
+<tr><td>5.1</td><td>2.36</td><td><a href=3D"https://www.corsix.org/content/=
+what-is-a-pidfd#pidfd-pidfd_send_signal"><code>pidfd_send_signal</code></a>=
+</td></tr>
+<tr><td>5.2 / 5.5</td><td>2.39</td><td><a href=3D"https://www.corsix.org/co=
+ntent/what-is-a-pidfd#pidfd-pidfd_getpid"><code>pidfd_getpid</code></a></td=
+></tr>
+<tr><td>5.3</td><td>2.2.5 / 2.3.2</td><td><a href=3D"https://www.corsix.org=
+/content/what-is-a-pidfd#pidfd-poll"><code>poll</code> / <code>select</code=
+> / <code>epoll</code></a></td></tr>
+<tr><td>5.4</td><td>2.2.5 / 2.36</td><td><a href=3D"https://www.corsix.org/=
+content/what-is-a-pidfd#pidfd-P_PIDFD"><code>waitid</code> with <code>P_PID=
+FD</code> mode</a></td></tr>
+<tr><td>5.6</td><td>2.36</td><td><a href=3D"https://www.corsix.org/content/=
+what-is-a-pidfd#pidfd-pidfd_getfd"><code>pidfd_getfd</code></a></td></tr>
+<tr><td>5.8</td><td>2.14</td><td><a href=3D"https://www.corsix.org/content/=
+what-is-a-pidfd#pidfd-setns"><code>setns</code></a></td></tr>
+<tr><td>5.10 / 5.12</td><td>2.36</td><td><a href=3D"https://www.corsix.org/=
+content/what-is-a-pidfd#pidfd-process_madvise"><code>process_madvise</code>=
+</a></td></tr>
+<tr><td>5.15</td><td>2.36</td><td><a href=3D"https://www.corsix.org/content=
+/what-is-a-pidfd#pidfd-process_mrelease"><code>process_mrelease</code></a><=
+/td></tr>
+<tr><td>6.9</td><td>2.2.5 / 2.28</td><td><a href=3D"https://www.corsix.org/=
+content/what-is-a-pidfd#pidfd-stat"><code>fstat</code> / <code>statx</code>=
+ for meaningful <code>stx_ino</code></a></td></tr>
+</tbody></table>
+<p>Some of the subsequent text refers to a process being <em>alive</em> or =
+<em>zombie</em> or <em>dead</em>. These terms come from the usual lifecycle=
+ of a unix process: it is initially <em>alive</em>, then transitions to <em=
+>zombie</em> when it terminates, and then transitions to <em>dead</em> once=
+ it is waited upon. As a quick summary of the states:</p>
+<table>
+<tbody><tr><th></th><th>Alive</th><th>Zombie</th><th>Dead</th></tr>
+<tr><th>Can execute code and receive signals</th><td>=E2=9C=85</td><td>=E2=
+=9D=8C</td><td>=E2=9D=8C</td></tr>
+<tr><th>Has pid number</th><td>=E2=9C=85</td><td>=E2=9C=85</td><td>=E2=9D=
+=8C</td></tr>
+<tr><th>Exit code / status retrievable</th><td>=E2=9D=8C</td><td>=E2=9C=85<=
+/td><td>=E2=9D=8C</td></tr>
+<tr><th>pidfd polls as readable</th><td>=E2=9D=8C</td><td>=E2=9C=85</td><td=
+>=E2=9C=85</td></tr>
+<tr><th>Cleaned up by kernel</th><td>=E2=9D=8C</td><td>=E2=9D=8C</td><td>=
+=E2=9C=85</td></tr>
+</tbody></table>
+<hr>
+<p><a name=3D"pidfd-clone"><strong><code>clone</code> with <code>CLONE_PIDF=
+D</code> flag</strong></a></p>
+<p>Available since: kernel 5.2, glibc 2.31 (or glibc 2.2.5 if you provide y=
+our own definition of <code>CLONE_PIDFD</code>; its value is <code>0x1000</=
+code>).</p>
+<p>If the <code>CLONE_PIDFD</code> flag is specified, then <code>clone</cod=
+e> returns a freshly allocated pidfd referring to the child (in <em>additio=
+n</em> to returning the pid number of the child). The <code>O_CLOEXEC</code=
+> flag is automatically set on the returned pidfd. Note that if <code>CLONE=
+_PIDFD</code> is specified, then <code>CLONE_THREAD</code> cannot be specif=
+ied, nor can <code>CLONE_DETACHED</code>. Furthermore, if <code>CLONE_PIDFD=
+</code> is specified, then <code>CLONE_PARENT_SETTID</code> cannot be speci=
+fied (unless using <code>clone3</code>).</p>
+<p>One of the arguments to <code>clone</code> is the signal number that the=
+ child will send to its parent when the child terminates. Setting this to a=
+nything other than <code>SIGCHLD</code> has several consequences:</p>
+<ul>
+<li>Calls to <code>wait</code> do not recognise the child.</li>
+<li>Calls to <code>waitpid</code> / <code>waitid</code> only recognise the =
+child if the <code>__WALL</code> or <code>__WCLONE</code> option is passed =
+(this is true even for <code>P_PIDFD</code> calls).</li>
+<li>The child will always transition to the zombie state upon termination a=
+nd stay there until waited upon, even if the parent's <code>SIGCHLD</code> =
+handler is <code>SIG_IGN</code> or has <code>SA_NOCLDWAIT</code>.</li>
+<li>When the child terminates, a signal <em>other</em> than <code>SIGCHLD</=
+code> will be sent to the parent (or no signal will be sent if the terminat=
+ion signal is set to zero).</li>
+</ul>
+<p>Note that if the child calls <code>execve</code> (or a similar <code>exe=
+c</code> function), then the termination signal number is reset to <code>SI=
+GCHLD</code>, and the above points stop applying.</p>
+<p><a name=3D"pidfd-clone3"><strong><code>clone3</code> with <code>CLONE_PI=
+DFD</code> flag</strong></a></p>
+<p>Available since: kernel 5.3, no glibc wrapper.</p>
+<p>This function is just a more extensible version of <code>clone</code>; e=
+verything <a href=3D"https://www.corsix.org/content/what-is-a-pidfd#pidfd-c=
+lone">written above about <code>clone</code></a> applies equally to <code>c=
+lone3</code>.</p>
+<p><a name=3D"pidfd-pidfd_open"><strong><code>pidfd_open</code></strong></a=
+></p>
+<p>Available since: kernel 5.3, glibc 2.36.</p>
+<p>This function takes a pid number (in the pid namespace of the caller), a=
+nd returns a freshly allocated pidfd refering to said process (or an error =
+if said process does not exist). It is inherently racy, unless the pid numb=
+er being passed is the result of <code>getpid</code> (i.e. creating a pidfd=
+ referring to your own process).</p>
+<p>Since kernel 5.10, the <code>PIDFD_NONBLOCK</code> flag can be passed to=
+ <code>pidfd_open</code>, which affects subsequent <a href=3D"https://www.c=
+orsix.org/content/what-is-a-pidfd#pidfd-P_PIDFD"><code>waitid</code></a> ca=
+lls. No other flags are valid to pass. The <code>O_CLOEXEC</code> flag is a=
+utomatically set on the returned pidfd.</p>
+<p><a name=3D"pidfd-pidfd_spawn"><strong><code>pidfd_spawn</code> / <code>p=
+idfd_spawnp</code></strong></a></p>
+<p>Available since: kernel 5.4, glibc 2.39.</p>
+<p>These functions are like <code>posix_spawn</code> / <code>posix_spawnp</=
+code>, except that they have an <code>int*</code> output parameter for a fr=
+eshly allocated pidfd <em>instead of</em> a <code>pid_t*</code> output para=
+meter for a pid number. The <code>O_CLOEXEC</code> flag is automatically se=
+t on the returned pidfd.</p>
+<p>In glibc 2.39, bug <a href=3D"https://sourceware.org/bugzilla/show_bug.c=
+gi?id=3D31695">BZ#31695</a> causes these functions to leak a file descripto=
+r in some error scenarios. This will hopefully be fixed in 2.40.</p>
+<p><a name=3D"pidfd-SO_PEERPIDFD"><strong><code>getsockopt</code> with <cod=
+e>SO_PEERPIDFD</code> optname</strong></a></p>
+<p>Available since: kernel 6.5, glibc 2.2.5 for <code>getsockopt</code>. Th=
+e definition of <code>SO_PEERPIDFD</code> is not tied to a particular glibc=
+ version; its value is <code>77</code> should you need to provide your own =
+definition of it.</p>
+<p><code>SO_PEERPIDFD</code> is the pidfd version of <code>SO_PEERCRED</cod=
+e>. For a unix socket created via <code>socketpair</code>, <code>SO_PEERPID=
+FD</code> gives a pidfd referring to the process that called <code>socketpa=
+ir</code>, meanwhile for a connected unix stream socket, <code>SO_PEERPIDFD=
+</code> gives a pidfd referring to the process that called <code>connect</c=
+ode> (if called on the server end of the socket) or the process that called=
+ <code>listen</code> (if called on the client end of the socket). The <code=
+>O_CLOEXEC</code> flag is automatically set on the returned pidfd.</p>
+<p><a name=3D"pidfd-SCM_PIDFD"><strong><code>recvmsg</code> with <code>SCM_=
+PIDFD</code> cmsg_type</strong></a></p>
+<p>Available since: kernel 6.5, glibc 2.39 (or glibc 2.2.5 if you provide y=
+our own definition of <code>SCM_PIDFD</code>; its value is <code>0x04</code=
+>).</p>
+<p><code>SCM_PIDFD</code> is the pidfd version of (the pid part of) <code>S=
+CM_CREDENTIALS</code>. If the receivier sets <code>SO_PASSPIDFD</code> on a=
+ unix socket (c.f. setting <code>SO_PASSCRED</code>), then it'll receive a =
+<code>SCM_PIDFD</code> cmsg as part of receiving a message, with the associ=
+ated cmsg data being a freshly allocated pidfd referring to the process of =
+the sender of the message (or some other process if the sender has <code>CA=
+P_SYS_ADMIN</code> and specifies a pid number other than itself as part of =
+its <code>SCM_CREDENTIALS</code>). The <code>O_CLOEXEC</code> flag is autom=
+atically set on the pidfd.</p>
+<p><a name=3D"pidfd-pidfd_send_signal"><strong><code>pidfd_send_signal</cod=
+e></strong></a></p>
+<p>Available since: kernel 5.1, glibc 2.36.</p>
+<p>This function is similar to <code>kill</code> / <code>rt_sigqueueinfo</c=
+ode>: it sends a signal to a process. It differs from these functions in th=
+at the destination is given as a pidfd rather than as a pid number.</p>
+<p>This function also accepts the result of <code>open("/proc/$pid")</code>=
+ as an fd, though it is the only function to do so: <code>open("/proc/$pid"=
+)</code> does not give a pidfd, and no other functions accept the result of=
+ <code>open("/proc/$pid")</code> in place of a pidfd.</p>
+<p><a name=3D"pidfd-pidfd_getpid"><strong><code>pidfd_getpid</code></strong=
+></a></p>
+<p>Available since: kernel 5.2, glibc 2.39.</p>
+<p>This function is the inverse of <code>pidfd_open</code>: given a pidfd, =
+it returns the pid number associated with the underlying process. This func=
+tion requires that <code>/proc</code> be mounted, and returns the pid numbe=
+r in the pid namespace associated with the mounted <code>/proc</code>. Note=
+ that the pid number can be reused for a different process once the underly=
+ing process is dead.</p>
+<p>Changed in kernel 5.5: if the process referenced by the pidfd is dead, t=
+his function returns -1 (prior to 5.5, it returned whatever pid number the =
+process had prior to its death).</p>
+<p>Note that this is not a direct system call; instead it opens <code>/proc=
+/self/fdinfo/$pidfd</code> and parses the <code>Pid:</code> line therein.</=
+p>
+<p><a name=3D"pidfd-poll"><strong><code>poll</code> / <code>select</code> /=
+ <code>epoll</code></strong></a></p>
+<p>Available since: kernel 5.3, glibc 2.2.5 (<code>poll</code> / <code>sele=
+ct</code>) or glibc 2.3.2 (<code>epoll</code>).</p>
+<p>These functions can be used to asynchronously monitor a pidfd. They will=
+ report the pidfd as readable iff the underlying process is a zombie or is =
+dead. Note however that <code>read</code> on a pidfd always fails; to get t=
+he exit code / status of the process, use <a href=3D"https://www.corsix.org=
+/content/what-is-a-pidfd#pidfd-P_PIDFD"><code>waitid</code></a> (possibly w=
+ith <code>WNOHANG</code>).</p>
+<p><a name=3D"pidfd-P_PIDFD"><strong><code>waitid</code> with <code>P_PIDFD=
+</code> mode</strong></a></p>
+<p>Available since: kernel 5.4, glibc 2.36 (or glibc 2.2.5 if you provide y=
+our own definition of <code>P_PIDFD</code>; its value is <code>3</code>).</=
+p>
+<p><code>waitid(P_PIDFD, fd, infop, options)</code> is identical to <code>w=
+aitid(P_PID, pidfd_getpid(fd), infop, options)</code>, except for the follo=
+wing:</p>
+<ul>
+<li>The embedded <code>pidfd_getpid</code> call is done atomically as part =
+of <code>waitid</code>; there is no race condition.</li>
+<li>The embedded <code>pidfd_getpid</code> call does not require <code>/pro=
+c</code> to be mounted.</li>
+<li>If the pidfd was opened with <a href=3D"https://www.corsix.org/content/=
+what-is-a-pidfd#pidfd-pidfd_open">the <code>PIDFD_NONBLOCK</code> flag</a>,=
+ and <code>options</code> does <em>not</em> contain <code>WNOHANG</code>, a=
+nd the process referenced by the pidfd is alive, then <code>waitid</code> w=
+ill fail with <code>EAGAIN</code> rather than blocking. Note that if <code>=
+options</code> <em>does</em> contain <code>WNOHANG</code>, then <code>PIDFD=
+_NONBLOCK</code> has no effect: if the process referenced by the pidfd is a=
+live, then <code>waitid</code> will succeed with result 0 rather than block=
+ing.</li>
+</ul>
+<p>In particular, note that:</p>
+<ul>
+<li>Waiting on a zombie process will retreive the exit code / status (in <c=
+ode>si_code</code> / <code>si_status</code>), and transition the process fr=
+om zombie to dead. The <code>si_signo</code>, <code>si_errno</code>, <code>=
+si_pid</code>, and <code>si_uid</code> fields will also be set.</li>
+<li>Waiting on a dead process will fail with <code>ECHILD</code>.</li>
+</ul>
+<p>The above points are true for all <code>waitid</code> calls, including <=
+code>P_PIDFD</code> calls. The first time a zombie is waited upon (by <em>a=
+ny</em> kind of <code>wait</code> / <code>waitpid</code> / <code>waitid</co=
+de> call), then the exit code / status is retreived, and subsequent attempt=
+s to wait upon it (again by <em>any</em> kind of <code>wait</code> / <code>=
+waitpid</code> / <code>waitid</code> call) will fail.</p>
+<p>When a process transitions from alive to zombie, if that process's <em>p=
+arent's</em> <code>SIGCHLD</code> handler is <code>SIG_IGN</code> or has <c=
+ode>SA_NOCLDWAIT</code>, then the kernel does an automatic <code>wait</code=
+> call on behalf of the parent and discards the result, thereby transitioni=
+ng the child onward from zombie to dead. This causes all attempts to wait u=
+pon the child (including via <code>P_PIDFD</code>) to fail. The only except=
+ion to this is if the child was created with <code>clone</code> or <code>cl=
+one3</code>, and the termination signal was specified as something other th=
+an <code>SIGCHLD</code>, and the child has not called <code>execve</code> o=
+r similar: given this combination of circumstances, the automatic <code>wai=
+t</code> call will not recognise the child.</p>
+<p><a name=3D"pidfd-pidfd_getfd"><strong><code>pidfd_getfd</code></strong><=
+/a></p>
+<p>Available since: kernel 5.6, glibc 2.36.</p>
+<p>This function takes a pidfd, along with an fd number in the file table o=
+f the process referenced by the pidfd, creates a duplicate of that file des=
+criptor in the file table of the calling process, and returns the new fd nu=
+mber. The effect is similar to what would happen if the referenced process =
+used an <code>SCM_RIGHTS</code> message to send a file descriptor to the ca=
+lling process. The <code>O_CLOEXEC</code> flag is automatically set on the =
+new fd.</p>
+<p>Calling this function incurs a <code>PTRACE_MODE_ATTACH_REALCREDS</code>=
+ security check.</p>
+<p><a name=3D"pidfd-setns"><strong><code>setns</code></strong></a></p>
+<p>Available since: kernel 5.8, glibc 2.14.</p>
+<p>Passing a pidfd to this function moves the caller into one or more of th=
+e namespaces that the process referenced by the pidfd is in. Note that this=
+ function can also be passed the result of <code>open("/proc/$pid/ns/$name"=
+)</code> as an fd.</p>
+<p><a name=3D"pidfd-process_madvise"><strong><code>process_madvise</code></=
+strong></a></p>
+<p>Available since: kernel 5.10, glibc 2.36.</p>
+<p>This function is similar to <code>madvise</code>, except that it operate=
+s on an arbitrary process (specified via a pidfd) rather than on the callin=
+g process.</p>
+<p>Since 5.12, calling this function incurs <code>PTRACE_MODE_READ_FSCREDS<=
+/code> and <code>CAP_SYS_NICE</code> security checks. In 5.10 and 5.11, it =
+incurred a <code>PTRACE_MODE_ATTACH_FSCREDS</code> security check.</p>
+<p><a name=3D"pidfd-process_mrelease"><strong><code>process_mrelease</code>=
+</strong></a></p>
+<p>Available since: kernel 5.15, glibc 2.36.</p>
+<p>This is a relatively niche function, which you are unlikely to ever need=
+ unless writing a userspace OOM killer. It can be called against a process =
+which is no longer alive, but hasn't yet had its virtual memory released up=
+ by the kernel, to cause the kernel to release said virtual memory faster.<=
+/p>
+<p><a name=3D"pidfd-stat"><strong><code>fstat</code> / <code>statx</code> f=
+or meaningful <code>stx_ino</code></strong></a></p>
+<p>Available since: kernel 6.9, glibc 2.2.5 (<code>fstat</code>) or glibc 2=
+.28 (<code>statx</code>).</p>
+<p>It has always been <em>possible</em> to call <code>fstat</code> or <code=
+>statx</code> on a pidfd, but prior to kernel 6.9, it was not useful to do =
+so. Since 6.9, calling <code>statx</code> on a pidfd gives a meaningful <co=
+de>stx_ino</code>: the 64-bit inode number of a pidfd uniquely identifies a=
+ process, so two pidfds referencing the same process will have identical <c=
+ode>stx_ino</code> values, while two pidfds referencing different processes=
+ will have different <code>stx_ino</code> values. The same is true for <cod=
+e>fstat</code>, provided that <code>st_ino</code> is 64 bits wide. In other=
+ words, since 6.9, a process's inode number (as observed via a pidfd) is a =
+unique 64-bit identifier for the process, which is never reused (until the =
+system is restarted), and is unique even across different pid namespaces.</=
+p>
+<hr>
+<p>It is likely that future kernel versions will add more things that can b=
+e done with (or to) a pidfd. As for the existing functionality, if you find=
+ yourself constrained by glibc version rather than kernel version, one opti=
+on is to compile against a very recent glibc, then use <a href=3D"https://g=
+ithub.com/corsix/polyfill-glibc/">polyfill-glibc</a> to restore runtime com=
+patibility with an older version of glibc.</p>
+<p>In terms of future directions, some of the things that I'd like to see a=
+re:</p>
+<ul>
+<li>The ability for a pidfd to obtain the exit code and status of dead proc=
+esses, not just zombie processes (c.f. <a href=3D"https://learn.microsoft.c=
+om/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getexitco=
+deprocess"><code>GetExitCodeProcess</code></a> in Windows).</li>
+<li>The ability to mark a process as transitioning directly from alive to d=
+ead, without sitting in the zombie state until someone waits upon it. This =
+would be similar to <code>SA_NOCLDWAIT</code>, but as a property of the chi=
+ld rather than a property of the parent. Combined with the previous point, =
+the exit code and status would still be retrievable (by any holder of a rel=
+evant pidfd).</li>
+<li>Subject to a flag, closing a pidfd could cause the underlying process (=
+and possibly all of its transitive descendants) to be terminated by the ker=
+nel.</li>
+<li>pidfd variants of <code>process_vm_readv</code> and <code>process_vm_wr=
+itev</code>.</li>
+</ul>
+
+    </div>
+  </div>
+
+
+</body></html>
+------MultipartBoundary--ru991gQC3XeN4I0E1SjIQobIjQlxZDfyw68viGtBN7----
+Content-Type: text/css
+Content-Transfer-Encoding: quoted-printable
+Content-Location: https://fonts.googleapis.com/css?family=Merriweather:300,700,700italic,300italic|Open+Sans:700,400
+
+@charset "utf-8";
+
+@font-face { font-family: Merriweather; font-style: italic; font-weight: 30=
+0; src: url("https://fonts.gstatic.com/s/merriweather/v30/u-4l0qyriQwlOrhSv=
+owK_l5-eR7lXff1jvzRPA.woff2") format("woff2"); unicode-range: U+460-52F, U+=
+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F; }
+
+@font-face { font-family: Merriweather; font-style: italic; font-weight: 30=
+0; src: url("https://fonts.gstatic.com/s/merriweather/v30/u-4l0qyriQwlOrhSv=
+owK_l5-eR7lXff8jvzRPA.woff2") format("woff2"); unicode-range: U+301, U+400-=
+45F, U+490-491, U+4B0-4B1, U+2116; }
+
+@font-face { font-family: Merriweather; font-style: italic; font-weight: 30=
+0; src: url("https://fonts.gstatic.com/s/merriweather/v30/u-4l0qyriQwlOrhSv=
+owK_l5-eR7lXff3jvzRPA.woff2") format("woff2"); unicode-range: U+102-103, U+=
+110-111, U+128-129, U+168-169, U+1A0-1A1, U+1AF-1B0, U+300-301, U+303-304, =
+U+308-309, U+323, U+329, U+1EA0-1EF9, U+20AB; }
+
+@font-face { font-family: Merriweather; font-style: italic; font-weight: 30=
+0; src: url("https://fonts.gstatic.com/s/merriweather/v30/u-4l0qyriQwlOrhSv=
+owK_l5-eR7lXff2jvzRPA.woff2") format("woff2"); unicode-range: U+100-2BA, U+=
+2BD-2C5, U+2C7-2CC, U+2CE-2D7, U+2DD-2FF, U+304, U+308, U+329, U+1D00-1DBF,=
+ U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60=
+-2C7F, U+A720-A7FF; }
+
+@font-face { font-family: Merriweather; font-style: italic; font-weight: 30=
+0; src: url("https://fonts.gstatic.com/s/merriweather/v30/u-4l0qyriQwlOrhSv=
+owK_l5-eR7lXff4jvw.woff2") format("woff2"); unicode-range: U+0-FF, U+131, U=
++152-153, U+2BB-2BC, U+2C6, U+2DA, U+2DC, U+304, U+308, U+329, U+2000-206F,=
+ U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+
+@font-face { font-family: Merriweather; font-style: italic; font-weight: 70=
+0; src: url("https://fonts.gstatic.com/s/merriweather/v30/u-4l0qyriQwlOrhSv=
+owK_l5-eR71Wvf1jvzRPA.woff2") format("woff2"); unicode-range: U+460-52F, U+=
+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F; }
+
+@font-face { font-family: Merriweather; font-style: italic; font-weight: 70=
+0; src: url("https://fonts.gstatic.com/s/merriweather/v30/u-4l0qyriQwlOrhSv=
+owK_l5-eR71Wvf8jvzRPA.woff2") format("woff2"); unicode-range: U+301, U+400-=
+45F, U+490-491, U+4B0-4B1, U+2116; }
+
+@font-face { font-family: Merriweather; font-style: italic; font-weight: 70=
+0; src: url("https://fonts.gstatic.com/s/merriweather/v30/u-4l0qyriQwlOrhSv=
+owK_l5-eR71Wvf3jvzRPA.woff2") format("woff2"); unicode-range: U+102-103, U+=
+110-111, U+128-129, U+168-169, U+1A0-1A1, U+1AF-1B0, U+300-301, U+303-304, =
+U+308-309, U+323, U+329, U+1EA0-1EF9, U+20AB; }
+
+@font-face { font-family: Merriweather; font-style: italic; font-weight: 70=
+0; src: url("https://fonts.gstatic.com/s/merriweather/v30/u-4l0qyriQwlOrhSv=
+owK_l5-eR71Wvf2jvzRPA.woff2") format("woff2"); unicode-range: U+100-2BA, U+=
+2BD-2C5, U+2C7-2CC, U+2CE-2D7, U+2DD-2FF, U+304, U+308, U+329, U+1D00-1DBF,=
+ U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60=
+-2C7F, U+A720-A7FF; }
+
+@font-face { font-family: Merriweather; font-style: italic; font-weight: 70=
+0; src: url("https://fonts.gstatic.com/s/merriweather/v30/u-4l0qyriQwlOrhSv=
+owK_l5-eR71Wvf4jvw.woff2") format("woff2"); unicode-range: U+0-FF, U+131, U=
++152-153, U+2BB-2BC, U+2C6, U+2DA, U+2DC, U+304, U+308, U+329, U+2000-206F,=
+ U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+
+@font-face { font-family: Merriweather; font-style: normal; font-weight: 30=
+0; src: url("https://fonts.gstatic.com/s/merriweather/v30/u-4n0qyriQwlOrhSv=
+owK_l521wRZVcf6lvg.woff2") format("woff2"); unicode-range: U+460-52F, U+1C8=
+0-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F; }
+
+@font-face { font-family: Merriweather; font-style: normal; font-weight: 30=
+0; src: url("https://fonts.gstatic.com/s/merriweather/v30/u-4n0qyriQwlOrhSv=
+owK_l521wRZXMf6lvg.woff2") format("woff2"); unicode-range: U+301, U+400-45F=
+, U+490-491, U+4B0-4B1, U+2116; }
+
+@font-face { font-family: Merriweather; font-style: normal; font-weight: 30=
+0; src: url("https://fonts.gstatic.com/s/merriweather/v30/u-4n0qyriQwlOrhSv=
+owK_l521wRZV8f6lvg.woff2") format("woff2"); unicode-range: U+102-103, U+110=
+-111, U+128-129, U+168-169, U+1A0-1A1, U+1AF-1B0, U+300-301, U+303-304, U+3=
+08-309, U+323, U+329, U+1EA0-1EF9, U+20AB; }
+
+@font-face { font-family: Merriweather; font-style: normal; font-weight: 30=
+0; src: url("https://fonts.gstatic.com/s/merriweather/v30/u-4n0qyriQwlOrhSv=
+owK_l521wRZVsf6lvg.woff2") format("woff2"); unicode-range: U+100-2BA, U+2BD=
+-2C5, U+2C7-2CC, U+2CE-2D7, U+2DD-2FF, U+304, U+308, U+329, U+1D00-1DBF, U+=
+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C=
+7F, U+A720-A7FF; }
+
+@font-face { font-family: Merriweather; font-style: normal; font-weight: 30=
+0; src: url("https://fonts.gstatic.com/s/merriweather/v30/u-4n0qyriQwlOrhSv=
+owK_l521wRZWMf6.woff2") format("woff2"); unicode-range: U+0-FF, U+131, U+15=
+2-153, U+2BB-2BC, U+2C6, U+2DA, U+2DC, U+304, U+308, U+329, U+2000-206F, U+=
+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+
+@font-face { font-family: Merriweather; font-style: normal; font-weight: 70=
+0; src: url("https://fonts.gstatic.com/s/merriweather/v30/u-4n0qyriQwlOrhSv=
+owK_l52xwNZVcf6lvg.woff2") format("woff2"); unicode-range: U+460-52F, U+1C8=
+0-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F; }
+
+@font-face { font-family: Merriweather; font-style: normal; font-weight: 70=
+0; src: url("https://fonts.gstatic.com/s/merriweather/v30/u-4n0qyriQwlOrhSv=
+owK_l52xwNZXMf6lvg.woff2") format("woff2"); unicode-range: U+301, U+400-45F=
+, U+490-491, U+4B0-4B1, U+2116; }
+
+@font-face { font-family: Merriweather; font-style: normal; font-weight: 70=
+0; src: url("https://fonts.gstatic.com/s/merriweather/v30/u-4n0qyriQwlOrhSv=
+owK_l52xwNZV8f6lvg.woff2") format("woff2"); unicode-range: U+102-103, U+110=
+-111, U+128-129, U+168-169, U+1A0-1A1, U+1AF-1B0, U+300-301, U+303-304, U+3=
+08-309, U+323, U+329, U+1EA0-1EF9, U+20AB; }
+
+@font-face { font-family: Merriweather; font-style: normal; font-weight: 70=
+0; src: url("https://fonts.gstatic.com/s/merriweather/v30/u-4n0qyriQwlOrhSv=
+owK_l52xwNZVsf6lvg.woff2") format("woff2"); unicode-range: U+100-2BA, U+2BD=
+-2C5, U+2C7-2CC, U+2CE-2D7, U+2DD-2FF, U+304, U+308, U+329, U+1D00-1DBF, U+=
+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C=
+7F, U+A720-A7FF; }
+
+@font-face { font-family: Merriweather; font-style: normal; font-weight: 70=
+0; src: url("https://fonts.gstatic.com/s/merriweather/v30/u-4n0qyriQwlOrhSv=
+owK_l52xwNZWMf6.woff2") format("woff2"); unicode-range: U+0-FF, U+131, U+15=
+2-153, U+2BB-2BC, U+2C6, U+2DA, U+2DC, U+304, U+308, U+329, U+2000-206F, U+=
+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+
+@font-face { font-family: "Open Sans"; font-style: normal; font-weight: 400=
+; font-stretch: 100%; src: url("https://fonts.gstatic.com/s/opensans/v40/me=
+mvYaGs126MiZpBA-UvWbX2vVnXBbObj2OVTSKmu1aB.woff2") format("woff2"); unicode=
+-range: U+460-52F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE=
+2F; }
+
+@font-face { font-family: "Open Sans"; font-style: normal; font-weight: 400=
+; font-stretch: 100%; src: url("https://fonts.gstatic.com/s/opensans/v40/me=
+mvYaGs126MiZpBA-UvWbX2vVnXBbObj2OVTSumu1aB.woff2") format("woff2"); unicode=
+-range: U+301, U+400-45F, U+490-491, U+4B0-4B1, U+2116; }
+
+@font-face { font-family: "Open Sans"; font-style: normal; font-weight: 400=
+; font-stretch: 100%; src: url("https://fonts.gstatic.com/s/opensans/v40/me=
+mvYaGs126MiZpBA-UvWbX2vVnXBbObj2OVTSOmu1aB.woff2") format("woff2"); unicode=
+-range: U+1F00-1FFF; }
+
+@font-face { font-family: "Open Sans"; font-style: normal; font-weight: 400=
+; font-stretch: 100%; src: url("https://fonts.gstatic.com/s/opensans/v40/me=
+mvYaGs126MiZpBA-UvWbX2vVnXBbObj2OVTSymu1aB.woff2") format("woff2"); unicode=
+-range: U+370-377, U+37A-37F, U+384-38A, U+38C, U+38E-3A1, U+3A3-3FF; }
+
+@font-face { font-family: "Open Sans"; font-style: normal; font-weight: 400=
+; font-stretch: 100%; src: url("https://fonts.gstatic.com/s/opensans/v40/me=
+mvYaGs126MiZpBA-UvWbX2vVnXBbObj2OVTS2mu1aB.woff2") format("woff2"); unicode=
+-range: U+307-308, U+590-5FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F; }
+
+@font-face { font-family: "Open Sans"; font-style: normal; font-weight: 400=
+; font-stretch: 100%; src: url("https://fonts.gstatic.com/s/opensans/v40/me=
+mvYaGs126MiZpBA-UvWbX2vVnXBbObj2OVTVOmu1aB.woff2") format("woff2"); unicode=
+-range: U+302-303, U+305, U+307-308, U+310, U+312, U+315, U+31A, U+326-327,=
+ U+32C, U+32F-330, U+332-333, U+338, U+33A, U+346, U+34D, U+391-3A1, U+3A3-=
+3A9, U+3B1-3C9, U+3D1, U+3D5-3D6, U+3F0-3F1, U+3F4-3F5, U+2016-2017, U+2034=
+-2038, U+203C, U+2040, U+2043, U+2047, U+2050, U+2057, U+205F, U+2070-2071,=
+ U+2074-208E, U+2090-209C, U+20D0-20DC, U+20E1, U+20E5-20EF, U+2100-2112, U=
++2114-2115, U+2117-2121, U+2123-214F, U+2190, U+2192, U+2194-21AE, U+21B0-2=
+1E5, U+21F1-21F2, U+21F4-2211, U+2213-2214, U+2216-22FF, U+2308-230B, U+231=
+0, U+2319, U+231C-2321, U+2336-237A, U+237C, U+2395, U+239B-23B7, U+23D0, U=
++23DC-23E1, U+2474-2475, U+25AF, U+25B3, U+25B7, U+25BD, U+25C1, U+25CA, U+=
+25CC, U+25FB, U+266D-266F, U+27C0-27FF, U+2900-2AFF, U+2B0E-2B11, U+2B30-2B=
+4C, U+2BFE, U+3030, U+FF5B, U+FF5D, U+1D400-1D7FF, U+1EE00-1EEFF; }
+
+@font-face { font-family: "Open Sans"; font-style: normal; font-weight: 400=
+; font-stretch: 100%; src: url("https://fonts.gstatic.com/s/opensans/v40/me=
+mvYaGs126MiZpBA-UvWbX2vVnXBbObj2OVTUGmu1aB.woff2") format("woff2"); unicode=
+-range: U+1-C, U+E-1F, U+7F-9F, U+20DD-20E0, U+20E2-20E4, U+2150-218F, U+21=
+90, U+2192, U+2194-2199, U+21AF, U+21E6-21F0, U+21F3, U+2218-2219, U+2299, =
+U+22C4-22C6, U+2300-243F, U+2440-244A, U+2460-24FF, U+25A0-27BF, U+2800-28F=
+F, U+2921-2922, U+2981, U+29BF, U+29EB, U+2B00-2BFF, U+4DC0-4DFF, U+FFF9-FF=
+FB, U+10140-1018E, U+10190-1019C, U+101A0, U+101D0-101FD, U+102E0-102FB, U+=
+10E60-10E7E, U+1D2C0-1D2D3, U+1D2E0-1D37F, U+1F000-1F0FF, U+1F100-1F1AD, U+=
+1F1E6-1F1FF, U+1F30D-1F30F, U+1F315, U+1F31C, U+1F31E, U+1F320-1F32C, U+1F3=
+36, U+1F378, U+1F37D, U+1F382, U+1F393-1F39F, U+1F3A7-1F3A8, U+1F3AC-1F3AF,=
+ U+1F3C2, U+1F3C4-1F3C6, U+1F3CA-1F3CE, U+1F3D4-1F3E0, U+1F3ED, U+1F3F1-1F3=
+F3, U+1F3F5-1F3F7, U+1F408, U+1F415, U+1F41F, U+1F426, U+1F43F, U+1F441-1F4=
+42, U+1F444, U+1F446-1F449, U+1F44C-1F44E, U+1F453, U+1F46A, U+1F47D, U+1F4=
+A3, U+1F4B0, U+1F4B3, U+1F4B9, U+1F4BB, U+1F4BF, U+1F4C8-1F4CB, U+1F4D6, U+=
+1F4DA, U+1F4DF, U+1F4E3-1F4E6, U+1F4EA-1F4ED, U+1F4F7, U+1F4F9-1F4FB, U+1F4=
+FD-1F4FE, U+1F503, U+1F507-1F50B, U+1F50D, U+1F512-1F513, U+1F53E-1F54A, U+=
+1F54F-1F5FA, U+1F610, U+1F650-1F67F, U+1F687, U+1F68D, U+1F691, U+1F694, U+=
+1F698, U+1F6AD, U+1F6B2, U+1F6B9-1F6BA, U+1F6BC, U+1F6C6-1F6CF, U+1F6D3-1F6=
+D7, U+1F6E0-1F6EA, U+1F6F0-1F6F3, U+1F6F7-1F6FC, U+1F700-1F7FF, U+1F800-1F8=
+0B, U+1F810-1F847, U+1F850-1F859, U+1F860-1F887, U+1F890-1F8AD, U+1F8B0-1F8=
+BB, U+1F8C0-1F8C1, U+1F900-1F90B, U+1F93B, U+1F946, U+1F984, U+1F996, U+1F9=
+E9, U+1FA00-1FA6F, U+1FA70-1FA7C, U+1FA80-1FA89, U+1FA8F-1FAC6, U+1FACE-1FA=
+DC, U+1FADF-1FAE9, U+1FAF0-1FAF8, U+1FB00-1FBFF; }
+
+@font-face { font-family: "Open Sans"; font-style: normal; font-weight: 400=
+; font-stretch: 100%; src: url("https://fonts.gstatic.com/s/opensans/v40/me=
+mvYaGs126MiZpBA-UvWbX2vVnXBbObj2OVTSCmu1aB.woff2") format("woff2"); unicode=
+-range: U+102-103, U+110-111, U+128-129, U+168-169, U+1A0-1A1, U+1AF-1B0, U=
++300-301, U+303-304, U+308-309, U+323, U+329, U+1EA0-1EF9, U+20AB; }
+
+@font-face { font-family: "Open Sans"; font-style: normal; font-weight: 400=
+; font-stretch: 100%; src: url("https://fonts.gstatic.com/s/opensans/v40/me=
+mvYaGs126MiZpBA-UvWbX2vVnXBbObj2OVTSGmu1aB.woff2") format("woff2"); unicode=
+-range: U+100-2BA, U+2BD-2C5, U+2C7-2CC, U+2CE-2D7, U+2DD-2FF, U+304, U+308=
+, U+329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD=
+-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+
+@font-face { font-family: "Open Sans"; font-style: normal; font-weight: 400=
+; font-stretch: 100%; src: url("https://fonts.gstatic.com/s/opensans/v40/me=
+mvYaGs126MiZpBA-UvWbX2vVnXBbObj2OVTS-muw.woff2") format("woff2"); unicode-r=
+ange: U+0-FF, U+131, U+152-153, U+2BB-2BC, U+2C6, U+2DA, U+2DC, U+304, U+30=
+8, U+329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FE=
+FF, U+FFFD; }
+
+@font-face { font-family: "Open Sans"; font-style: normal; font-weight: 700=
+; font-stretch: 100%; src: url("https://fonts.gstatic.com/s/opensans/v40/me=
+mvYaGs126MiZpBA-UvWbX2vVnXBbObj2OVTSKmu1aB.woff2") format("woff2"); unicode=
+-range: U+460-52F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE=
+2F; }
+
+@font-face { font-family: "Open Sans"; font-style: normal; font-weight: 700=
+; font-stretch: 100%; src: url("https://fonts.gstatic.com/s/opensans/v40/me=
+mvYaGs126MiZpBA-UvWbX2vVnXBbObj2OVTSumu1aB.woff2") format("woff2"); unicode=
+-range: U+301, U+400-45F, U+490-491, U+4B0-4B1, U+2116; }
+
+@font-face { font-family: "Open Sans"; font-style: normal; font-weight: 700=
+; font-stretch: 100%; src: url("https://fonts.gstatic.com/s/opensans/v40/me=
+mvYaGs126MiZpBA-UvWbX2vVnXBbObj2OVTSOmu1aB.woff2") format("woff2"); unicode=
+-range: U+1F00-1FFF; }
+
+@font-face { font-family: "Open Sans"; font-style: normal; font-weight: 700=
+; font-stretch: 100%; src: url("https://fonts.gstatic.com/s/opensans/v40/me=
+mvYaGs126MiZpBA-UvWbX2vVnXBbObj2OVTSymu1aB.woff2") format("woff2"); unicode=
+-range: U+370-377, U+37A-37F, U+384-38A, U+38C, U+38E-3A1, U+3A3-3FF; }
+
+@font-face { font-family: "Open Sans"; font-style: normal; font-weight: 700=
+; font-stretch: 100%; src: url("https://fonts.gstatic.com/s/opensans/v40/me=
+mvYaGs126MiZpBA-UvWbX2vVnXBbObj2OVTS2mu1aB.woff2") format("woff2"); unicode=
+-range: U+307-308, U+590-5FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F; }
+
+@font-face { font-family: "Open Sans"; font-style: normal; font-weight: 700=
+; font-stretch: 100%; src: url("https://fonts.gstatic.com/s/opensans/v40/me=
+mvYaGs126MiZpBA-UvWbX2vVnXBbObj2OVTVOmu1aB.woff2") format("woff2"); unicode=
+-range: U+302-303, U+305, U+307-308, U+310, U+312, U+315, U+31A, U+326-327,=
+ U+32C, U+32F-330, U+332-333, U+338, U+33A, U+346, U+34D, U+391-3A1, U+3A3-=
+3A9, U+3B1-3C9, U+3D1, U+3D5-3D6, U+3F0-3F1, U+3F4-3F5, U+2016-2017, U+2034=
+-2038, U+203C, U+2040, U+2043, U+2047, U+2050, U+2057, U+205F, U+2070-2071,=
+ U+2074-208E, U+2090-209C, U+20D0-20DC, U+20E1, U+20E5-20EF, U+2100-2112, U=
++2114-2115, U+2117-2121, U+2123-214F, U+2190, U+2192, U+2194-21AE, U+21B0-2=
+1E5, U+21F1-21F2, U+21F4-2211, U+2213-2214, U+2216-22FF, U+2308-230B, U+231=
+0, U+2319, U+231C-2321, U+2336-237A, U+237C, U+2395, U+239B-23B7, U+23D0, U=
++23DC-23E1, U+2474-2475, U+25AF, U+25B3, U+25B7, U+25BD, U+25C1, U+25CA, U+=
+25CC, U+25FB, U+266D-266F, U+27C0-27FF, U+2900-2AFF, U+2B0E-2B11, U+2B30-2B=
+4C, U+2BFE, U+3030, U+FF5B, U+FF5D, U+1D400-1D7FF, U+1EE00-1EEFF; }
+
+@font-face { font-family: "Open Sans"; font-style: normal; font-weight: 700=
+; font-stretch: 100%; src: url("https://fonts.gstatic.com/s/opensans/v40/me=
+mvYaGs126MiZpBA-UvWbX2vVnXBbObj2OVTUGmu1aB.woff2") format("woff2"); unicode=
+-range: U+1-C, U+E-1F, U+7F-9F, U+20DD-20E0, U+20E2-20E4, U+2150-218F, U+21=
+90, U+2192, U+2194-2199, U+21AF, U+21E6-21F0, U+21F3, U+2218-2219, U+2299, =
+U+22C4-22C6, U+2300-243F, U+2440-244A, U+2460-24FF, U+25A0-27BF, U+2800-28F=
+F, U+2921-2922, U+2981, U+29BF, U+29EB, U+2B00-2BFF, U+4DC0-4DFF, U+FFF9-FF=
+FB, U+10140-1018E, U+10190-1019C, U+101A0, U+101D0-101FD, U+102E0-102FB, U+=
+10E60-10E7E, U+1D2C0-1D2D3, U+1D2E0-1D37F, U+1F000-1F0FF, U+1F100-1F1AD, U+=
+1F1E6-1F1FF, U+1F30D-1F30F, U+1F315, U+1F31C, U+1F31E, U+1F320-1F32C, U+1F3=
+36, U+1F378, U+1F37D, U+1F382, U+1F393-1F39F, U+1F3A7-1F3A8, U+1F3AC-1F3AF,=
+ U+1F3C2, U+1F3C4-1F3C6, U+1F3CA-1F3CE, U+1F3D4-1F3E0, U+1F3ED, U+1F3F1-1F3=
+F3, U+1F3F5-1F3F7, U+1F408, U+1F415, U+1F41F, U+1F426, U+1F43F, U+1F441-1F4=
+42, U+1F444, U+1F446-1F449, U+1F44C-1F44E, U+1F453, U+1F46A, U+1F47D, U+1F4=
+A3, U+1F4B0, U+1F4B3, U+1F4B9, U+1F4BB, U+1F4BF, U+1F4C8-1F4CB, U+1F4D6, U+=
+1F4DA, U+1F4DF, U+1F4E3-1F4E6, U+1F4EA-1F4ED, U+1F4F7, U+1F4F9-1F4FB, U+1F4=
+FD-1F4FE, U+1F503, U+1F507-1F50B, U+1F50D, U+1F512-1F513, U+1F53E-1F54A, U+=
+1F54F-1F5FA, U+1F610, U+1F650-1F67F, U+1F687, U+1F68D, U+1F691, U+1F694, U+=
+1F698, U+1F6AD, U+1F6B2, U+1F6B9-1F6BA, U+1F6BC, U+1F6C6-1F6CF, U+1F6D3-1F6=
+D7, U+1F6E0-1F6EA, U+1F6F0-1F6F3, U+1F6F7-1F6FC, U+1F700-1F7FF, U+1F800-1F8=
+0B, U+1F810-1F847, U+1F850-1F859, U+1F860-1F887, U+1F890-1F8AD, U+1F8B0-1F8=
+BB, U+1F8C0-1F8C1, U+1F900-1F90B, U+1F93B, U+1F946, U+1F984, U+1F996, U+1F9=
+E9, U+1FA00-1FA6F, U+1FA70-1FA7C, U+1FA80-1FA89, U+1FA8F-1FAC6, U+1FACE-1FA=
+DC, U+1FADF-1FAE9, U+1FAF0-1FAF8, U+1FB00-1FBFF; }
+
+@font-face { font-family: "Open Sans"; font-style: normal; font-weight: 700=
+; font-stretch: 100%; src: url("https://fonts.gstatic.com/s/opensans/v40/me=
+mvYaGs126MiZpBA-UvWbX2vVnXBbObj2OVTSCmu1aB.woff2") format("woff2"); unicode=
+-range: U+102-103, U+110-111, U+128-129, U+168-169, U+1A0-1A1, U+1AF-1B0, U=
++300-301, U+303-304, U+308-309, U+323, U+329, U+1EA0-1EF9, U+20AB; }
+
+@font-face { font-family: "Open Sans"; font-style: normal; font-weight: 700=
+; font-stretch: 100%; src: url("https://fonts.gstatic.com/s/opensans/v40/me=
+mvYaGs126MiZpBA-UvWbX2vVnXBbObj2OVTSGmu1aB.woff2") format("woff2"); unicode=
+-range: U+100-2BA, U+2BD-2C5, U+2C7-2CC, U+2CE-2D7, U+2DD-2FF, U+304, U+308=
+, U+329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD=
+-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+
+@font-face { font-family: "Open Sans"; font-style: normal; font-weight: 700=
+; font-stretch: 100%; src: url("https://fonts.gstatic.com/s/opensans/v40/me=
+mvYaGs126MiZpBA-UvWbX2vVnXBbObj2OVTS-muw.woff2") format("woff2"); unicode-r=
+ange: U+0-FF, U+131, U+152-153, U+2BB-2BC, U+2C6, U+2DA, U+2DC, U+304, U+30=
+8, U+329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FE=
+FF, U+FFFD; }
+------MultipartBoundary--ru991gQC3XeN4I0E1SjIQobIjQlxZDfyw68viGtBN7----
+Content-Type: text/css
+Content-Transfer-Encoding: quoted-printable
+Content-Location: https://www.corsix.org/content/all.css
+
+@charset "utf-8";
+
+html { font-family: sans-serif; text-size-adjust: 100%; }
+
+body { margin: 0px; }
+
+article, aside, details, figcaption, figure, footer, header, hgroup, main, =
+menu, nav, section, summary { display: block; }
+
+audio, canvas, progress, video { display: inline-block; vertical-align: bas=
+eline; }
+
+audio:not([controls]) { display: none; height: 0px; }
+
+[hidden], template { display: none; }
+
+a { background-color: transparent; }
+
+a:active, a:hover { outline: 0px; }
+
+abbr[title] { border-bottom: 1px dotted; }
+
+b, strong { font-weight: 700; }
+
+dfn { font-style: italic; }
+
+mark { background: rgb(255, 255, 0); color: rgb(0, 0, 0); }
+
+small { font-size: 80%; }
+
+sub, sup { font-size: 75%; line-height: 0; position: relative; vertical-ali=
+gn: baseline; }
+
+sup { top: -0.5em; }
+
+sub { bottom: -0.25em; }
+
+img { border: 0px; }
+
+svg:not(:root) { overflow: hidden; }
+
+figure { margin: 1em 40px; }
+
+hr { box-sizing: content-box; }
+
+code, kbd, pre, samp { font-family: monospace, monospace; font-size: 1em; }
+
+button, input, optgroup, select, textarea { color: inherit; font: inherit; =
+margin: 0px; }
+
+button { overflow: visible; }
+
+button, select { text-transform: none; }
+
+button, html input[type=3D"button"], input[type=3D"reset"], input[type=3D"s=
+ubmit"] { appearance: button; cursor: pointer; }
+
+button[disabled], html input[disabled] { cursor: default; }
+
+input { line-height: normal; }
+
+input[type=3D"checkbox"], input[type=3D"radio"] { box-sizing: border-box; p=
+adding: 0px; }
+
+input[type=3D"number"]::-webkit-inner-spin-button, input[type=3D"number"]::=
+-webkit-outer-spin-button { height: auto; }
+
+input[type=3D"search"] { appearance: textfield; box-sizing: content-box; }
+
+input[type=3D"search"]::-webkit-search-cancel-button, input[type=3D"search"=
+]::-webkit-search-decoration { appearance: none; }
+
+fieldset { border: 1px solid silver; margin: 0px 2px; padding: 0.35em 0.625=
+em 0.75em; }
+
+legend { border: 0px; padding: 0px; }
+
+textarea { overflow: auto; }
+
+optgroup { font-weight: 700; }
+
+table { border-collapse: collapse; border-spacing: 0px; }
+
+td, th { padding: 0px; }
+
+.hljs { display: block; overflow-x: auto; padding: 0.5em; background: rgb(2=
+40, 240, 240); text-size-adjust: none; }
+
+.hljs, .hljs-subst, .hljs-tag .hljs-title, .nginx .hljs-title { color: rgb(=
+0, 0, 0); }
+
+.apache .hljs-cbracket, .apache .hljs-tag, .asciidoc .hljs-header, .bash .h=
+ljs-variable, .coffeescript .hljs-attribute, .django .hljs-variable, .erlan=
+g_repl .hljs-function_or_atom, .haml .hljs-symbol, .hljs-addition, .hljs-co=
+nstant, .hljs-flow, .hljs-parent, .hljs-pragma, .hljs-preprocessor, .hljs-r=
+ules .hljs-value, .hljs-stream, .hljs-string, .hljs-tag .hljs-value, .hljs-=
+template_tag, .hljs-title, .markdown .hljs-header, .pf .hljs-variable, .rub=
+y .hljs-symbol, .ruby .hljs-symbol .hljs-string, .smalltalk .hljs-class, .t=
+ex .hljs-command, .tex .hljs-special { color: rgb(136, 0, 0); }
+
+.asciidoc .hljs-blockquote, .diff .hljs-header, .hljs-annotation, .hljs-chu=
+nk, .hljs-comment, .markdown .hljs-blockquote, .smartquote { color: rgb(136=
+, 136, 136); }
+
+.asciidoc .hljs-bullet, .asciidoc .hljs-link_url, .go .hljs-constant, .hljs=
+-change, .hljs-date, .hljs-hexcolor, .hljs-literal, .hljs-number, .hljs-reg=
+exp, .lasso .hljs-variable, .makefile .hljs-variable, .markdown .hljs-bulle=
+t, .markdown .hljs-link_url, .smalltalk .hljs-char, .smalltalk .hljs-symbol=
+ { color: rgb(0, 136, 0); }
+
+.apache .hljs-sqbracket, .asciidoc .hljs-attribute, .asciidoc .hljs-link_la=
+bel, .clojure .hljs-attribute, .coffeescript .hljs-property, .erlang_repl .=
+hljs-reserved, .haml .hljs-bullet, .hljs-array, .hljs-attr_selector, .hljs-=
+decorator, .hljs-deletion, .hljs-doctype, .hljs-envvar, .hljs-filter .hljs-=
+argument, .hljs-important, .hljs-javadoc, .hljs-label, .hljs-localvars, .hl=
+js-phony, .hljs-pi, .hljs-prompt, .hljs-pseudo, .hljs-shebang, .lasso .hljs=
+-attribute, .markdown .hljs-link_label, .nginx .hljs-built_in, .ruby .hljs-=
+string, .tex .hljs-formula, .vhdl .hljs-attribute { color: rgb(136, 136, 25=
+5); }
+
+.apache .hljs-tag, .asciidoc .hljs-strong, .bash .hljs-variable, .css .hljs=
+-tag, .hljs-built_in, .hljs-dartdoc, .hljs-id, .hljs-javadoctag, .hljs-keyw=
+ord, .hljs-phpdoc, .hljs-request, .hljs-status, .hljs-title, .hljs-type, .h=
+ljs-typename, .hljs-winutils, .hljs-yardoctag, .markdown .hljs-strong, .pf =
+.hljs-variable, .smalltalk .hljs-class, .tex .hljs-command { font-weight: 7=
+00; }
+
+.asciidoc .hljs-emphasis, .markdown .hljs-emphasis { font-style: italic; }
+
+.nginx .hljs-built_in { font-weight: 400; }
+
+.coffeescript .javascript, .javascript .xml, .lasso .markup, .tex .hljs-for=
+mula, .xml .css, .xml .hljs-cdata, .xml .javascript, .xml .vbscript { opaci=
+ty: 0.5; }
+
+html { height: 100%; max-height: 100%; font-size: 62.5%; }
+
+body { height: 100%; max-height: 100%; font-family: Merriweather, serif; le=
+tter-spacing: 0.01em; font-size: 1.8em; line-height: 1.75em; color: rgb(58,=
+ 65, 69); font-feature-settings: "kern"; }
+
+div.next-post a, div.prev-post a, h1, h2, h3, h4, h5, h6 { font-feature-set=
+tings: "dlig", "liga", "lnum", "kern"; color: rgb(46, 46, 46); line-height:=
+ 1.15em; margin: 0px 0px 0.4em; font-family: "Open Sans", sans-serif; }
+
+div.next-post a, div.prev-post a, h1 { font-size: 5rem; letter-spacing: -2p=
+x; text-indent: -3px; }
+
+h2 { font-size: 3.6rem; letter-spacing: -1px; }
+
+h3 { font-size: 3rem; }
+
+h4 { font-size: 2.5rem; }
+
+h5, h6 { font-size: 2rem; }
+
+a { color: rgb(74, 74, 74); transition: color 0.3s ease 0s; }
+
+a:hover { color: rgb(17, 17, 17); }
+
+dl, ol, p, ul { font-feature-settings: "liga", "onum", "kern"; margin: 0px =
+0px 1.75em; }
+
+ol, ul { padding-left: 3rem; }
+
+ol ol, ol ul, ul ol, ul ul { margin: 0px 0px 0.4em; padding-left: 2em; }
+
+dl dt { float: left; width: 180px; overflow: hidden; clear: left; text-alig=
+n: right; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; m=
+argin-bottom: 1em; }
+
+dl dd { margin-left: 200px; margin-bottom: 1em; }
+
+li { margin: 0.4em 0px; }
+
+li li { margin: 0px; }
+
+hr { display: block; height: 1px; border-width: 1px 0px 0px; border-right-s=
+tyle: initial; border-bottom-style: initial; border-left-style: initial; bo=
+rder-right-color: initial; border-bottom-color: initial; border-left-color:=
+ initial; border-image: initial; border-top-style: solid; border-top-color:=
+ rgb(239, 239, 239); margin: 3.2em 0px; padding: 0px; }
+
+blockquote { box-sizing: border-box; margin: 1.75em 0px 1.75em -1.7em; padd=
+ing: 0px 0px 0px 1.25em; border-left: 0.4em solid rgb(74, 74, 74); }
+
+blockquote p { margin: 0.8em 0px; font-style: italic; }
+
+blockquote small { display: inline-block; margin: 0.8em 0px 0.8em 1.5em; fo=
+nt-size: 0.9em; color: rgb(204, 204, 204); }
+
+blockquote small::before { content: "=E2=80=94=C2=A0"; }
+
+blockquote cite { font-weight: 700; }
+
+blockquote cite a { font-weight: 400; }
+
+mark { background-color: rgb(255, 195, 54); }
+
+code, tt { padding: 1px 3px; font-family: Inconsolata, monospace, sans-seri=
+f; font-size: 0.85em; white-space: pre-wrap; border: 1px solid rgb(227, 237=
+, 243); background: rgb(247, 250, 251); border-radius: 2px; hyphens: none; =
+font-feature-settings: normal; }
+
+pre.antibanner code, pre.banner code { display: block; width: 710px; margin=
+: 0px auto; font-size: 5rem; }
+
+pre.banner { border-top: 0px; border-left: 0px; border-right: 0px; border-r=
+adius: 0px; line-height: 2em; padding-bottom: 15px; }
+
+pre.antibanner { border-bottom: 0px; border-left: 0px; border-right: 0px; b=
+order-radius: 0px; margin: 0px; line-height: 2em; padding: 20px; }
+
+pre { box-sizing: border-box; margin: 0px 0px 1.75em; border: 1px solid rgb=
+(227, 237, 243); width: 100%; padding: 10px; font-family: Inconsolata, mono=
+space, sans-serif; font-size: 0.9em; line-height: 1.3em; overflow: auto; ba=
+ckground: rgb(247, 250, 251); border-radius: 3px; }
+
+pre code, tt { font-size: inherit; white-space: pre-wrap; background: 0px 0=
+px; border: 0px; padding: 0px; }
+
+kbd { display: inline-block; margin-bottom: 0.4em; padding: 1px 8px; border=
+: 1px solid rgb(204, 204, 204); color: rgb(102, 102, 102); text-shadow: rgb=
+(255, 255, 255) 0px 1px 0px; font-size: 0.9em; font-weight: 700; background=
+: rgb(244, 244, 244); border-radius: 4px; box-shadow: rgba(0, 0, 0, 0.2) 0p=
+x 1px 0px, rgb(255, 255, 255) 0px 1px 0px 0px inset; }
+
+table { box-sizing: border-box; margin: 1.75em 0px; width: 100%; max-width:=
+ 100%; background-color: transparent; }
+
+table td, table th { padding: 8px; line-height: 20px; text-align: left; ver=
+tical-align: top; border-top: 1px solid rgb(239, 239, 239); }
+
+table th { color: rgb(0, 0, 0); }
+
+table caption + thead tr:first-child td, table caption + thead tr:first-chi=
+ld th, table colgroup + thead tr:first-child td, table colgroup + thead tr:=
+first-child th, table thead:first-child tr:first-child td, table thead:firs=
+t-child tr:first-child th { border-top: 0px; }
+
+table tbody + tbody { border-top: 2px solid rgb(239, 239, 239); }
+
+table table table { background-color: rgb(255, 255, 255); }
+
+table tbody > tr:nth-child(2n+1) > td, table tbody > tr:nth-child(2n+1) > t=
+h { background-color: rgb(246, 246, 246); }
+
+table.plain tbody > tr:nth-child(2n+1) > td, table.plain tbody > tr:nth-chi=
+ld(2n+1) > th { background: 0px 0px; }
+
+div.post { width: 710px; margin: 4rem auto; border-bottom: 1px solid rgb(23=
+5, 242, 246); overflow-wrap: break-word; hyphens: auto; }
+
+div.post-meta { display: inline-block; text-transform: uppercase; font-size=
+: 1.3rem; }
+
+h1.post-title { margin-bottom: 0px; }
+
+div.post-header { margin-bottom: 2rem; }
+
+div.next-post, div.prev-post { position: absolute; }
+
+div.next-post a, div.prev-post a { display: block; position: relative; text=
+-decoration: none; color: rgb(58, 65, 69); opacity: 0.5; top: 0.2em; }
+
+div.next-post a:hover, div.prev-post a:hover { opacity: 1; }
+
+div.prev-post a { left: -1em; }
+
+div.perma a { left: -1.15em; }
+
+div.next-post a { left: 710px; }
+
+pre, pre code { overflow-wrap: normal; white-space: pre; }
+
+@media (min-width: 980px) {
+  table.ultrawide { width: 980px; max-width: 980px; margin-left: -135px; }
+}
+
+@media (min-width: 1200px) {
+  table.ultrawide { width: 1200px; max-width: 1200px; margin-left: -245px; =
+}
+}
+
+@media (min-width: 1420px) {
+  table.ultrawide { width: 1420px; max-width: 1420px; margin-left: -355px; =
+}
+}
+------MultipartBoundary--ru991gQC3XeN4I0E1SjIQobIjQlxZDfyw68viGtBN7------

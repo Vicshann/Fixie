@@ -1,0 +1,7 @@
+https://webassembly.org/features/
+
+https://blog.stackblitz.com/posts/thread-destroyer/
+
+https://stackoverflow.com/questions/11728829/html5-webworkers-all-one-file?rq=3
+
+

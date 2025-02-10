@@ -1,0 +1,121 @@
+
+# https://clang.llvm.org/docs/ClangFormatStyleOptions.html
+
+DisableFormat: false               # Disables formatting completely
+Language: Cpp
+Standard: Latest
+BasedOnStyle: Microsoft        # !!! overrides ColumnLimit and prevents on line if/for
+#LineEnding: LE_LF
+MaxEmptyLinesToKeep: 4
+SortIncludes: false # These can break compilation
+UseTab: Never
+IndentWidth: 1
+ColumnLimit: 999    # 0 does not means unlimited for AllowShortBlocksOnASingleLine, AllowShortLoopsOnASingleLine, AllowShortIfStatementsOnASingleLine
+#ContinuationIndentWidth: 2
+#SpacesInLineCommentPrefix: -1
+#BinPackArguments: false
+#BinPackParameters: true
+
+#BreakBeforeBraces: Custom      # Allman  # Whitesmiths   # How to do separate for functions from other scopes?
+#BraceWrapping:
+#  AfterCaseLabel: true
+#  AfterClass: true
+#  AfterControlStatement: true
+#  AfterEnum: true
+#  AfterFunction: true
+#  AfterNamespace: true
+#  AfterStruct: true
+#  AfterUnion: true
+#  AfterExternBlock: true
+#  BeforeCatch: true
+#  BeforeElse: true
+#  BeforeLambdaBody: true
+#  BeforeWhile: true
+#  IndentBraces: false
+#  SplitEmptyFunction: false
+#  SplitEmptyRecord: false
+#  SplitEmptyNamespace: false
+
+#SpaceBeforeParens: Custom        
+#SpaceBeforeParensOptions:
+
+#SpacesInParens: Custom
+#SpacesInParensOptions:
+
+PointerAlignment: Left
+ReferenceAlignment: Pointer
+SpaceAroundPointerQualifiers: Before    # For PointerAlignment left
+#SpacesBeforeTrailingComments: 4
+RemoveBracesLLVM: true  # Unreliable?   # Unnecesary - AllowShortLoopsOnASingleLine works fine
+RemoveParentheses: MultipleParentheses   # Unreliable?
+#RemoveSemicolon: true         # Unreliable. There is a warning for that    
+AlignAfterOpenBracket: AlwaysBreak           # Make arguments/parameters on a single line  # To place them vertically
+
+AlignConsecutiveAssignments:    # AcrossEmptyLines  # AcrossEmptyLinesAndComments          # Any way to limit indents here?   !!!
+  Enabled: true
+  AcrossEmptyLines: false
+  AcrossComments: false
+  AlignCompound: true
+  PadOperators: true
+
+AlignConsecutiveDeclarations:    # AcrossEmptyLinesAndComments   # Any way to limit indents here?  !!!
+  Enabled: true
+  AcrossEmptyLines: false
+  AcrossComments: false
+  #AlignFunctionDeclarations: true      # Not found!
+  AlignFunctionPointers: true
+
+AlignConsecutiveBitFields: AcrossEmptyLinesAndComments
+AlignConsecutiveMacros: AcrossEmptyLinesAndComments
+AlignTrailingComments: Always
+AlignOperands: Align
+#BinPackParameters: true
+#ExperimentalAutoDetectBinPacking: true   
+#AllowAllParametersOfDeclarationOnNextLine: false  
+AllowShortBlocksOnASingleLine: Always            # Proc: tryMergeSimpleBlock    # How short? Should allow any single expression!!!
+#AllowShortCaseExpressionOnASingleLine: false
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortCompoundRequirementOnASingleLine: true
+AllowShortEnumsOnASingleLine: true
+AllowShortFunctionsOnASingleLine: true
+AllowShortIfStatementsOnASingleLine: AllIfsAndElse     # 'if' only # How short? Should allow any single expression!!!  What about 'for'?
+#AllowShortLambdasOnASingleLine: All
+AllowShortLoopsOnASingleLine: true        # for, while, do      # Proc: tryMergeSimpleControlStatement
+#AllowShortNamespacesOnASingleLine: true
+BitFieldColonSpacing: Both
+BreakBeforeConceptDeclarations: Never
+BreakFunctionDefinitionParameters: false     
+BreakTemplateDeclarations: No             
+EmptyLineAfterAccessModifier: Leave
+EmptyLineBeforeAccessModifier: LogicalBlock
+NamespaceIndentation: None
+SeparateDefinitionBlocks: Always
+IndentCaseBlocks: true
+IndentCaseLabels: true        # TODO: Adjust indent
+IndentExternBlock: NoIndent
+IndentGotoLabels: false
+IndentPPDirectives: AfterHash
+IndentRequiresClause: true      # RequiresClausePosition is OwnLine
+IndentWrappedFunctionNames: true
+InsertNewlineAtEOF: true
+PackConstructorInitializers: CurrentLine
+#QualifierAlignment: Left    # Unreliable?
+#QualifierOrder: [inline, static, const, type, volatile]
+#RemoveEmptyLinesInUnwrappedLines : true       # !! Not implemented yet !!
+#RequiresClausePosition: SingleLine
+SpaceAfterCStyleCast: false
+SpaceAfterLogicalNot: false
+SpaceAfterTemplateKeyword: false
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeCaseColon: false
+#SpaceBeforeCpp11BracedList: true     # ???
+#SpaceBeforeCtorInitializerColon: true  # ???
+SpaceBeforeInheritanceColon: false     # ???
+#SpaceBeforeRangeBasedForLoopColon: true     # ???
+SpaceBeforeSquareBrackets: false
+SpaceInEmptyBlock: true
+SpacesInAngles: Leave               # ???
+SpacesInSquareBrackets: false
+#WrapNamespaceBodyWithEmptyLines: Always    # !! Not implemented yet !!
+
+# TODO: Investigate penalties

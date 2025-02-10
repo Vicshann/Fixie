@@ -1,0 +1,1 @@
+# The contents of namespaces or wrapper classes should not be indented.

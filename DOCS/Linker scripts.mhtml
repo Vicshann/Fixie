@@ -1,0 +1,3905 @@
+From: <Saved by Blink>
+Snapshot-Content-Location: https://users.informatik.haw-hamburg.de/~krabat/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html
+Subject: Linker scripts
+Date: Mon, 3 Feb 2025 17:32:27 -0000
+MIME-Version: 1.0
+Content-Type: multipart/related;
+	type="text/html";
+	boundary="----MultipartBoundary--SBJxxZjC1xm4sRVQ2swi826he3r955mDgCC2dSETRt----"
+
+
+------MultipartBoundary--SBJxxZjC1xm4sRVQ2swi826he3r955mDgCC2dSETRt----
+Content-Type: text/html
+Content-ID: <frame-02A62D5C8A97028FEC7ED50DB85B8AFD@mhtml.blink>
+Content-Transfer-Encoding: quoted-printable
+Content-Location: https://users.informatik.haw-hamburg.de/~krabat/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html
+
+<html><head><meta http-equiv=3D"Content-Type" content=3D"text/html; charset=
+=3Dwindows-1252"></head><body bgcolor=3D"#FFFFFF">f78
+
+
+  =20
+   <meta name=3D"GENERATOR" content=3D"Mozilla/4.04 [en] (Win95; I) [Netsca=
+pe]">
+   <title> Linker scripts</title>
+
+
+
+<div class=3D"ChapterTitle"><a href=3D"https://users.informatik.haw-hamburg=
+.de/~krabat/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ld.html">Contents=
+</a>|<a href=3D"https://users.informatik.haw-hamburg.de/~krabat/FH-Labor/gn=
+upro/5_GNUPro_Utilities/c_Using_LD/ldindex.html">Index</a>|<a href=3D"https=
+://users.informatik.haw-hamburg.de/~krabat/FH-Labor/gnupro/5_GNUPro_Utiliti=
+es/c_Using_LD/ldEnvironment_Variables.html">Previous</a>|<a href=3D"https:/=
+/users.informatik.haw-hamburg.de/~krabat/FH-Labor/gnupro/5_GNUPro_Utilities=
+/c_Using_LD/ldMachine_Dependent_Features.html">Next</a></div>
+
+<h1 class=3D"ChapterTitle">
+<a name=3D"pgfId=3D1002958"></a><a name=3D"42018"></a><font color=3D"#00000=
+0">Linker
+scripts&nbsp;</font>&nbsp;
+<hr size=3D"6" width=3D"100%"></h1>
+<a name=3D"pgfId=3D1002965"></a><font size=3D"+1">A linker script&nbsp;<a n=
+ame=3D"marker=3D1007222"></a>controls
+every link. Such a script is written in the linker command language. The
+main purpose of the linker script is to describe how the sections in the
+input files should be mapped into the output file, and to control the memor=
+y
+layout of the output file. However, when necessary, the linker script can
+also direct the linker to perform many other operations, using the linker
+commands. The following documentation discusses using the linker script
+and its commands.</font>
+<ul>
+<ul>
+<ul>
+<li class=3D"Heading1">
+<font size=3D"+1"><a href=3D"https://users.informatik.haw-hamburg.de/~kraba=
+t/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html#Conce=
+pts">Basic linker script concepts</a></font></li>
+
+<ul>
+<li class=3D"Heading1">
+<font size=3D"+1"><a href=3D"https://users.informatik.haw-hamburg.de/~kraba=
+t/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html#forma=
+ts">Linker script format</a></font></li>
+
+<li class=3D"Heading1">
+<font size=3D"+1"><a href=3D"https://users.informatik.haw-hamburg.de/~kraba=
+t/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html#examp=
+le">Simple linker script example</a></font></li>
+
+<li class=3D"Heading1">
+<font size=3D"+1"><a href=3D"https://users.informatik.haw-hamburg.de/~kraba=
+t/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html#Comma=
+nds">Simple linker script commands</a></font></li>
+
+<li class=3D"Heading2">
+<font size=3D"+1"><a href=3D"https://users.informatik.haw-hamburg.de/~kraba=
+t/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html#Entry=
+_point">Setting the entry point</a></font></li>
+
+<li class=3D"Heading2">
+<font size=3D"+1"><a href=3D"https://users.informatik.haw-hamburg.de/~kraba=
+t/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html#Comma=
+nds_dealing">Commands dealing with files</a></font></li>
+
+<li class=3D"Heading2">
+<font size=3D"+1"><a href=3D"https://users.informatik.haw-hamburg.de/~kraba=
+t/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html#OFF">=
+Commands dealing with object file formats</a></font></li>
+
+<li class=3D"Heading2">
+<font size=3D"+1"><a href=3D"https://users.informatik.haw-hamburg.de/~kraba=
+t/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html#Other=
+_commands">Other linker script commands</a></font></li>
+
+<li class=3D"Heading1">
+<font size=3D"+1"><a href=3D"https://users.informatik.haw-hamburg.de/~kraba=
+t/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html#Assig=
+ning_values_symbols">Assigning values to symbols</a></font></li>
+
+<li class=3D"Heading1">
+<font size=3D"+1"><a href=3D"https://users.informatik.haw-hamburg.de/~kraba=
+t/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html#Simpl=
+e_assignments">Simple assignments</a></font></li>
+</ul>
+
+<li class=3D"Heading2">
+<font size=3D"+1"><a href=3D"https://users.informatik.haw-hamburg.de/~kraba=
+t/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html#PROVI=
+DE_command"><tt>PROVIDE</tt> command</a></font></li>
+
+<li class=3D"Heading1">
+<font size=3D"+1"><a href=3D"https://users.informatik.haw-hamburg.de/~kraba=
+t/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html#SECTI=
+ONS_command"><tt>SECTIONS</tt> command</a></font></li>
+
+<ul>
+<li class=3D"Heading2">
+<font size=3D"+1"><a href=3D"https://users.informatik.haw-hamburg.de/~kraba=
+t/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html#Outpu=
+t_section_description">Output section description</a></font></li>
+
+<li class=3D"Heading2">
+<font size=3D"+1"><a href=3D"https://users.informatik.haw-hamburg.de/~kraba=
+t/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html#Outpu=
+t_section_name">Output section name</a></font></li>
+
+<li class=3D"Heading2">
+<font size=3D"+1"><a href=3D"https://users.informatik.haw-hamburg.de/~kraba=
+t/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html#Outpu=
+t_section_address">Output section address</a></font></li>
+
+<li class=3D"Heading2">
+<font size=3D"+1"><a href=3D"https://users.informatik.haw-hamburg.de/~kraba=
+t/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html#Input=
+_section_description">Input section description</a></font></li>
+
+<li class=3D"Heading2">
+<font size=3D"+1"><a href=3D"https://users.informatik.haw-hamburg.de/~kraba=
+t/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html#Input=
+_section_basics">Input section basics</a></font></li>
+
+<li class=3D"Heading2">
+<font size=3D"+1"><a href=3D"https://users.informatik.haw-hamburg.de/~kraba=
+t/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html#Input=
+_section_wildcard_patterns">Input section
+wildcard patterns</a></font></li>
+
+<li class=3D"Heading2">
+<font size=3D"+1"><a href=3D"https://users.informatik.haw-hamburg.de/~kraba=
+t/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html#Input=
+_section_for_common_symbols">Input section
+for common symbols</a></font></li>
+
+<li class=3D"Heading2">
+<font size=3D"+1"><a href=3D"https://users.informatik.haw-hamburg.de/~kraba=
+t/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html#Input=
+_section_example">Input section example</a></font></li>
+
+<li class=3D"Heading2">
+<font size=3D"+1"><a href=3D"https://users.informatik.haw-hamburg.de/~kraba=
+t/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html#Outpu=
+t_section_data">Output section data</a></font></li>
+
+<li class=3D"Heading2">
+<font size=3D"+1"><a href=3D"https://users.informatik.haw-hamburg.de/~kraba=
+t/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html#Outpu=
+t_section_keywords">Output section keywords</a></font></li>
+
+<li class=3D"Heading2">
+<font size=3D"+1"><a href=3D"https://users.informatik.haw-hamburg.de/~kraba=
+t/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html#Outpu=
+t_section_discarding">Output section discarding</a></font></li>
+
+<li class=3D"Heading2">
+<font size=3D"+1"><a href=3D"https://users.informatik.haw-hamburg.de/~kraba=
+t/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html#Outpu=
+t_section_attributes">Output section attributes</a></font></li>
+
+<li class=3D"Heading2">
+<font size=3D"+1" ffb=3D""><a href=3D"https://users.informatik.haw-hamburg.=
+de/~krabat/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.h=
+tml#Output_section_type">Output section type</a></font></li>
+
+<li class=3D"Heading2">
+<font size=3D"+1"><a href=3D"https://users.informatik.haw-hamburg.de/~kraba=
+t/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html#Outpu=
+t_section_LMA">Output section LMA</a></font></li>
+
+<li class=3D"Heading2">
+<font size=3D"+1"><a href=3D"https://users.informatik.haw-hamburg.de/~kraba=
+t/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html#Outpu=
+t_section_region">Output section region</a></font></li>
+
+<li class=3D"Heading2">
+<font size=3D"+1"><a href=3D"https://users.informatik.haw-hamburg.de/~kraba=
+t/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html#Outpu=
+t_section_phdr">Output section <tt>phdr</tt></a></font></li>
+
+<li class=3D"Heading2">
+<font size=3D"+1"><a href=3D"https://users.informatik.haw-hamburg.de/~kraba=
+t/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html#Outpu=
+t_section_fill">Output section fill</a></font></li>
+</ul>
+
+<li class=3D"Heading2">
+<font size=3D"+1"><a href=3D"https://users.informatik.haw-hamburg.de/~kraba=
+t/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html#Overl=
+ay_description">Overlay description</a></font></li>
+
+<li class=3D"Heading1">
+<font size=3D"+1"><a href=3D"https://users.informatik.haw-hamburg.de/~kraba=
+t/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html#MEMOR=
+Y_command"><tt>MEMORY</tt> command</a></font></li>
+
+<li class=3D"Heading1">
+<font size=3D"+1"><a href=3D"https://users.informatik.haw-hamburg.de/~kraba=
+t/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html#PHDRS=
+_command"><tt>PHDRS</tt> command</a></font></li>
+
+<li class=3D"Heading1">
+<font size=3D"+1"><a href=3D"https://users.informatik.haw-hamburg.de/~kraba=
+t/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html#VERSI=
+ON_command"><tt>VERSION</tt> command</a></font></li>
+
+<li class=3D"Heading1">
+<font size=3D"+1"><a href=3D"https://users.informatik.haw-hamburg.de/~kraba=
+t/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html#Expre=
+ssions_in%20_linker_scripts">Expressions in
+linker scripts</a></font></li>
+
+<ul>
+<li class=3D"Heading1">
+<font size=3D"+1"><a href=3D"https://users.informatik.haw-hamburg.de/~kraba=
+t/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html#Const=
+ants">Constants</a></font></li>
+
+<li class=3D"Heading2">
+<font size=3D"+1"><a href=3D"https://users.informatik.haw-hamburg.de/~kraba=
+t/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html#Symbo=
+l_names">Symbol names</a></font></li>
+
+<li class=3D"Heading2">
+<font size=3D"+1"><a href=3D"https://users.informatik.haw-hamburg.de/~kraba=
+t/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html#The_l=
+ocation_counter">The location counter</a></font></li>
+
+<li class=3D"Heading2">
+<font size=3D"+1"><a href=3D"https://users.informatik.haw-hamburg.de/~kraba=
+t/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html#Opera=
+tors">Operators</a></font></li>
+
+<li class=3D"Heading2">
+<font size=3D"+1"><a href=3D"https://users.informatik.haw-hamburg.de/~kraba=
+t/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html#Evalu=
+ation">Evaluation</a></font></li>
+
+<li class=3D"Heading2">
+<font size=3D"+1"><a href=3D"https://users.informatik.haw-hamburg.de/~kraba=
+t/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html#The_s=
+ection_of_an_expression">The section of an
+expression</a></font></li>
+
+<li class=3D"Heading2">
+<font size=3D"+1"><a href=3D"https://users.informatik.haw-hamburg.de/~kraba=
+t/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html#Built=
+in_functions">Builtin functions</a></font></li>
+</ul>
+</ul>
+</ul>
+</ul>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1002966"></a><font size=3D"+1">The l=
+inker
+always uses a linker script. If you do not supply one yourself, the linker
+will use a default script that is compiled into the linker executable.
+You can use the ` <tt>--verbose</tt> ' command line option to display the
+default linker script. Certain command line options, such as ` <tt>-r</tt>
+' or ` <tt>-N</tt> ', will affect the default linker script. You may supply
+your own linker script by using the ` <tt>-T</tt> ' command line option.
+When you do this, your linker script will replace the default linker script=
+.</font></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1002967"></a><font size=3D"+1">You m=
+ay also
+use linker scripts implicitly by naming them as input files to the linker,
+as though they were files to be linked. If the linker opens a file, which
+it can not recognize as an object file or as an archive file, it will try
+to read it as a linker script. If the file can not be parsed as a linker
+script, the linker will report an error. An implicit linker script will
+not replace the default linker script. Typically an implicit linker script
+would contain only the ` <tt>INPUT</tt> ', ` <tt>GROUP</tt> ', or ` <tt>VER=
+SION</tt>
+' commands.</font></div>
+
+<h3 class=3D"Heading1">
+<a name=3D"pgfId=3D1002969"></a><a name=3D"_Toc417794832"></a><a name=3D"Co=
+ncepts"></a><font face=3D"Arial,Helvetica"><font size=3D"+2">Basic
+linker script concepts</font></font></h3>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1002970"></a><font size=3D"+1">We ne=
+ed to
+define some basic concepts and vocabulary in order to describe the linker
+script language.&nbsp;</font><a name=3D"marker=3D1007232"></a></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1002971"></a><font size=3D"+1">The l=
+inker
+combines input files into a single output file. The output file and each
+input file are in a special data format known as an object file format&nbsp=
+;<a name=3D"marker=3D1007227"></a>.
+Each file is called an object file&nbsp;<a name=3D"marker=3D1007229"></a>.
+The output file is often called an executable&nbsp;<a name=3D"marker=3D1007=
+228"></a>,
+but for our purposes we will also call it an object file. Each object file
+has, among other things, a list of sections . We sometimes refer to a secti=
+on
+in an input file as an input section&nbsp;<a name=3D"marker=3D100723
+ffb
+1"></a>;
+similarly, a section in the output file is an output section&nbsp;<a name=
+=3D"marker=3D1007230"></a>.</font></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1002972"></a><font size=3D"+1">Each =
+section
+in an object file has a name and a size. Most sections also have an associa=
+ted
+block of data, known as the section contents&nbsp;<a name=3D"marker=3D10072=
+33"></a>.
+A section may be marked as loadable&nbsp;<a name=3D"marker=3D1007235"></a>,
+meaning that the contents should be loaded into memory when the output
+file is run. A section with no contents may be allocatable&nbsp;<a name=3D"=
+marker=3D1007234"></a>,
+which means that an area in memory should be set aside, but nothing in
+particular should be loaded there (in some cases this memory must be zeroed
+out). A section, which is neither loadable nor allocatable, typically conta=
+ins
+some sort of debugging information.</font></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1002973"></a><font size=3D"+1">Every=
+ loadable
+or allocatable output section has two addresses. The first is the&nbsp;<a n=
+ame=3D"marker=3D1007240"></a>VMA&nbsp;<a name=3D"marker=3D1007237"></a>,
+or virtual memory address&nbsp;<a name=3D"marker=3D1007236"></a>. This is t=
+he
+address the section will have when the output file is run. The second is
+the LMA&nbsp;<a name=3D"marker=3D1007238"></a>, or load memory address&nbsp=
+;<a name=3D"marker=3D1007239"></a>.
+This is the address at which the section will be loaded. In most cases
+the two addresses will be the same. An example of when they might be differ=
+ent
+is when a data section is loaded into ROM, and then copied into RAM when
+the program starts up (this technique is often used to initialize global
+variables in a ROM based system). In this case the ROM address would be
+the&nbsp;<a name=3D"marker=3D1007241"></a>LMA , and the RAM address would b=
+e
+the VMA.</font></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1002974"></a><font size=3D"+1">You c=
+an see
+the sections in an object file by using the ` <tt>objdump</tt> ' program
+with the ` <tt>-h</tt> ' option.</font></div>
+
+
+<p class=3D"Body"><a name=3D"pgfId=3D1002975"></a><font size=3D"+1">Every o=
+bject
+file also has a list of symbols&nbsp;<a name=3D"marker=3D1007242"></a>, kno=
+wn
+as the symbol table&nbsp;<a name=3D"marker=3D1007243"></a>. A symbol may be
+defined or undefined. Each symbol has a name, and each defined symbol has
+an address, among other information. If you compile a C or C++ program
+into an object file, you will get a defined symbol for every defined functi=
+on
+and global or static variable. Every undefined function or global variable,
+which is referenced in the input file, will become an undefined symbol.
+You can see the symbols in an object file by using the `&nbsp;<a name=3D"ma=
+rker=3D1007245"></a><a name=3D"marker=3D1007246"></a><a name=3D"marker=3D10=
+07247"></a><tt>nm</tt>
+' program, or by using the ` <tt>objdump</tt>&nbsp;<a name=3D"marker=3D1007=
+244"></a>'
+program with the ` <tt>-t</tt> ' option.</font>
+</p><h3 class=3D"Heading1">
+<a name=3D"pgfId=3D1002977"></a><a name=3D"_Toc417794833"></a><a name=3D"fo=
+rmats"></a><font face=3D"Arial,Helvetica">Linker
+script format</font></h3>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1002978"></a><font size=3D"+1">Linke=
+r scripts
+are text files. You write a linker script as a series of commands. Each
+command is either a keyword, possibly followed by arguments or an assignmen=
+t
+to a symbol. You may separate commands using semicolons. Whitespace is
+generally ignored.&nbsp;</font><a name=3D"marker=3D1007248"></a></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1002979"></a><font size=3D"+1">Strin=
+gs such
+as file or format names can normally be entered directly. If the file name
+contains a character such as a comma, which would otherwise serve to separa=
+te
+file names, you may put the file name in double quotes. There is no way
+to use a double quote character in a file name.</font></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1002980"></a><font size=3D"+1">You m=
+ay include
+comments in linker scripts just as in C, delimited by `&nbsp;<a name=3D"mar=
+ker=3D1007250"></a><tt>/*</tt>
+' and ` <tt>*/</tt> '. As in C, comments are syntactically equivalent to
+whitespace.&nbsp;</font>
+ffb
+<a name=3D"marker=3D1007253"></a></div>
+
+<h3 class=3D"Heading1">
+<a name=3D"pgfId=3D1002982"></a><a name=3D"_Toc417794834"></a><a name=3D"ex=
+ample"></a><font face=3D"Arial,Helvetica">Simple
+linker script example</font></h3>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1002983"></a><font size=3D"+1">Many =
+linker
+scripts are fairly simple. The simplest possible linker script has just
+one command: `&nbsp;<a name=3D"marker=3D1007254"></a><tt>SECTIONS</tt> '. Y=
+ou
+use the ` <tt>SECTIONS</tt> ' command to describe the memory layout of
+the output file. The ` <tt>SECTIONS</tt> ' command is a powerful command.
+Here we will describe a simple use of it. Let's assume your program consist=
+s
+only of code, initialized data, and uninitialized data. These will be in
+the `&nbsp;<a name=3D"marker=3D1007260"></a><a name=3D"marker=3D1007261"></=
+a><tt>.text</tt>
+', ` <tt>.data</tt> ', and ` <tt>.bss</tt> ' sections, respectively. Let's
+assume further that these are the only sections, which appear in your input
+files.</font></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1002984"></a><font size=3D"+1">For t=
+his example,
+let's say that the code should be loaded at address ` <tt>0x10000</tt>
+', and that the data should start at address ` <tt>0x8000000</tt> '. The
+following linker script will do this function.</font></div>
+&nbsp;
+<ul>
+<ul>
+<pre class=3D"CodeExample"><a name=3D"pgfId=3D1002985"></a><font size=3D"+1=
+">SECTIONS</font></pre>
+
+<pre><font size=3D"+1">{</font></pre>
+
+<pre><font size=3D"+1">. =3D 0x10000;</font></pre>
+
+<pre><font size=3D"+1">.text : { *(.text) }</font></pre>
+
+<pre><font size=3D"+1">. =3D 0x8000000;</font></pre>
+
+<pre><font size=3D"+1">.data : { *(.data) }</font></pre>
+
+<pre><font size=3D"+1">.bss : { *(.bss) }</font></pre>
+
+<pre><font size=3D"+1">}</font></pre>
+</ul>
+</ul>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1002986"></a><font size=3D"+1">You w=
+rite the
+` <tt>SECTIONS</tt> ' command as the keyword ` <tt>SECTIONS</tt> ', followe=
+d
+by a series of symbol assignments and output section descriptions enclosed
+in curly braces. The first line in the above example sets the special symbo=
+l
+` <tt>.</tt> ', which is the location counter. If you do not specify the
+address of an output section in some other way (other ways are described
+later), the address is set from the current value of the location counter.
+The location counter is then incremented by the size of the output section.
+The second line defines an output section, ` <tt>.text</tt> '. The colon
+is required syntax, which may be ignored for now. Within the curly braces
+after the output section name, you list the names of the input sections,
+which should be placed into this output section. The ` <tt>*</tt> ' is
+a wildcard which matches any file name. The expression ` <tt>*(.text)</tt>&=
+nbsp;<a name=3D"marker=3D1007255"></a>'
+means all ` <tt>.text</tt>&nbsp;<a name=3D"marker=3D1007256"></a>' input se=
+ctions
+in all input files.</font></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1002987"></a><font size=3D"+1">Since=
+ the location
+counter is ` <tt>0x10000</tt> ' when the output section ` <tt>.text</tt>
+' is defined, the linker will set the address of the ` <tt>.text</tt>&nbsp;=
+<a name=3D"marker=3D1007259"></a>'
+section in the output file to be ` <tt>0x10000</tt> '. The remaining lines
+define the ` <tt>.data</tt> ' and ` <tt>.bss</tt> ' sections in the output
+file. The ` <tt>.data</tt> ' output section will be at address ` <tt>0x8000=
+000</tt>
+'. When the ` <tt>.bss</tt> ' output section is defined, the value of the
+location counter will be ` <tt>0x8000000</tt> ' plus the size of the `
+<tt>.data</tt> ' output section. The effect is that the ` <tt>.bss</tt>&nbs=
+p;<a name=3D"marker=3D1007257"></a>'
+output section will follow immediately after the ` <tt>.data</tt>&nbsp;<a n=
+ame=3D"marker=3D1007258"></a>'
+output section in memory.</font></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1005897"></a><font size=3D"+1">That'=
+s it!
+That's a simple and complete linker script.</font></div>
+
+<h3 class=3D"Heading1">
+<a name=3D"pgfId=3D1002989"></a><a name=3D"_Toc417794835"></a><a name=3D"Co=
+mmands"></a><i><font face=3D"Arial,Helvetica">Simple
+linker script commands</font></i></h3>
+
+&lt;
+ffb
+DIV CLASS=3D"Body"&gt;<a name=3D"pgfId=3D1002990"></a><font size=3D"+1">In =
+the following
+documentation, the discussion describes the simple linker script commands.
+See also <a href=3D"https://users.informatik.haw-hamburg.de/~krabat/FH-Labo=
+r/gnupro/5_GNUPro_Utilities/c_Using_LD/ldCommand_Line_Options.html" class=
+=3D"XRef">Command line
+options for ld</a> and <a href=3D"https://users.informatik.haw-hamburg.de/~=
+krabat/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldBFD.html" class=3D"X=
+Ref">BFD</a>.</font>
+
+<h4 class=3D"Heading2">
+<a name=3D"pgfId=3D1002992"></a><a name=3D"_Toc417794836"></a><a name=3D"En=
+try_point"></a><font face=3D"Arial,Helvetica">Setting
+the entry point</font></h4>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1002993"></a><font size=3D"+1">The f=
+irst instruction
+to execute in a program is called the entry point&nbsp;<a name=3D"marker=3D=
+1007262"></a>.
+You can use the ` <tt>ENTRY</tt> ' linker script command to set the entry
+point. The argument is a symbol name:</font></div>
+&nbsp;
+<ul>
+<pre class=3D"Body"><a name=3D"pgfId=3D1005902"></a><font size=3D"+1"><tt>E=
+NTRY (</tt> <i>symbol</i> <tt>)</tt></font></pre>
+</ul>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1002994"></a><font size=3D"+1">There=
+ are several
+ways to set the entry point. The linker will set the entry point by trying
+each of the following methods in order, and stopping when one of them succe=
+eds:</font></div>
+&nbsp;
+<ul>
+<ul>
+<ul>
+<li class=3D"Bullet">
+<a name=3D"pgfId=3D1002995"></a><font size=3D"+1">The `<tt> -e</tt> ' entry=
+&nbsp;<a name=3D"marker=3D1007263"></a>command-line
+option;</font></li>
+
+<li class=3D"Bullet">
+<a name=3D"pgfId=3D1002996"></a><font size=3D"+1">The ` <tt>ENTRY (symbol)<=
+/tt>
+' command in a linker script;</font></li>
+
+<li class=3D"Bullet">
+<a name=3D"pgfId=3D1002997"></a><font size=3D"+1">The value of the symbol, =
+<tt>start</tt>,
+if defined;</font></li>
+
+<li class=3D"Bullet">
+<a name=3D"pgfId=3D1002998"></a><font size=3D"+1">The address of the first =
+byte
+of the ` <tt>.text</tt> ' section, if present;</font></li>
+
+<li class=3D"Bullet">
+<a name=3D"pgfId=3D1002999"></a><font size=3D"+1">The address, ` <tt>0</tt>=
+ '.</font></li>
+</ul>
+</ul>
+</ul>
+
+<h4 class=3D"Heading2">
+<a name=3D"pgfId=3D1003001"></a><a name=3D"_Toc417794837"></a><a name=3D"Co=
+mmands_dealing"></a><i><font face=3D"Arial,Helvetica">Commands
+dealing with files</font></i></h4>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003002"></a><font size=3D"+1">Sever=
+al linker
+script commands deal with files. See also <a href=3D"https://users.informat=
+ik.haw-hamburg.de/~krabat/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldC=
+ommand_Line_Options.html" class=3D"XRef">Command
+line options for ld</a> and <a href=3D"https://users.informatik.haw-hamburg=
+.de/~krabat/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldBFD.html" class=
+=3D"XRef">BFD</a>.</font></div>
+
+<div class=3D"BodyHang1"><a name=3D"pgfId=3D1003003"></a><tt><font size=3D"=
++1">INCLUDE
+<i>filename</i></font></tt></div>
+
+<ul><font size=3D"+1">Include the linker script <i><tt>filename</tt></i> at
+this point. The file will be searched for in the current directory, and
+in any directory specified with the ` <tt>-L</tt> ' option. You can nest
+calls to ` <tt>INCLUDE</tt> ' up to 10 levels deep.</font></ul>
+
+<div class=3D"BodyHang1"><a name=3D"pgfId=3D1003004"></a><tt><font size=3D"=
++1">INPUT
+(<i>file</i> , <i>file</i> , ...)</font></tt></div>
+
+<div class=3D"BodyHang1List"><a name=3D"pgfId=3D1003005"></a><tt><font size=
+=3D"+1">INPUT
+(<i>file file</i> ...)</font></tt></div>
+
+<ul><font size=3D"+1">The ` <tt>INPUT</tt> ' command directs the linker to
+include the named files in the link, as though they were named on the comma=
+nd
+line.</font>
+
+<p class=3D"BodyListFollow"><a name=3D"pgfId=3D1003006"></a><font size=3D"+=
+1">For
+example, if you always want to include ` <tt>subr.o</tt> ' any time you
+do a link, but you can't be bothered to put it on every link command line,
+then you can put ` <tt>INPUT (subr.o)</tt> ' in your linker script. In
+fact, if you like, you can list all of your input files in the linker scrip=
+t,
+and then invoke the linker with nothing but a ` <tt>-T</tt> ' option. The
+linker will first try to open the file in the current directory. If it
+is not found, the linker will search through the archive library search
+path. See the description of ` <tt>-L</tt> ' . If you use ` <tt>INPUT (-l</=
+tt>
+file <tt>)</tt> ', <tt>ld</tt> will transform the name to ` <tt>lib</tt>
+file <tt>.a</tt> ', as with the command line argument ` <tt>-l</tt> '.
+When you use the ` <tt>INPUT</tt> ' command in an implicit linker script,
+the files
+ffb
+ will be included in the link at the point at which the linker
+script file is included. This can affect archive searching. <tt>GROUP(FILE,
+FILE, ...)</tt></font></p></ul>
+
+<div class=3D"BodyHang1"><a name=3D"pgfId=3D1003007"></a><tt><font size=3D"=
++1">GROUP
+(<i>file file</i></font></tt><font size=3D"+1"> <tt>...)</tt></font></div>
+
+<ul><font size=3D"+1">The ` <tt>GROUP</tt> ' command is like ` <tt>INPUT</t=
+t>
+', except that the named files should all be archives, and they are searche=
+d
+repeatedly until no new undefined references are created.</font></ul>
+
+<div class=3D"BodyHang1"><a name=3D"pgfId=3D1003008"></a><font size=3D"+1">=
+<tt>OUTPUT</tt>
+<tt>(<i>filename</i>)</tt></font></div>
+
+<ul><font size=3D"+1">The ` <tt>OUTPUT</tt> ' command names the output file=
+.
+Using ` <tt>OUTPUT(FILENAME)</tt> ' in the linker script is exactly like
+using ` <tt>-o</tt> filename ' on the command line. If both are used, the
+command line option takes precedence.</font>
+
+<p class=3D"BodyListFollow"><a name=3D"pgfId=3D1003009"></a><font size=3D"+=
+1">You
+can use the ` <tt>OUTPUT</tt> ' command to define a default name for the
+output file other than the usual default of ` <tt>a.out</tt> '.</font></p><=
+/ul>
+
+<div class=3D"BodyHang1"><a name=3D"pgfId=3D1006079"></a><tt><font size=3D"=
++1">SEARCH_DIR
+(<i>path</i>)</font></tt></div>
+
+<ul><font size=3D"+1">The ` <tt>SEARCH_DIR</tt> ' command adds path to the
+list of paths where ` <tt>ld</tt> ' looks for archive libraries. Using
+` <tt>SEARCH_DIR (<i>path</i>)</tt> ' is exactly like using ` <tt>-L </tt>p=
+ath
+' on the command line; see <a href=3D"https://users.informatik.haw-hamburg.=
+de/~krabat/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldCommand_Line_Opt=
+ions.html" class=3D"XRef">Command
+line options for ld</a>. If both are used, then the linker will search
+both paths. Paths specified using the command line option are searched
+first.</font></ul>
+
+<div class=3D"BodyHang1"><a name=3D"pgfId=3D1003010"></a><font size=3D"+1">=
+<tt>STARTUP
+(</tt> filename <tt>)</tt></font></div>
+
+<ul><font size=3D"+1">The ` <tt>STARTUP</tt> ' command is just like the ` <=
+tt>INPUT</tt>
+' command, except that filename will become the first input file to be
+linked, as though it were specified first on the command line. This may
+be useful when using a system in which the entry point is always the start
+of the first file.</font></ul>
+
+<h4 class=3D"Heading2">
+<a name=3D"pgfId=3D1003012"></a><a name=3D"_Toc417794838"></a><a name=3D"OF=
+F"></a><font face=3D"Arial,Helvetica"><font size=3D"+1">Commands
+dealing with object file formats</font></font></h4>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003013"></a><font size=3D"+1">A cou=
+ple of
+linker script commands deal with object file formats. See also&nbsp;<a name=
+=3D"marker=3D1007264"></a><a href=3D"https://users.informatik.haw-hamburg.d=
+e/~krabat/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldCommand_Line_Opti=
+ons.html" class=3D"XRef">Command
+line options for ld</a> and <a href=3D"https://users.informatik.haw-hamburg=
+.de/~krabat/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldBFD.html" class=
+=3D"XRef">BFD</a>.</font></div>
+
+<div class=3D"BodyHang1"><a name=3D"pgfId=3D1003014"></a><tt><font size=3D"=
++1">OUTPUT_FORMAT
+(<i>bfdname</i>)</font></tt></div>
+
+<div class=3D"BodyHang1List"><a name=3D"pgfId=3D1003015"></a><tt><font size=
+=3D"+1">OUTPUT_FORMAT(default,
+big, little)</font></tt></div>
+
+<ul><font size=3D"+1">The ` <tt>OUTPUT_FORMAT</tt> ' command names which BF=
+D
+format to use for the output file. Using ` <tt>OUTPUT_FORMAT (<i>bfdname</i=
+>)'</tt>
+is exactly like using ` <tt>-oformat&nbsp;</tt> <i><tt>bfdname</tt></i>
+' on the command line . If both are used, the command line option takes
+precedence.</font>
+
+<p class=3D"BodyListFollow"><a name=3D"pgfId=3D1003016"></a><font size=3D"+=
+1">You
+can use ` <tt>OUTPUT_FORMAT</tt> ' with three arguments to use different
+formats based on the ` <tt>-EB</tt> ' and ` <tt>-EL</tt> ' command line
+options. This permits the linker script to set the output format based
+on the desired endianness. If neither ` <tt>-EB</tt> ' nor ` <tt>-EL</tt>
+' is used, then the output format will be the first argument, ` <tt>DEFAULT=
+</tt>
+'. If ` <tt>-EB</tt> ' is used, the output format will be the second argume=
+nt,
+` <tt>BIG</tt> '. If ` <tt>-EL</tt> ' is used, the output format will be
+the third argument, ` <tt>LITTLE</tt> '. For example, the default linker
+script for the MIPS ELF target uses the following command:</font></p></ul>
+&nbsp;
+<ul>
+&lt;
+ffb
+UL&gt;
+<pre class=3D"CodeExample"><a name=3D"pgfId=3D1003017"></a><tt><font size=
+=3D"+1">OUTPUT_FORMAT(elf32-bigmips, elf32-bigmips, elf32-littlemips)</font=
+></tt></pre>
+</ul>
+
+&nbsp;
+<ul>
+<div class=3D"BodyListFollow"><a name=3D"pgfId=3D1003018"></a><font size=3D=
+"+1">This
+says that the default format for the output file is ` <tt>elf32-bigmips</tt=
+>
+', but if the user uses the ` <tt>-EL</tt> ' command line option, the outpu=
+t
+file will be created in the ` <tt>elf32-littlemips</tt> ' format.</font></d=
+iv>
+</ul>
+
+<div class=3D"BodyHang1"><a name=3D"pgfId=3D1006288"></a><tt><font size=3D"=
++1">TARGET(<i>bfdname</i>)</font></tt></div>
+
+<ul>
+<div class=3D"BodyHang1"><font size=3D"+1">The ` <tt>TARGET</tt> ' command =
+names
+which BFD format to use when reading input files. It affects subsequent
+` <tt>INPUT</tt> ' and ` <tt>GROUP</tt> ' commands. This command is like
+using ` <tt>-b </tt>bfdname ' on the command line. If the ` <tt>TARGET</tt>
+' command is used but ` <tt>OUTPUT_FORMAT</tt> ' is not, then the last
+` <tt>TARGET</tt> ' command is also used to set the format for the output
+file.</font></div>
+</ul>
+
+<h4 class=3D"Heading2">
+<a name=3D"pgfId=3D1003020"></a><a name=3D"_Toc417794839"></a><a name=3D"Ot=
+her_commands"></a><font face=3D"Arial,Helvetica"><font size=3D"+1">Other
+linker script commands</font></font></h4>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003021"></a><font size=3D"+1">There=
+ are a
+few other linker scripts commands. See also&nbsp;<a name=3D"marker=3D100726=
+5"></a><a href=3D"https://users.informatik.haw-hamburg.de/~krabat/FH-Labor/=
+gnupro/5_GNUPro_Utilities/c_Using_LD/ldCommand_Line_Options.html" class=3D"=
+XRef">Command
+line options for ld</a> and <a href=3D"https://users.informatik.haw-hamburg=
+.de/~krabat/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldBFD.html" class=
+=3D"XRef">BFD</a>.</font></div>
+
+<div class=3D"BodyHang1"><a name=3D"pgfId=3D1003022"></a><tt><font size=3D"=
++1">FORCE_COMMON_ALLOCATION</font></tt></div>
+
+<ul><font size=3D"+1">This command has the same effect as the ` <tt>-d</tt>
+' command-line option: to make ` <tt>ld</tt> ' assign space to common symbo=
+ls
+even if a relocatable output file is specified (` <tt>-r</tt> ').</font></u=
+l>
+
+<div class=3D"BodyHang1"><a name=3D"pgfId=3D1003023"></a><font size=3D"+1">=
+<tt>NOCROSSREFS(</tt>
+<tt><i>section section </i>...)</tt></font></div>
+
+<ul><font size=3D"+1">This command may be used to tell ` <tt>ld</tt> ' to i=
+ssue
+an error about any references among certain output sections.</font></ul>
+&nbsp;
+<ul>
+<div class=3D"BodyListFollow"><a name=3D"pgfId=3D1003024"></a><font size=3D=
+"+1">In
+certain types of programs, particularly on embedded systems when using
+overlays, when one section is loaded into memory, another section will
+not be. Any direct references between the two sections would be errors.
+For example, it would be an error if code in one section called a function
+defined in the other section. The ` <tt>NOCROSSREFS</tt> ' command takes
+a list of output section names. If ` <tt>ld</tt> ' detects any cross-refere=
+nces
+between the sections, it reports an error and returns a non-zero exit statu=
+s.
+Remember that the ` <tt>NOCROSSREFS</tt> ' command uses output section
+names, not input section names.</font></div>
+</ul>
+
+<div class=3D"BodyHang1"><a name=3D"pgfId=3D1006365"></a><font size=3D"+1">=
+<tt>OUTPUT_ARCH(</tt>
+bfdarch <tt>)</tt></font></div>
+
+<ul><font size=3D"+1">Specify a particular output machine architecture, bfd=
+arch
+. The argument is one of the names used by the BFD library. You can see
+the architecture of an object file by using the ` <tt>objdump</tt> ' progra=
+m
+with the ` <tt>-f</tt> ' option.</font></ul>
+
+<h3 class=3D"Heading1">
+<a name=3D"pgfId=3D1003026"></a><a name=3D"_Toc417794840"></a><a name=3D"As=
+signing_values_symbols"></a><font face=3D"Arial,Helvetica">Assigning
+values to symbols</font></h3>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003027"></a><font size=3D"+1">You m=
+ay assign
+a value to a symbol in a linker script. This will define the symbol as
+a global symbol.&nbsp;</font><a name=3D"marker=3D1007268"></a></div>
+
+<h4 class=3D"Heading2">
+<a name=3D"pgfId=3D1003029"></a><a name=3D"_Toc417794841"></a><a name=3D"Si=
+mple_assignments"></a><font face=3D"Arial,Helvetica"><font size=3D"+1">Simp=
+le
+assignments</font></font></h4>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003030"></a><font size=3D"+1">You m=
+ay assign
+to a symbol using any of the=20
+ffb
+C assignment operators:&nbsp;</font><a name=3D"marker=3D1007266"></a><a nam=
+e=3D"marker=3D1007267"></a></div>
+
+<div class=3D"CodeExample"><a name=3D"pgfId=3D1003031"></a><tt><font size=
+=3D"+1">symbol
+=3D expression ;</font></tt></div>
+<tt><font size=3D"+1">symbol +=3D expression ;</font></tt>
+<br><tt><font size=3D"+1">symbol -=3D expression ;</font></tt>
+<br><tt><font size=3D"+1">symbol *=3D expression ;</font></tt>
+<br><tt><font size=3D"+1">symbol /=3D expression ;</font></tt>
+<br><tt><font size=3D"+1">symbol &lt;&lt;=3D expression ;</font></tt>
+<br><tt><font size=3D"+1">symbol &gt;&gt;=3D expression ;</font></tt>
+<br><tt><font size=3D"+1">symbol &amp;=3D expression ;</font></tt>
+<br><tt><font size=3D"+1">symbol |=3D expression ;</font></tt>
+<ul>
+<ul>
+<ul>
+<li class=3D"Bullet">
+<a name=3D"pgfId=3D1003032"></a><font size=3D"+1">The first case will defin=
+e `
+symbol ' to the value of ` expression '. In the other cases, ` symbol '
+must already be defined, and the value will be accordingly adjusted.</font>=
+</li>
+
+<li class=3D"Bullet">
+<a name=3D"pgfId=3D1003033"></a><font size=3D"+1">The special symbol name `=
+ <tt>.</tt>
+' indicates the location counter. You may only use this within a `&nbsp;<a =
+name=3D"marker=3D1007269"></a><tt>SECTIONS</tt>
+' command.</font></li>
+
+<li class=3D"Bullet">
+<a name=3D"pgfId=3D1003034"></a><font size=3D"+1">The semicolon after ` exp=
+ression
+' is required.</font></li>
+
+<li class=3D"Bullet">
+<a name=3D"pgfId=3D1003035"></a><font size=3D"+1">See <a href=3D"https://us=
+ers.informatik.haw-hamburg.de/~krabat/FH-Labor/gnupro/5_GNUPro_Utilities/c_=
+Using_LD/ldLinker_scripts.html#Expressions_in%20_linker_scripts" class=3D"X=
+Ref">Expressions
+in linker scripts</a>.</font></li>
+
+<li class=3D"Bullet">
+<a name=3D"pgfId=3D1003036"></a><font size=3D"+1">You may write symbol assi=
+gnments
+as commands in their own right, or as statements within a ` <tt>SECTIONS</t=
+t>
+' command, or as part of an output section description in a ` <tt>SECTIONS<=
+/tt>
+' command.</font></li>
+
+<li class=3D"Bullet">
+<a name=3D"pgfId=3D1003037"></a><font size=3D"+1">The section of the symbol=
+ will
+be set from the section of the expression; for more information, see <a hre=
+f=3D"https://users.informatik.haw-hamburg.de/~krabat/FH-Labor/gnupro/5_GNUP=
+ro_Utilities/c_Using_LD/ldLinker_scripts.html#Expressions_in%20_linker_scri=
+pts" class=3D"XRef">Expressions
+in linker scripts</a>.</font></li>
+
+<li class=3D"Bullet">
+<a name=3D"pgfId=3D1003038"></a><font size=3D"+1">The following is an examp=
+le showing
+the three different places that symbol assignments may be used:</font></li>
+
+<ul>
+<ul>
+<pre class=3D"CodeExample2"><a name=3D"pgfId=3D1003039"></a><font size=3D"+=
+1">floating_point =3D 0;</font></pre>
+
+<pre><font size=3D"+1">SECTIONS</font></pre>
+
+<pre><font size=3D"+1">{</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp; .text :</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {</=
+font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbs=
+p;&nbsp; *(.text)</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbs=
+p;&nbsp; _etext =3D .;</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }</=
+font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp; _bdata =3D (. + 3) &amp; ~ 4;</font></p=
+re>
+
+<pre><font size=3D"+1">&nbsp;&nbsp; .data : { *(.data) }</font></pre>
+
+<pre><font size=3D"+1">}</font></pre>
+</ul>
+</ul>
+</ul>
+</ul>
+</ul>
+
+<div class=3D"Body">
+<ul><a name=3D"pgfId=3D1003040"></a><font size=3D"+1">In the previous examp=
+le,
+the ` <tt>floating_point</tt> ' symbol will be defined as zero. The ` <tt>_=
+etext</tt>
+' symbol will be defined as the address following the last ` <tt>.text</tt>
+' input section. The symbol ` <tt>_bdata</tt> ' will be defined as the
+address following the ` <tt>.text</tt> ' output section aligned upward
+to a 4 byte boundary.</font></ul>
+</div>
+
+<h4 class=3D"Heading2">
+<a name=3D"pgfId=3D1003042"></a><a name=3D"_Toc417794842"></a><a name=3D"PR=
+OVIDE_command"></a><font size=3D"+2"><tt>PROVIDE</tt><font face=3D"Arial,He=
+lvetica">
+command</font></font></h4>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003043"></a><font size=3D"+1">In so=
+me cases,
+it is desirable for a linker script to define a symbol only if it is refere=
+nced
+and is not defined by any object included in the link. For example, traditi=
+onal
+linkers defined the symbol ` <tt>etext</tt> '. However, ANSI C requires
+that the user be able to use ` <tt>etext</tt> ' as a function name without
+encountering an error. The ` <tt>PROVIDE</tt>&nbsp;<a name=3D"marker=3D1007=
+270"></a>'
+keyword may be used to define a symbol, such as ` <tt>etext</tt> ', only
+if it is referenced but not defined. The syntax is ` <tt>PROVIDE(</tt>
+symbol <tt>=3D </tt>expression <tt>)</tt> '.</font></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003044"></a><font size=3D"+1">Here =
+is an
+example of using ` <tt>PROVIDE</tt> ' to define ` <tt>etext</tt> ':</font><=
+/div>
+&nbsp;
+<ul>
+<ul>
+<ul>
+<pre class=3D"CodeExample"><a name=3D"pgfId=3D1003045"></a><font size=3D"+1=
+">SECTIONS</font></pre>
+
+<pre><font size=3D"+1">{</font></pre>
+
+<pre><font size=3D"+1">.text :</font></pre>
+
+<pre><font size=3D"+1">{</font></pre>
+
+<pre><font size=3D"+1">*(.text)</font></pre>
+
+<pre><font size=3D"+1">_etext =3D .;</font></pre>
+
+<pre><font size=3D"+1">PROVIDE(etext =3D .);</font></pre>
+
+<pre><font size=3D"+1">}</font></pre>
+
+<pre><font size=3D"+1">}</font></pre>
+</ul>
+</ul>
+</ul>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003046"></a><font size=3D"+1">In th=
+e previousexample,
+if the program defines ` <tt>_etext</tt> ', the linker will give a multiple
+definition error. If, on the other hand, the program defines ` <tt>etext</t=
+t>
+', the linker will silently use the definition in the program. If the progr=
+am
+references ` <tt>etext</tt> ' but does not define it, the linker will use
+the definition in the linker script.</font></div>
+
+<h3 class=3D"Heading1">
+<a name=3D"pgfId=3D1003048"></a><a name=3D"_Toc417794843"></a><a name=3D"SE=
+CTIONS_command"></a><font size=3D"+2"><tt>SECTIONS</tt>
+<font face=3D"Arial,Helvetica">command</font></font></h3>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003049"></a><font size=3D"+1">The `=
+ <tt>SECTIONS</tt>&nbsp;<a name=3D"SECTIONS"></a>'
+command tells the linker how to map input sections into output sections,
+and how to place the output sections in memory. The format of the ` <tt>SEC=
+TIONS</tt>
+' command is:</font></div>
+&nbsp;
+<ul>
+<ul>
+<pre class=3D"CodeExample"><a name=3D"pgfId=3D1003050"></a><font size=3D"+1=
+">SECTIONS</font></pre>
+
+<pre><font size=3D"+1">&nbsp; {</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp;&nbsp;&nbsp; sections - command</font></=
+pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp;&nbsp;&nbsp; sections - command</font></=
+pre>
+
+<pre><font size=3D"+1">...</font></pre>
+
+<pre><font size=3D"+1">&nbsp; }</font></pre>
+</ul>
+</ul>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003051"></a><font size=3D"+1">Each =
+` sections
+- command ' may of be one of the following:</font></div>
+
+<ul>
+<ul>
+<ul>
+<li class=3D"Bullet">
+<a name=3D"pgfId=3D1003052"></a><font size=3D"+1">An ` <tt>ENTRY</tt> ' com=
+mand
+(see <a href=3D"https://users.informatik.haw-hamburg.de/~krabat/FH-Labor/gn=
+upro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html#Entry_point">Setti=
+ng the entry point</a>)</font></li>
+
+<li class=3D"Bullet">
+<a name=3D"pgfId=3D1003053"></a><font size=3D"+1">A symbol assignment (see =
+<a href=3D"https://users.informatik.haw-hamburg.de/~krabat/FH-Labor/gnupro/=
+5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html#Simple_assignments">Sim=
+ple
+assignments</a>)</font></li>
+
+<li class=3D"Bullet">
+<a name=3D"pgfId=3D1003054"></a><font size=3D"+1">An output section descrip=
+tion
+(see <a href=3D"https://users.informatik.haw-hamburg.de/~krabat/FH-Labor/gn=
+upro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html#Output_section_des=
+cription">Output section description</a>)</font></li>
+
+<li class=3D"Bullet">
+<a name=3D"pgfId=3D1003055"></a><font size=3D"+1">An overlay description (s=
+ee <a href=3D"https://users.informatik.haw-hamburg.de/~krabat/FH-Labor/gnup=
+ro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html#Overlay_description"=
+>Overlay
+description</a>)</font></li>
+</ul>
+</ul>
+</ul>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003056"></a><font size=3D"+1">The `=
+ <tt>ENTRY</tt>
+' command and symbol assignments are permitted inside the `&nbsp;<a name=3D=
+"symbol assignments"></a><tt>SECTIONS</tt>
+' command for convenience in using the location counter in those commands.
+This can also make the linker script easier to understand because you can
+use those commands at meaningful points in the layout of the output file.
+See <a href=3D"https://users.informatik.haw-hamburg.de/~krabat/FH-Labor/gnu=
+pro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html#Output_section_desc=
+ription">Output section description</a>
+and <a href=3D"https://users.informatik.haw-hamburg.de/~krabat/FH-Labor/gnu=
+pro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html#Overlay_description=
+">Overlay description</a>.</font></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003057"></a><font size=3D"+1">If yo=
+u do not
+use a ` <tt>SECTIONS</tt> ' command in your linker script, the linker will
+place each input section into an identically named output section in the
+order that the sections are first encountered in the input files. If all
+input sections are present in the first file, for examp
+ffb
+le, the order of
+sections in the output file will match the order in the first input file.
+The first section will be at address-zero.</font></div>
+
+<h4 class=3D"Heading2">
+<a name=3D"pgfId=3D1003059"></a><a name=3D"_Toc417794844"></a><a name=3D"Ou=
+tput_section_description"></a><font face=3D"Arial,Helvetica"><font size=3D"=
++1">Output
+section description</font></font></h4>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003060"></a><font size=3D"+1">The f=
+ull description
+of an output section looks like this:&nbsp;</font><a name=3D"output section=
+"></a></div>
+
+<ul>
+<ul>
+<pre class=3D"CodeExample"><a name=3D"pgfId=3D1003061"></a><font size=3D"+1=
+">SECTION [ address ] [( type )] : [AT( LMA )]</font></pre>
+
+<pre><font size=3D"+1">&nbsp; {</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; output-sections=
+-command</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; output-sections=
+-command</font></pre>
+
+<pre><font size=3D"+1">...</font></pre>
+
+<pre><font size=3D"+1">} [&gt; region ] [: phdr : phdr ...] [=3Dfillexp]</f=
+ont></pre>
+</ul>
+</ul>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003062"></a><font size=3D"+1">Most =
+output
+sections do not use most of the optional section attributes. The whitespace
+around ` <tt>SECTION</tt> ' is required, so that the section name is unambi=
+guous.
+The colon and the curly braces are also required. The line breaks and other
+white space are optional.</font></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003063"></a><font size=3D"+1">Each =
+` <tt>output-sections-command</tt>
+' may be one of the following:</font></div>
+
+<ul>
+<ul>
+<ul>
+<li class=3D"Bullet">
+<a name=3D"pgfId=3D1003064"></a><font size=3D"+1">A symbol assignment (see =
+<a href=3D"https://users.informatik.haw-hamburg.de/~krabat/FH-Labor/gnupro/=
+5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html#Simple_assignments">Sim=
+ple
+assignments</a>)</font></li>
+
+<li class=3D"Bullet">
+<a name=3D"pgfId=3D1003065"></a><font size=3D"+1">An input section descript=
+ion
+(see <a href=3D"https://users.informatik.haw-hamburg.de/~krabat/FH-Labor/gn=
+upro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html#Input_section_desc=
+ription">Input section description</a>)</font></li>
+
+<li class=3D"Bullet">
+<a name=3D"pgfId=3D1003066"></a><font size=3D"+1">Data values to include di=
+rectly
+(see <a href=3D"https://users.informatik.haw-hamburg.de/~krabat/FH-Labor/gn=
+upro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html#Output_section_dat=
+a">Output section data</a>)</font></li>
+
+<li class=3D"Bullet">
+<a name=3D"pgfId=3D1003067"></a><font size=3D"+1">A special output section =
+keyword
+(see <a href=3D"https://users.informatik.haw-hamburg.de/~krabat/FH-Labor/gn=
+upro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html#Output_section_key=
+words">Output section keywords</a>)</font></li>
+</ul>
+</ul>
+</ul>
+
+<h4 class=3D"Heading2">
+<a name=3D"pgfId=3D1003069"></a><a name=3D"_Toc417794845"></a><a name=3D"Ou=
+tput_section_name"></a><font face=3D"Arial,Helvetica"><font size=3D"+1">Out=
+put
+section name</font></font></h4>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003070"></a><font size=3D"+1">The n=
+ame of
+the output section is `&nbsp;<a name=3D"marker=3D1006643"></a>section '. `
+section ' must meet the constraints of your output format. In formats which
+only support a limited number of sections, such as `a.out', the name must
+be one of the names supported by the format (` <tt>a.out</tt> ', for exampl=
+e,
+allows only ` <tt>.text</tt> ', ` <tt>.data</tt> ' or ` <tt>.bss</tt> ').
+If the output format supports any number of sections, but with numbers
+and not names (as is the case for Oasys ), the name should be supplied
+as a quoted numeric string&nbsp;<a name=3D"marker=3D1006642"></a>. A sectio=
+n
+name may consist of any sequence of characters, but a name, which contains
+any unusual characters such as commas, must be quoted. The output section
+name ` <tt>/DISCARD/</tt> ' is special. See <a href=3D"https://users.inform=
+atik.haw-hamburg.de/~krabat/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/l=
+dLinker_scripts.html#Output_section_discarding">Output
+section discarding</a>.</font></div>
+
+<h4 class=3D"Heading2">
+<a name=3D"pgfId=3D1003072"></a><a name=3D"_Toc417794846"></a><a name=3D"Ou=
+tput_section_address"></a><font face=3D"Arial,Helvetica"><font size=3D"+1">=
+Output
+section address</font></font></h4>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003073"></a><font size=3D"+1">The `=
+ address
+' is an expression for the&nbsp;<a name=3D"marker=3D1007274"></a>VMA (the v=
+irtual
+memory address) of the output section. If you do not provide `&nbsp;<a name=
+=3D"marker=3D1007279"></a>address
+', the linker will set it based on ` <tt>REGION</tt> ' if present, or other=
+wise
+based on the current value of the location counter.</font></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003074"></a><font s=3D"" ffb=3D"" i=
+ze=3D"+1">If you provide
+` address ', the address of the output section will be set to precisely
+that specification. If you provide neither ` address ' nor ` region ',
+then the address of the output section will be set to the current value
+of the location counter aligned to the alignment requirements of the output
+section. The alignment requirement of the output section is the strictest
+alignment of any input section contained within the output section.&nbsp;</=
+font><a name=3D"marker=3D1007280"></a></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003075"></a><font size=3D"+1">For e=
+xample:</font></div>
+&nbsp;
+<ul>
+<ul>
+<pre class=3D"CodeExample"><a name=3D"pgfId=3D1003076"></a><font size=3D"+1=
+">.text . : { *(.text) }</font></pre>
+</ul>
+</ul>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003077"></a><font size=3D"+1">and</=
+font></div>
+&nbsp;
+<ul>
+<ul>
+<pre class=3D"CodeExample"><a name=3D"pgfId=3D1003078"></a><font size=3D"+1=
+">.text : { *(.text) }</font></pre>
+</ul>
+</ul>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003079"></a><font size=3D"+1">are s=
+ubtly
+different. The first will set the address of the ` <tt>.text</tt> ' output
+section to the current value of the location counter. The second will set
+it to the current value of the location counter aligned to the strictest
+alignment of a `&nbsp;<a name=3D"marker=3D1006688"></a><tt>.text</tt> ' inp=
+ut
+section.</font></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003080"></a><font size=3D"+1">The `=
+ address
+' may be an arbitrary expression. See <a href=3D"https://users.informatik.h=
+aw-hamburg.de/~krabat/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldLinke=
+r_scripts.html#Expressions_in%20_linker_scripts" class=3D"XRef">Expressions
+in linker scripts</a>. For example, if you want to align the section on
+a 0x10 byte boundary, so that the lowest four bits of the section address
+are zero, you could do something like the following declaration:&nbsp;</fon=
+t><a name=3D"marker=3D1006687"></a></div>
+&nbsp;
+<ul>
+<ul>
+<pre class=3D"CodeExample"><a name=3D"pgfId=3D1003081"></a><font size=3D"+1=
+">.text ALIGN(0x10) : { *(.text) }</font></pre>
+</ul>
+</ul>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003082"></a><font size=3D"+1">This =
+works
+because ` <tt>ALIGN</tt> ' returns the current location counter aligned
+upward to the specified value.</font></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003083"></a><font size=3D"+1">Speci=
+fying
+` address ' for a section will change the value of the location counter.</f=
+ont></div>
+
+<h4 class=3D"Heading2">
+<a name=3D"pgfId=3D1003085"></a><a name=3D"_Toc417794847"></a><a name=3D"In=
+put_section_description"></a><font face=3D"Arial,Helvetica"><font size=3D"+=
+1">Input
+section description</font></font></h4>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003086"></a><font size=3D"+1">The m=
+ost common
+output section command is an input section description&nbsp;<a name=3D"mark=
+er=3D1006686"></a>.
+The input section description is the most basic linker script operation.
+You use output sections to tell the linker how to lay out your program
+in memory. You use input section descriptions to tell the linker how to
+map the input files into your memory layout.</font></div>
+
+<h4 class=3D"Heading2">
+<a name=3D"pgfId=3D1003087"></a><a name=3D"Input_section_basics"></a><font =
+face=3D"Arial,Helvetica"><font size=3D"+1">Input
+section basics</font></font></h4>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003088"></a><font size=3D"+1">An in=
+put section
+description&nbsp;<a name=3D"marker=3D1007281"></a>consists of a file name o=
+ptionally
+followed by a list of section names in parentheses. The file name and the
+section name may be wildcard patterns, which we describe; see <a href=3D"ht=
+tps://users.informatik.haw-hamburg.de/~krabat/FH-Labor/gnupro/5_GNUPro_Util=
+ities/c_Using_LD/ldLinker_scripts.html#Input_section_wildcard_patterns">Inp=
+ut
+section wildcard patterns</a>. The most common input section description
+is to include all input sections with a particular name in the output secti=
+on.
+For example, to include all input ` <tt>.text</tt> ' sections, you would
+write:</font></div>
+&nbsp;
+<ul>
+<ul>
+<pre class=3D"CodeExample"><a name=3D"pgfId=3D1003089"></a><font size=3D"+1=
+">*(.text)</font></pre>
+</ul>
+</ul>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003090"></a><font size=3D"+1">Here =
+the `
+<tt>*</tt> ' is a wildcard which matches any file name.</font></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003091"></a><font size=3D"+1">There=
+ are two
+ways to include mor
+ffb
+e than one section:</font></div>
+&nbsp;
+<ul>
+<ul>
+<ul>
+<pre class=3D"CodeExample"><a name=3D"pgfId=3D1003092"></a><font size=3D"+1=
+">*(.text .rdata)</font></pre>
+
+<pre class=3D"CodeExample"><a name=3D"pgfId=3D1003093"></a><font size=3D"+1=
+">*(.text) *(.rdata)</font></pre>
+</ul>
+</ul>
+</ul>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003094"></a><font size=3D"+1">The d=
+ifference
+between these is the order in which the ` <tt>.text</tt> ' and ` <tt>.rdata=
+</tt>
+' input sections will appear in the output section. In the first example,
+they will be intermingled. In the second example, all ` <tt>.text</tt>
+' input sections will appear first, followed by all ` <tt>.rdata</tt> '
+input sections.</font></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003095"></a><font size=3D"+1">You c=
+an specify
+a file name to include sections from a particular file. You would do this
+if one or more of your files contain special data that needs to be at a
+particular location in memory. For example:</font></div>
+&nbsp;
+<ul>
+<ul>
+<pre class=3D"CodeExample"><a name=3D"pgfId=3D1003096"></a><font size=3D"+1=
+">data.o(.data)</font></pre>
+</ul>
+</ul>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003097"></a><font size=3D"+1">If yo=
+u use
+a file name without a list of sections, then all sections in the input
+file will be included in the output section. This is not commonly done,
+but it may by useful on occasion. For example:</font></div>
+&nbsp;
+<ul>
+<ul>
+<pre class=3D"CodeExample"><a name=3D"pgfId=3D1003098"></a><font size=3D"+1=
+">data.o</font></pre>
+</ul>
+</ul>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003099"></a><font size=3D"+1">When =
+you use
+a file name, which does not contain any wild card characters, the linker
+will first see if you also specified the file name on the linker command
+line or in an ` <tt>INPUT</tt> ' command. If you did not, the linker will
+attempt to open the file as an input file, as though it appeared on the
+command line. Note that this differs from an ` <tt>INPUT</tt> ' command,
+because the linker will not search for the file in the archive search path.=
+</font></div>
+
+<h4 class=3D"Heading2">
+<a name=3D"pgfId=3D1003100"></a><a name=3D"Input_section_wildcard_patterns"=
+></a><a name=3D"35935"></a><font face=3D"Arial,Helvetica"><font size=3D"+1"=
+>Input
+section wildcard patterns</font></font></h4>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003101"></a><font size=3D"+1">In an=
+ input
+section description, either the file name or the section name or both may
+be wildcard patterns. The file name of `&nbsp;<a name=3D"marker=3D1007282">=
+</a><a name=3D"marker=3D1007283"></a><tt>*</tt>
+' seen in many examples is a simple wildcard pattern for the file name.
+The wildcard patterns are like those used by the Unix shell.</font></div>
+
+<div class=3D"BodyHang1"><a name=3D"pgfId=3D1003102"></a><font size=3D"+1">=
+` <tt>*</tt>
+'</font></div>
+
+<ul><font size=3D"+1">Matches any number of characters.</font></ul>
+
+<div class=3D"BodyHang1"><a name=3D"pgfId=3D1003103"></a><font size=3D"+1">=
+` <tt>?</tt>
+'</font></div>
+
+<ul><font size=3D"+1">Matches any single character.</font></ul>
+
+<div class=3D"BodyHang1"><a name=3D"pgfId=3D1003104"></a><font size=3D"+1">=
+` <tt>[</tt>
+chars <tt>]</tt> '</font></div>
+
+<ul><font size=3D"+1">Matches a single instance of any of the chars ; the `
+<tt>-</tt> ' character may be used to specify a range of characters, as
+in ` <tt>[a-z]</tt> ' to match any lower case letter.</font></ul>
+
+<div class=3D"BodyHang1"><a name=3D"pgfId=3D1003105"></a><font size=3D"+1">=
+` <tt>\</tt>
+'</font></div>
+
+<ul><font size=3D"+1">Quotes the following character.</font>
+
+<p class=3D"Body"><a name=3D"pgfId=3D1003106"></a><font size=3D"+1">When a =
+file name
+is matched with a wildcard, the wildcard characters will not match a `
+<tt>/</tt> ' character (used to separate directory names on Unix). A patter=
+n
+consisting of a single ` <tt>*</tt> ' character is an exception; it will
+always match any file name, whether it contains a ` <tt>/</tt> ' or not.
+In a section name, the wildcard characters will match a ` <tt>/</tt> '
+character.</font>
+
+</p><p class=3D"Body"><a name=3D"pgfId=3D1003107"></a><font size=3D"+1">Fil=
+e name wildcard
+patterns only match files which are explicitly specified on the
+ffb
+ command
+line or in an `&nbsp;<a name=3D"marker=3D1007284"></a><tt>INPUT</tt> ' comm=
+and.
+The linker does not search directories to expand wildcards.</font>
+
+</p><p class=3D"Body"><a name=3D"pgfId=3D1003108"></a><font size=3D"+1">If =
+a file name
+matches more than one wildcard pattern, or if a file name appears explicitl=
+y
+and is also matched by a wildcard pattern, the linker will use the first
+match in the linker script. For example, this sequence of input section
+descriptions is probably in error, because the ` <tt>data.o</tt> ' rule
+will not be used:</font>
+</p><ul>
+<div class=3D"CodeExample"><a name=3D"pgfId=3D1003109"></a><tt><font size=
+=3D"+1">.data
+: { *(.data) }</font></tt></div>
+<tt><font size=3D"+1">.data1 : { data.o(.data) }</font></tt></ul>
+</ul>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003110"></a><font size=3D"+1">If yo=
+u ever
+get confused about where input sections are going, use the ` <tt>-M</tt>
+' linker option to generate a map file. The map file shows precisely, how
+input sections are mapped to output sections.</font></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003111"></a><font size=3D"+1">This =
+example
+shows how wildcard patterns might be used to partition files. This linker
+script directs the linker to place all ` <tt>.text</tt> ' sections in `.tex=
+t'
+and all ` <tt>.bss</tt> ' sections in ` <tt>.bss</tt> '. The linker will
+place the ` <tt>.data</tt> ' section from all files beginning with an upper
+case character in ` <tt>.DATA</tt> '; for all other files, the linker will
+place the ` <tt>.data</tt> ' section in ` <tt>.data</tt> '.</font></div>
+
+<ul>
+<ul>
+<ul>
+<pre class=3D"CodeExample"><a name=3D"pgfId=3D1003112"></a><font size=3D"+1=
+">SECTIONS {</font></pre>
+
+<pre><font size=3D"+1">&nbsp; .text : { *(.text) }</font></pre>
+
+<pre><font size=3D"+1">&nbsp; .DATA : { [A-Z]*(.data) }</font></pre>
+
+<pre><font size=3D"+1">&nbsp; .data : { *(.data) }</font></pre>
+
+<pre><font size=3D"+1">&nbsp; .bss : { *(.bss) }</font></pre>
+
+<pre><font size=3D"+1">}</font></pre>
+</ul>
+</ul>
+</ul>
+
+<h4 class=3D"Heading2">
+<a name=3D"pgfId=3D1003113"></a><a name=3D"Input_section_for_common_symbols=
+"></a><font face=3D"Arial,Helvetica"><font size=3D"+1">Input
+section for common symbols</font></font></h4>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003114"></a><font size=3D"+1">A spe=
+cial notation
+is needed for common symbols, because in many object-file formats common
+symbols do not have a particular input section. The linker treats common
+symbols as though they are in an input section named `&nbsp;<a name=3D"mark=
+er=3D1007285"></a><tt>COMMON</tt>
+'.</font></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003115"></a><font size=3D"+1">You m=
+ay use
+file names with the ` <tt>COMMON</tt> ' section just as with any other
+input sections. You can use this to place common symbols from a particular
+input file in one section while common symbols from other input files are
+placed in another section.</font></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003116"></a><font size=3D"+1">In mo=
+st cases,
+common symbols in input files will be placed in the ` <tt>.bss</tt> ' secti=
+on
+in the output file. For example:</font></div>
+&nbsp;
+<ul>
+<ul>
+<pre class=3D"CodeExample"><a name=3D"pgfId=3D1003117"></a><font size=3D"+1=
+">.bss { *(.bss) *(COMMON) }</font></pre>
+</ul>
+</ul>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003118"></a><font size=3D"+1">Some =
+object
+file formats have more than one type of common symbol. For example, the
+MIPS ELF object file format distinguishes standard common symbols and small
+common symbols. In this case, the linker will use a different special secti=
+on
+name for other types of common symbols. In the case of MIPS ELF, the linker
+uses ` <tt>COMMON</tt> ' for standard common symbols and ` <tt>.scommon</tt=
+>
+' for small common symbols. This permits you to map the different types
+of common symbols into memory at different locations.</font></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003119"></a><font size=3D"+1">You w=
+ill sometimes
+see ` <tt>[COMMON]</tt> ' in old linker scripts. This notation is now consi=
+dered
+obsolete. It is equivalent to ` <tt>*(COMMON)</tt> '.</font></div>
+
+<h4 class=3D"Heading2">
+<a name=3D"pgfId=3D1
+ffb
+003120"></a><a name=3D"Input_section_example"></a><font face=3D"Arial,Helve=
+tica"><font size=3D"+1">Input
+section example</font></font></h4>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003121"></a><font size=3D"+1">The f=
+ollowing
+example is a complete linker script. It tells the linker to read all of
+the sections from file ` <tt>all.o</tt> ' and place them at the start of
+output section ` <tt>outputa</tt> ', which starts at location ` <tt>0x10000=
+</tt>
+'. All of section ` <tt>.input1</tt> ' from file ` <tt>foo.o</tt> ' follows
+immediately, in the same output section. All of section ` <tt>.input2</tt>
+' from ` <tt>foo.o</tt> ' goes into output section ` <tt>outputb</tt> ',
+followed by section `.input1' from ` <tt>foo1.o</tt> '. All of the remainin=
+g
+` <tt>.input1</tt> ' and ` <tt>.input2</tt> ' sections from any files are
+written to output section `&nbsp;<a name=3D"marker=3D1007286"></a><tt>outpu=
+tc</tt>
+'.</font></div>
+
+<ul>
+<ul>
+<ul>
+<pre class=3D"CodeExample"><a name=3D"pgfId=3D1003122"></a><font size=3D"+1=
+">SECTIONS {</font></pre>
+
+<pre><font size=3D"+1">&nbsp; outputa 0x10000 :</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp;&nbsp; {</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp;&nbsp; all.o</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp;&nbsp; foo.o (.input1)</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp;&nbsp; }</font></pre>
+
+<pre><font size=3D"+1">&nbsp; outputb :</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp;&nbsp; {</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp;&nbsp; foo.o (.input2)</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp;&nbsp; foo1.o (.input1)</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp;&nbsp; }</font></pre>
+
+<pre><font size=3D"+1">&nbsp; outputc :</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp;&nbsp; {</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp;&nbsp; *(.input1)</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp;&nbsp; *(.input2)</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp;&nbsp; }</font></pre>
+
+<pre><font size=3D"+1">}</font></pre>
+</ul>
+</ul>
+</ul>
+
+<h4 class=3D"Heading2">
+<a name=3D"pgfId=3D1003124"></a><a name=3D"_Toc417794848"></a><a name=3D"Ou=
+tput_section_data"></a><font face=3D"Arial,Helvetica"><font size=3D"+1">Out=
+put
+section data</font></font></h4>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003125"></a><font size=3D"+1">You c=
+an include
+explicit bytes of data in an output section by using ` <tt>BYTE</tt> ',
+` <tt>SHORT</tt> ', ` <tt>LONG</tt> ', ` <tt>QUAD</tt> ', or ` <tt>SQUAD</t=
+t>
+' as an output section command. Each keyword is followed by an expression
+in parentheses providing the value to store; see <a href=3D"https://users.i=
+nformatik.haw-hamburg.de/~krabat/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using=
+_LD/ldLinker_scripts.html#Expressions_in%20_linker_scripts" class=3D"XRef">=
+Expressions
+in linker scripts</a>. The value of the expression is stored at the current
+value of the location counter.</font></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003126"></a><font size=3D"+1">The `=
+ <tt>BYTE</tt>
+', ` <tt>SHORT</tt> ', ` <tt>LONG</tt> ', and ` <tt>QUAD</tt> ' commands
+store one, two, four, and eight bytes (respectively). After storing the
+bytes, the location counter is incremented by the number of bytes stored.
+For example, this will store the byte 1 followed by the four byte value
+of the symbol ` <tt>addr</tt> ':</font></div>
+&nbsp;
+<ul>
+<ul>
+<ul>
+<pre class=3D"CodeExample"><a name=3D"pgfId=3D1003127"></a><font size=3D"+1=
+">BYTE(1)</font></pre>
+
+<pre><font size=3D"+1">LONG(addr)</font></pre>
+</ul>
+</ul>
+</ul>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003128"></a><font size=3D"+1">When =
+using
+a 64-bit host or target, ` <tt>QUAD</tt> ' and ` <tt>SQUAD</tt> ' are the
+same; they both store an 8-byte, or 64-bit, value. When both host and targe=
+t
+are 32 bits, an expression is computed as 32 bits. In this case ` <tt>QUAD<=
+/tt>
+' stores a 32-bit value zero extended to 64 bits, and ` <tt>SQUAD</tt>
+' stores a 32-bit value sign extended to 64 bits.</font></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003129"></a><font size=3D"+1">If th=
+e object
+file format of the output file has an explicit endianness, which is the
+normal case, the value will be stored in that endianness. When the object
+file format does not have an explicit endianness, as is true of, for exampl=
+e,
+S-re
+ffb
+cords, the value will be stored in the endianness of the first input
+object file.&nbsp;</font><a name=3D"marker=3D1006763"></a></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003130"></a><font size=3D"+1">You m=
+ay use
+the ` <tt>FILL</tt> ' command to set the fill pattern for the current secti=
+on.
+It is followed by an expression in parentheses. Any otherwise unspecified
+regions of memory within the section (for example, gaps left due to the
+required alignment of input sections) are filled with the two least signifi=
+cant
+bytes of the expression, repeated as necessary. A ` <tt>FILL</tt> ' stateme=
+nt
+covers memory locations after the point at which it occurs in the section
+definition; by including more than one ` <tt>FILL</tt> ' statement, you
+can have different fill patterns in different parts of an output section.</=
+font></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003131"></a><font size=3D"+1">This =
+example
+shows how to fill unspecified regions of memory with the value ` <tt>0x9090=
+</tt>
+':</font></div>
+
+<br>&nbsp;
+<ul>
+<ul>
+<pre class=3D"CodeExample"><a name=3D"pgfId=3D1003132"></a><font size=3D"+1=
+">FILL(0x9090)</font></pre>
+</ul>
+</ul>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003133"></a><font size=3D"+1">The `=
+ <tt>FILL</tt>
+' command is similar to the ` <tt>=3D</tt> fillexp ' output section attribu=
+te
+(see <a href=3D"https://users.informatik.haw-hamburg.de/~krabat/FH-Labor/gn=
+upro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html#Output_section_fil=
+l">Output section fill</a>); but it only
+affects the part of the section following the ` <tt>FILL</tt> ' command,
+rather than the entire section. If both are used, the ` <tt>FILL</tt> '
+command takes precedence.</font></div>
+
+<h4 class=3D"Heading2">
+<a name=3D"pgfId=3D1003135"></a><a name=3D"_Toc417794849"></a><a name=3D"Ou=
+tput_section_keywords"></a><font face=3D"Arial,Helvetica"><font size=3D"+1"=
+>Output
+section keywords</font></font></h4>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003136"></a><font size=3D"+1">There=
+ are a
+couple of keywords, which can appear as output section commands.&nbsp;</fon=
+t><a name=3D"marker=3D1007287"></a></div>
+
+<div class=3D"BodyHang1"><a name=3D"pgfId=3D1003137"></a><tt><font size=3D"=
++1">CREATE_OBJECT_SYMBOLS</font></tt></div>
+
+<ul><a name=3D"marker=3D1007293"></a><font size=3D"+1">The command tells th=
+e linker
+to create a symbol for each input file. The name of each symbol will be
+the name of the corresponding input file. The section of each symbol will
+be the output section in which the ` <tt>CREATE_OBJECT_SYMBOLS</tt> ' comma=
+nd
+appears.</font>
+
+<p class=3D"BodyListFollow"><a name=3D"pgfId=3D1003138"></a><font size=3D"+=
+1">This
+is conventional for the ` <tt>a.out</tt> ' object file format. It is not
+normally used for any other object file format.</font></p></ul>
+
+<div class=3D"BodyHang1"><a name=3D"pgfId=3D1003139"></a><tt><font size=3D"=
++1">CONSTRUCTORS</font></tt></div>
+
+<ul><a name=3D"marker=3D1007294"></a><font size=3D"+1">When linking, using =
+the
+` <tt>a.out</tt> ' object file format, the linker uses an unusual set const=
+ruct
+to support C++ global constructors and destructors. When linking object
+file formats, which do not support arbitrary sections, such as ` <tt>ECOFF<=
+/tt>
+' and ` <tt>XCOFF</tt> ', the linker will automatically recognize C++ globa=
+l
+constructors and destructors by name. For these object file formats, the
+`&nbsp;<a name=3D"marker=3D1007292"></a><tt>CONSTRUCTORS</tt> ' command tel=
+ls
+the linker to place constructor information in the output section where
+the ` <tt>CONSTRUCTORS</tt> ' command appears. The ` <tt>CONSTRUCTORS</tt>
+' command is ignored for other object file formats.</font>
+
+<p class=3D"BodyListFollow"><a name=3D"pgfId=3D1003140"></a><font size=3D"+=
+1">The
+symbol ` <tt>__CTOR_LIST__</tt> ' marks the start of the global constructor=
+s,
+and the symbol ` <tt>__DTOR_LIST</tt> ' marks the end. The first word in
+the list is the number of entries, followed by the address of each construc=
+tor
+or destructor, followed by a zero word. The compiler must arrange to actual=
+ly
+run the code. For these object file formats GNU C++ normally calls construc=
+tors
+from a subroutine `&nbsp;<a name=3D"marker=3D1007290"></a><a name=3D"marker=
+=3D1007291"></a><tt>__main</tt>&nbsp;<a name=3D"marker=3D1007288"></a>';
+a call to ` <tt>__main</tt> ' is a
+ffb
+utomatically inserted into the startup
+code for ` <tt>main</tt> '. GNU C++ normally runs destructors either by
+using `&nbsp;<a name=3D"marker=3D1007289"></a><tt>atexit</tt> ', or directl=
+y
+from the function ` <tt>exit</tt> '.</font>
+
+</p><p class=3D"BodyListFollow"><a name=3D"pgfId=3D1003141"></a><font size=
+=3D"+1">For
+object file formats such as ` <tt>COFF</tt> ' or ` <tt>ELF</tt> ', which
+support arbitrary section names, GNU C++ will normally arrange to put the
+addresses of global constructors and destructors into the ` <tt>.ctors</tt>
+' and ` <tt>.dtors</tt> ' sections. Placing the following sequence into
+your linker script will build the sort of table that the GNU C++ runtime
+code expects to see.</font>
+</p><pre class=3D"CodeExample2"><a name=3D"pgfId=3D1003142"></a><font size=
+=3D"+1">__CTOR_LIST__ =3D .;</font></pre>
+
+<pre><font size=3D"+1">LONG((__CTOR_END__ - __CTOR_LIST__) / 4 - 2)</font><=
+/pre>
+
+<pre><font size=3D"+1">*(.ctors)</font></pre>
+
+<pre><font size=3D"+1">LONG(0)</font></pre>
+
+<pre><font size=3D"+1">__CTOR_END__ =3D .;</font></pre>
+
+<pre><font size=3D"+1">__DTOR_LIST__ =3D .;</font></pre>
+
+<pre><font size=3D"+1">LONG((__DTOR_END__ - __DTOR_LIST__) / 4 - 2)</font><=
+/pre>
+
+<pre><font size=3D"+1">*(.dtors)</font></pre>
+
+<pre><font size=3D"+1">LONG(0)</font></pre>
+
+<pre><font size=3D"+1">__DTOR_END__ =3D .;</font></pre>
+</ul>
+
+<div class=3D"BodyListFollow"><a name=3D"pgfId=3D1003143"></a><font size=3D=
+"+1">Normally
+the compiler and linker will handle these issues automatically, and you
+will not need to concern yourself with them. However, you may need to consi=
+der
+this occurrence, if you are using C++ and writing your own linker scripts.<=
+/font></div>
+
+<h4 class=3D"Heading2">
+<a name=3D"pgfId=3D1003145"></a><a name=3D"_Toc417794850"></a><a name=3D"Ou=
+tput_section_discarding"></a><font face=3D"Arial,Helvetica"><font size=3D"+=
+1">Output
+section discarding</font></font></h4>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003146"></a><font size=3D"+1">The l=
+inker
+will not create output section which do not have any contents. This is
+for convenience when referring to input sections that may or may not be
+present in any of the input files. For example:</font></div>
+&nbsp;
+<ul>
+<ul>
+<pre class=3D"CodeExample"><a name=3D"pgfId=3D1003147"></a><font size=3D"+1=
+">.foo { *(.foo) }</font></pre>
+</ul>
+</ul>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003148"></a><font size=3D"+1">Will =
+only create
+a ` <tt>.foo</tt> ' section in the output file if there is a ` <tt>.foo</tt=
+>
+' section in at least one input file.</font></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003149"></a><font size=3D"+1">If yo=
+u use
+anything other than an input section description as an output section comma=
+nd,
+such as a symbol assignment, then the output section will always be created=
+,
+even if there are no matching input sections.</font></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003150"></a><font size=3D"+1">The s=
+pecial
+output section name ` <tt>/DISCARD/</tt> ' may be used to discard input
+sections. Any input sections which are assigned to an output section named
+` <tt>/DISCARD/</tt> ' are not included in the output file.</font></div>
+
+<h4 class=3D"Heading2">
+<a name=3D"pgfId=3D1003152"></a><a name=3D"_Toc417794851"></a><a name=3D"Ou=
+tput_section_attributes"></a><font face=3D"Arial,Helvetica"><font size=3D"+=
+1">Output
+section attributes</font></font></h4>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003153"></a><font size=3D"+1">We sh=
+owed above
+that the full description of an output section looked like this:</font></di=
+v>
+
+<ul>
+<ul>
+<pre class=3D"CodeExample"><a name=3D"pgfId=3D1006809"></a><font size=3D"+1=
+">SECTION [ address ] [( type )] : [AT( LMA )]</font></pre>
+
+<pre><font size=3D"+1">&nbsp; {</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; output-sections=
+-command</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; output-sections=
+-command</font></pre>
+
+<pre><font size=3D"+1">...</font></pre>
+
+<pre><font size=3D"+1">} [&gt; region ] [: phdr : phdr ...] [=3Dfillexp]</f=
+ont></pre>
+</ul>
+</ul>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003156"></a><font size=3D"+1">We've=
+ already
+described ` section ', ` address ', and ` output-sections-command '. In
+th
+ffb
+e following discussion, we will describe the remaining section attributes.&=
+nbsp;</font><a name=3D"marker=3D1007297"></a></div>
+
+<h4 class=3D"Heading2">
+<a name=3D"pgfId=3D1003157"></a><a name=3D"Output_section_type"></a><font f=
+ace=3D"Arial,Helvetica"><font size=3D"+1">Output
+section type</font></font></h4>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003158"></a><font size=3D"+1">Each =
+output
+section may have a type. The type is a keyword in parentheses. The followin=
+g
+types are defined:</font></div>
+
+<div class=3D"BodyHang1"><a name=3D"pgfId=3D1003159"></a><tt><font size=3D"=
++1">NOLOAD</font></tt></div>
+
+<ul><a name=3D"marker=3D1007298"></a><font size=3D"+1">The section should b=
+e marked
+as not loadable, so that it will not be loaded into memory when the program
+is run.</font></ul>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003160"></a><font size=3D"+1"><tt>D=
+SECT</tt>&nbsp;</font><a name=3D"marker=3D1007299"></a></div>
+
+<div class=3D"BodyHang1List"><a name=3D"pgfId=3D1003161"></a><font size=3D"=
++1"><tt>COPY</tt>&nbsp;</font><a name=3D"marker=3D1007300"></a></div>
+
+<div class=3D"BodyHang1List"><a name=3D"pgfId=3D1003162"></a><font size=3D"=
++1"><tt>INFO</tt>&nbsp;</font><a name=3D"marker=3D1007301"></a></div>
+
+<div class=3D"BodyHang1List"><a name=3D"pgfId=3D1003163"></a><tt><font size=
+=3D"+1">OVERLAY</font></tt></div>
+
+<ul><a name=3D"marker=3D1007302"></a><font size=3D"+1">These type names are=
+ supported
+for backward compatibility, and are rarely used. They all have the same
+effect: the section should be marked as not allocatable, so that no memory
+is allocated for the section when the program is run.</font></ul>
+
+<div class=3D"BodyListFollow"><a name=3D"pgfId=3D1003164"></a><font size=3D=
+"+1">The
+linker normally sets the attributes of an output section, based on the
+input sections, which map into it. You can override this by using the secti=
+on
+type. For example, in the script sample below, the ` <tt>ROM</tt> ' section
+is addressed at memory location ` <tt>0</tt> ' and does not need to be
+loaded when the program is run. The contents of the ` <tt>ROM</tt> ' sectio=
+n
+will appear in the linker output file as usual.</font></div>
+
+<ul>
+<ul>
+<pre class=3D"CodeExample2"><a name=3D"pgfId=3D1003165"></a><font size=3D"+=
+1">SECTIONS {</font></pre>
+
+<pre><font size=3D"+1">&nbsp; ROM 0 (NOLOAD) : { ... }</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp;&nbsp;&nbsp; ...</font></pre>
+
+<pre><font size=3D"+1">}</font></pre>
+</ul>
+</ul>
+
+<h4 class=3D"Heading2">
+<a name=3D"pgfId=3D1003166"></a><a name=3D"26303"></a><a name=3D"marker=3D1=
+007303"></a><a name=3D"Output_section_LMA"></a><font face=3D"Arial,Helvetic=
+a"><font size=3D"+1">Output
+section LMA</font></font></h4>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003167"></a><font size=3D"+1">Every=
+ section
+has a virtual address (VMA ) and a load address (LMA ); see <a href=3D"http=
+s://users.informatik.haw-hamburg.de/~krabat/FH-Labor/gnupro/5_GNUPro_Utilit=
+ies/c_Using_LD/ldLinker_scripts.html#Concepts">Basic
+linker script concepts</a>. The address expression that, may appear in
+an output section description sets the VMA . The linker will normally set
+the LMA equal to the ` VMA '. You can change that by using the ` <tt>AT</tt=
+>
+' keyword. The expression, LMA , that follows the ` <tt>AT</tt> ' keyword
+specifies the load address of the section. This feature is designed to
+make it easy to build a ROM image. For example, the following linker script
+creates three output sections: one called ` <tt>.text</tt> ', which starts
+at ` <tt>0x1000</tt> ', one called ` <tt>.mdata</tt> ', which is loaded
+at the end of the `.text' section even though its VMA is ` <tt>0x2000</tt>
+', and one called `.bss' to hold uninitialized data at address ` <tt>0x3000=
+</tt>
+'. The symbol ` <tt>_data</tt> ' is defined with the value ` <tt>0x2000</tt=
+>
+', which shows that the location counter holds the VMA value, not the LMA
+value.</font></div>
+
+<ul>
+<ul>
+<ul>
+<pre class=3D"CodeExample"><a name=3D"pgfId=3D1003168"></a><font size=3D"+1=
+">SECTIONS</font></pre>
+
+<pre><font size=3D"+1">&nbsp; {</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp;&nbsp; .text 0x1000 : { *(.text) _etext =
+=3D . ; }</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp;&nbsp; .mdata 0x2000 :</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; AT ( ADDR (.text) + S=
+IZEOF (.text) )</font></pre>
+
+&lt;
+ffb
+PRE&gt;<font size=3D"+1">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; { _data =3D . ; *(.=
+data); _edata =3D . ; }</font>
+
+<pre><font size=3D"+1">&nbsp;&nbsp;&nbsp; .bss 0x3000 :</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; { _bstart =3D . ; *(.=
+bss) *(COMMON) ; _bend =3D . ;}</font></pre>
+
+<pre><font size=3D"+1">}</font></pre>
+</ul>
+</ul>
+</ul>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003169"></a><font size=3D"+1">The r=
+un-time
+initialization code for use with a program generated with this linker scrip=
+t
+would include something like the following, to copy the initialized data
+from the ROM image to its runtime address. Notice how this code takes advan=
+tage
+of the symbols defined by the linker script.</font></div>
+
+<ul>
+<pre class=3D"CodeExample"><a name=3D"pgfId=3D1003170"></a><font size=3D"+1=
+">extern char _etext, _data, _edata, _bstart, _bend;</font></pre>
+
+<pre><font size=3D"+1">char *src =3D &amp;_etext;</font></pre>
+
+<pre><font size=3D"+1">char *dst =3D &amp;_data;</font></pre>
+
+<pre><font size=3D"+1">/* ROM has data at end of text; copy it. */</font></=
+pre>
+
+<pre><font size=3D"+1">while (dst &lt; &amp;_edata) {</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp;&nbsp; *dst++ =3D *src++;</font></pre>
+
+<pre><font size=3D"+1">}</font></pre>
+
+<pre><font size=3D"+1">/* Zero bss */</font></pre>
+
+<pre><font size=3D"+1">for (dst =3D &amp;_bstart; dst&lt; &amp;_bend; dst++=
+)</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp;&nbsp; *dst =3D 0;</font></pre>
+</ul>
+
+<h4 class=3D"Heading2">
+<a name=3D"pgfId=3D1003171"></a><a name=3D"Output_section_region"></a><font=
+ face=3D"Arial,Helvetica"><font size=3D"+1">Output
+section region&nbsp;</font></font><a name=3D"10159"></a></h4>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003172"></a><font size=3D"+1">You c=
+an assign
+a section to a previously defined region of memory by using `&nbsp;<a name=
+=3D"marker=3D1007304"></a><tt>&gt;</tt>
+REGION '. Here is a simple example:</font></div>
+&nbsp;
+<ul>
+<ul>
+<pre class=3D"CodeExample"><a name=3D"pgfId=3D1003173"></a><font size=3D"+1=
+">MEMORY { rom : ORIGIN =3D 0x1000, LENGTH =3D 0x1000 }</font></pre>
+
+<pre><font size=3D"+1">SECTIONS { ROM : { *(.text) } &gt;rom }</font></pre>
+</ul>
+</ul>
+
+<h4 class=3D"Heading2">
+<a name=3D"pgfId=3D1003174"></a><a name=3D"Output_section_phdr"></a><font f=
+ace=3D"Arial,Helvetica"><font size=3D"+1">Output
+section phdr&nbsp;</font></font><a name=3D"30813"></a><a name=3D"marker=3D1=
+007305"></a></h4>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003175"></a><font size=3D"+1">You c=
+an assign
+a section to a previously defined program segment by using ` <tt>: phdr
+</tt>'. If a section is assigned to one or more segments, then all subseque=
+nt
+allocated sections will be assigned to those segments as well, unless they
+use an explicitly ` <tt>: phdr</tt> ' modifier. To prevent a section from
+being assigned to a segment when it would normally default to one, use
+` <tt>:NONE</tt> '. See <a href=3D"https://users.informatik.haw-hamburg.de/=
+~krabat/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html=
+#PHDRS_command"><tt>PHDRS</tt> command</a>.</font></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003176"></a><font size=3D"+1">Here =
+is a simple
+example:</font></div>
+
+<ul>
+<ul>
+<pre class=3D"CodeExample"><a name=3D"pgfId=3D1003177"></a><font size=3D"+1=
+">PHDRS { text PT_LOAD ; }</font></pre>
+
+<pre><font size=3D"+1">SECTIONS { .text : { *(.text) } :text }</font></pre>
+</ul>
+</ul>
+
+<h4 class=3D"Heading2">
+<a name=3D"pgfId=3D1003178"></a><a name=3D"Output_section_fill"></a><font f=
+ace=3D"Arial,Helvetica"><font size=3D"+1">Output
+section fill&nbsp;</font></font><a name=3D"41365"></a><a name=3D"marker=3D1=
+007306"></a></h4>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003179"></a><font size=3D"+1">You c=
+an set
+the fill pattern for an entire section by using <tt>=3D fillexp</tt>. ` <tt=
+>fillexp</tt>
+' is an expression; see <a href=3D"https://users.informatik.haw-hamburg.de/=
+~krabat/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html=
+#Expressions_in%20_linker_scripts" class=3D"XRef">Expressions
+in linker scripts</a>. Any otherwise unspecified regions of memory within
+the output section (for example, gaps left due to the required alignment
+of input sections) will be filled with the two least significant bytes
+of the value, repeated as necessary.&nbsp;</font><a name=3D"marker=3D100730=
+7"></a></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003180"></a><font size=3D"+1">You c=
+an also
+change the fill value with a ` <tt>FILL&lt;
+ffb
+/TT&gt; ' command in the output section
+commands. See <a href=3D"https://users.informatik.haw-hamburg.de/~krabat/FH=
+-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html#Output_se=
+ction_data">Output section data</a>.</tt></font></div><tt>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003181"></a><font size=3D"+1">Here =
+is a simple
+example:</font></div>
+&nbsp;
+<ul>
+<ul>
+<pre class=3D"CodeExample"><a name=3D"pgfId=3D1003182"></a><font size=3D"+1=
+">SECTIONS { .text : { *(.text) } =3D0x9090 }</font></pre>
+</ul>
+</ul>
+
+<h4 class=3D"Heading2">
+<a name=3D"pgfId=3D1003184"></a><a name=3D"_Toc417794852"></a><a name=3D"Ov=
+erlay_description"></a><font face=3D"Arial,Helvetica"><font size=3D"+2">Ove=
+rlay
+description</font></font></h4>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003185"></a><font size=3D"+1">An ov=
+erlay
+description provides an easy way to describe sections, which are to be
+loaded as part of a single memory image but are to be run at the same memor=
+y
+address. At run time, some sort of overlay manager will copy the overlaid
+sections in and out of the runtime memory address as required, perhaps
+by simply manipulating addressing bits. This approach can be useful, for
+example, when a certain region of memory is faster than another region
+of memory.&nbsp;</font><a name=3D"marker=3D1007308"></a></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003186"></a><font size=3D"+1">Overl=
+ays are
+described using the ` <tt>OVERLAY</tt> ' command. The ` <tt>OVERLAY</tt>
+' command is used within a ` <tt>SECTIONS</tt> ' command, like an output
+section description. The full syntax of the ` <tt>OVERLAY</tt> ' command
+is as follows:</font></div>
+&nbsp;
+<ul>
+<ul>
+<pre class=3D"CodeExample"><a name=3D"pgfId=3D1003187"></a><font size=3D"+1=
+">OVERLAY [ start ] : [NOCROSSREFS] [AT (&nbsp;<a name=3D"marker=3D1007311"=
+></a>ldaddr )]</font></pre>
+
+<pre><font size=3D"+1">{</font></pre>
+
+<pre><font size=3D"+1">secname1</font></pre>
+
+<pre><font size=3D"+1">{</font></pre>
+
+<pre><font size=3D"+1">output-section-command</font></pre>
+
+<pre><font size=3D"+1">output-section-command</font></pre>
+
+<pre><font size=3D"+1">...</font></pre>
+
+<pre><font size=3D"+1">} [:PHDR...] [=3DFILL]</font></pre>
+
+<pre><font size=3D"+1">secname2</font></pre>
+
+<pre><font size=3D"+1">{</font></pre>
+
+<pre><font size=3D"+1">output-section-command</font></pre>
+
+<pre><font size=3D"+1">output-section-command</font></pre>
+
+<pre><font size=3D"+1">...</font></pre>
+
+<pre><font size=3D"+1">} [: phdr ...] [=3D fill ]</font></pre>
+
+<pre><font size=3D"+1">...</font></pre>
+
+<pre><font size=3D"+1">} [&gt; region ] [: phdr ...] [=3D fill ]</font></pr=
+e>
+</ul>
+</ul>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003188"></a><font size=3D"+1">Every=
+thing
+is optional except ` <tt>OVERLAY</tt>&nbsp;<a name=3D"marker=3D1007309"></a=
+>'
+(a keyword), and each section must have a name (` secname1 ' and ` secname2
+' above). The section definitions within the ` <tt>OVERLAY</tt> ' construct
+are identical to those within the general ` <tt>SECTIONS</tt>&nbsp;<a name=
+=3D"marker=3D1007312"></a>'
+construct, except that no addresses and no memory regions may be defined
+for sections within an ` <tt>OVERLAY</tt> '. See <a href=3D"https://users.i=
+nformatik.haw-hamburg.de/~krabat/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using=
+_LD/ldLinker_scripts.html#SECTIONS_command"><tt>SECTIONS</tt>
+command</a>.</font></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003189"></a><font size=3D"+1">The s=
+ections
+are all defined with the same starting address. The load addresses of the
+sections are arranged, so that they are consecutive in memory, starting
+at the load address used for the `&nbsp;<a name=3D"marker=3D1007310"></a><t=
+t>OVERLAY</tt>
+' as a whole (as with normal section definitions. The load address is optio=
+nal,
+and defaults to the start address. The start address is also optional,
+and defaults to the current value of the location counter).</font></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003190"></a><font size=3D"+1">If th=
+e ` <tt>NOCROSSREFS</tt>
+' keyword is used, and there any references among the sections, the linker
+will report an error. Since the sections all run at the same address, it
+normally does not make sense for one section to refer directly to another.<=
+/font></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003191"></a><font size=3D"+1">For e=
+ach section
+within the ` <tt>OVERLAY</tt> ', the linker automatically defines two symbo=
+ls.
+The symbol ` <tt>__load_start_</tt> secnam
+ffb
+e ' is defined as the starting
+load address of the section. The symbol ` <tt>__load_stop_</tt> secname
+' is defined as the final load address of the section. Any characters withi=
+n
+` secname ' that are not legal within C identifiers are removed. C (or
+assembler) code may use these symbols to move the overlaid sections around
+as necessary.</font></div>
+
+
+<p class=3D"Body"><a name=3D"pgfId=3D1003192"></a><font size=3D"+1">At the =
+end of
+the overlay, the value of the location counter is set to the start address
+of the overlay plus the size of the largest section.</font>
+
+</p><p class=3D"Body"><a name=3D"pgfId=3D1003193"></a><font size=3D"+1">Her=
+e is an example.
+Remember that this would appear inside a ` <tt>SECTIONS</tt> ' construct.</=
+font>
+<br>&nbsp;
+</p><ul>
+<ul>
+<pre class=3D"CodeExample"><a name=3D"pgfId=3D1003194"></a><font size=3D"+1=
+">OVERLAY 0x1000 : AT (0x4000)</font></pre>
+
+<pre><font size=3D"+1">&nbsp; {</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp;&nbsp; .text0 { o1/*.o(.text) }</font></=
+pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp;&nbsp; .text1 { o2/*.o(.text) }</font></=
+pre>
+
+<pre><font size=3D"+1">&nbsp; }</font></pre>
+</ul>
+</ul>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003195"></a><font size=3D"+1">This =
+will define
+both ` <tt>.text0</tt> ' and ` <tt>.text1</tt> ' to start at address `
+<tt>0x1000</tt> '. ` <tt>.text0</tt> ' will be loaded at address ` <tt>0x40=
+00</tt>
+', and `.text1' will be loaded immediately after ` <tt>.text0</tt> '. The
+following symbols will be defined: ` <tt>__load_start_text0</tt> ', ` <tt>_=
+_load_stop_text0</tt>
+', ` <tt>__load_start_text1</tt> ', ` <tt>__load_stop_text1</tt> '.</font><=
+/div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003196"></a><font size=3D"+1">C cod=
+e to copy
+overlay ` <tt>.text1</tt> ' into the overlay area might look like the follo=
+wing.</font></div>
+&nbsp;
+<ul>
+<pre class=3D"CodeExample"><a name=3D"pgfId=3D1003197"></a><font size=3D"+1=
+">extern char __load_start_text1, __load_stop_text1;</font></pre>
+
+<pre><font size=3D"+1">memcpy ((char *) 0x1000, &amp;__load_start_text1,</f=
+ont></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &amp;__lo=
+ad_stop_text1 - &amp;__load_start_text1);</font></pre>
+</ul>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003198"></a><font size=3D"+1">Note =
+that the
+` <tt>OVERLAY</tt> ' command is just syntactic sugar, since everything
+it does can be done using the more basic commands. The above example could
+have been written identically as follows.</font></div>
+
+<ul>
+<ul>
+<pre class=3D"CodeExample"><a name=3D"pgfId=3D1003199"></a><tt><font size=
+=3D"+1">.text0 0x1000 : AT (0x4000) { o1/*.o(.text) }</font></tt></pre>
+
+<pre><tt><font size=3D"+1">__load_start_text0 =3D LOADADDR (.text0);</font>=
+</tt></pre>
+
+<pre><tt><font size=3D"+1">__load_stop_text0 =3D LOADADDR (.text0) + SIZEOF=
+ (.text0);</font></tt></pre>
+
+<pre><tt><font size=3D"+1">.text1 0x1000 : AT (0x4000 + SIZEOF (.text0)) { =
+o2/*.o(.text) }</font></tt></pre>
+
+<pre><tt><font size=3D"+1">__load_start_text1 =3D LOADADDR (.text1);</font>=
+</tt></pre>
+
+<pre><tt><font size=3D"+1">__load_stop_text1 =3D LOADADDR (.text1) + SIZEOF=
+ (.text1);</font></tt></pre>
+
+<pre><tt><font size=3D"+1">. =3D 0x1000 + MAX (SIZEOF (.text0), SIZEOF (.te=
+xt1));</font></tt></pre>
+</ul>
+</ul>
+
+<h3 class=3D"Heading1">
+<a name=3D"pgfId=3D1003201"></a><a name=3D"_Toc417794853"></a><a name=3D"ME=
+MORY_command"></a><font size=3D"+2"><tt>MEMORY</tt>
+<font face=3D"Arial,Helvetica">command</font></font></h3>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003202"></a><font size=3D"+1">The l=
+inker's
+default configuration permits allocation of all available memory. You can
+override this by using the `&nbsp;<a name=3D"allocation"></a><tt>MEMORY</tt=
+>&nbsp;<a name=3D"MEMORY"></a>'
+command.</font></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003203"></a><font size=3D"+1">The `=
+ <tt>MEMORY</tt>
+' command describes the location and size of blocks of memory in the target=
+.
+You can use it to describe which memory regions may be used by the linker,
+and which memory regions it must avoid. You can then assign sections to
+particular memory regions. The linker will set section addresses based
+on the memory regions, and will warn about regions
+ffb
+ that become too full.
+The linker will not shuffle sections around to fit into the available regio=
+ns.</font></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003204"></a><font size=3D"+1">A lin=
+ker script
+may contain at most one use of the ` <tt>MEMORY</tt> ' command. However,
+you can define as many blocks of memory within it as you wish. The syntax
+is:</font></div>
+&nbsp;
+<ul>
+<pre class=3D"CodeExample"><a name=3D"pgfId=3D1003205"></a><font size=3D"+1=
+">MEMORY</font></pre>
+
+<pre><font size=3D"+1">&nbsp; {</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp;&nbsp;&nbsp; name [( attr )] : ORIGIN =
+=3D origin , LENGTH =3D len</font></pre>
+
+<pre><font size=3D"+1">...</font></pre>
+
+<pre><font size=3D"+1">&nbsp; }</font></pre>
+</ul>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003206"></a><font size=3D"+1">The `=
+ <tt>name</tt>
+' is a name used in the linker script to refer to the region. The region
+name has no meaning outside of the linker script. Region names are stored
+in a separate name space, and will not conflict with symbol names, file
+names, or section names. Each memory region must have a distinct name.</fon=
+t></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003207"></a><font size=3D"+1">The `=
+ <tt>attr
+</tt>' string is an optional list of attributes that specify whether to
+use a particular memory region for an input section, which is not explicitl=
+y
+mapped in the linker script. If you do not specify an output section for
+some input section, the linker will create an output section with the same
+name as the input section. If you define region attributes, the linker
+will use them to select the memory region for the output section that it
+creates. See <a href=3D"https://users.informatik.haw-hamburg.de/~krabat/FH-=
+Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html#SECTIONS_c=
+ommand"><tt>SECTIONS</tt> command</a>.</font></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003208"></a><font size=3D"+1">The `=
+ <tt>attr</tt>
+' string must consist only of the following characters:</font></div>
+
+
+<p>&nbsp;
+</p><ul>
+<ul>
+<div class=3D"BodyHang1">
+<ul>
+<li>
+<a name=3D"pgfId=3D1003209"></a><tt><font size=3D"+1">R</font></tt></li>
+
+<br><font size=3D"+1">Read-only section</font>
+<li>
+<a name=3D"pgfId=3D1003210"></a><tt><font size=3D"+1">W</font></tt></li>
+
+<br><font size=3D"+1">Read/write section</font></ul>
+</div>
+</ul>
+</ul>
+
+<ul>
+<ul>
+<ul>
+<li class=3D"BodyHang1">
+<a name=3D"pgfId=3D1003211"></a><tt><font size=3D"+1">X</font></tt></li>
+
+<br><font size=3D"+1">Executable section</font>
+<li class=3D"BodyHang1">
+<a name=3D"pgfId=3D1003212"></a><tt><font size=3D"+1">A</font></tt></li>
+
+<br><font size=3D"+1">Allocatable section</font>
+<li class=3D"BodyHang1">
+<a name=3D"pgfId=3D1003213"></a><tt><font size=3D"+1">I</font></tt></li>
+
+<br><font size=3D"+1">Initialized section</font>
+<li class=3D"BodyHang1">
+<a name=3D"pgfId=3D1003214"></a><tt><font size=3D"+1">L</font></tt></li>
+
+<br><font size=3D"+1">Same as `<tt>I</tt>'</font>
+<li class=3D"BodyHang1">
+<a name=3D"pgfId=3D1003215"></a><tt><font size=3D"+1">!</font></tt></li>
+
+<br><font size=3D"+1">Invert the sense of any of the preceding attributes</=
+font></ul>
+</ul>
+</ul>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003216"></a><font size=3D"+1">If an=
+ unmapped
+section matches any of the listed attributes other than ` <tt>!</tt> ',
+it will be placed in the memory region. The ` <tt>!</tt> ' attribute revers=
+es
+this test, so that an unmapped section will be placed in the memory region
+only if it does not match any of the listed attributes.</font></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003217"></a><font size=3D"+1">The `=
+ <tt>ORIGIN</tt>
+' is an expression for the start address of the memory region. The expressi=
+on
+must evaluate to a constant before memory allocation is performed, which
+means that you may not use any section relative symbols. The keyword `
+<tt>ORIGIN</tt> ' may be abbreviated to ` <tt>org</tt> ' or ` <tt>o</tt>
+' (but not, for example, ` <tt>ORG</tt> ').</font></div>
+
+
+<p class=3D"Body"><a name=3D"pgfId=3D1003218"></a><font size=3D"+1">The ` <=
+i><tt>len</tt></i>
+' is an expression for the size in bytes of the memory region. As with
+the ` origin ' expression, the expression must evaluate to a constant befor=
+e
+memory allocation is performed. The keyword ` <tt>LENGTH</tt> ' may be
+abbreviated to `=20
+ffb
+<tt>len</tt> ' or ` <tt>l</tt> '.</font>
+
+</p><p class=3D"Body"><a name=3D"pgfId=3D1003219"></a><font size=3D"+1">In =
+the following
+example, we specify that there are two memory regions available for allocat=
+ion:
+one starting at ` <tt>0</tt> ' for 256 kilobytes, and the other starting
+at ` <tt>0x40000000</tt> ' for four megabytes. The linker will place into
+the ` <tt>rom</tt> ' memory region every section, which is not explicitly
+mapped into a memory region, and is either read-only or executable. The
+linker will place other sections, which are not explicitly mapped into
+a memory region into the ` <tt>ram</tt> ' memory region.</font>
+<br>&nbsp;
+</p><ul>
+<ul>
+<pre class=3D"CodeExample"><a name=3D"pgfId=3D1003220"></a><font size=3D"+1=
+">MEMORY</font></pre>
+
+<pre><font size=3D"+1">&nbsp; {</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp;&nbsp; rom (rx) : ORIGIN =3D 0, LENGTH =
+=3D 256K</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp;&nbsp; ram (!rx) : org =3D 0x40000000, l=
+ =3D 4M</font></pre>
+
+<pre><font size=3D"+1">&nbsp; }</font></pre>
+</ul>
+</ul>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003221"></a><font size=3D"+1">If yo=
+u have
+defined a memory region named ` <tt>mem</tt> ', you can direct the linker
+to place specific output sections into that memory region by using the
+` <tt>&gt;</tt> region ' output section attribute. If no address was specif=
+ied
+for the output section, the linker will set the address to the next availab=
+le
+address within the memory region. If the combined output sections directed
+to a memory region are too large for the region, the linker will issue
+an error message. See <a href=3D"https://users.informatik.haw-hamburg.de/~k=
+rabat/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html#O=
+utput_section_region">Output section region</a>.</font></div>
+
+<h3 class=3D"Heading1">
+<a name=3D"pgfId=3D1003223"></a><a name=3D"_Toc417794854"></a><a name=3D"PH=
+DRS_command"></a><font size=3D"+2"><tt>PHDRS</tt>
+<font face=3D"Arial,Helvetica">command</font></font></h3>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003224"></a><font size=3D"+1">The E=
+LF object
+file format uses program headers&nbsp;<a name=3D"program headers"></a>, als=
+o
+knows as segments&nbsp;<a name=3D"segments"></a>. The program headers descr=
+ibe
+how the program should be loaded into memory. You can print them out by
+using the ` <tt>objdump</tt> ' program with the ` <tt>-p</tt> ' option.</fo=
+nt></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003225"></a><font size=3D"+1">When =
+you run
+an ELF program on a native ELF system, the system loader reads the program
+headers in order to figure out how to load the program. This will only
+work if the program headers are set correctly. This documentation does
+not describe the details of how the system loader interprets program header=
+s;
+for more information, see the ELF ABI.</font></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003226"></a><font size=3D"+1">The l=
+inker
+will create reasonable program headers by default. However, in some cases,
+you may need to specify the program headers more precisely. You may use
+the ` <tt>PHDRS</tt> ' command for this purpose. When the linker sees the
+` <tt>PHDRS</tt> ' command in the linker script, it will not create any
+program headers other than the ones specified.</font></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003227"></a><font size=3D"+1">The l=
+inker
+only pays attention to the ` <tt>PHDRS</tt> ' command when generating an
+ELF output file. In other cases, the linker will simply ignore ` <tt>PHDRS<=
+/tt>
+'.</font></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003228"></a><font size=3D"+1">This =
+is the
+syntax of the ` <tt>PHDRS</tt>&nbsp;<a name=3D"PHDRS"></a>' command. The
+words ` <tt>PHDRS</tt> ', ` <tt>FILEHDR</tt> ', ` <tt>AT</tt> ', and `
+<tt>FLAGS</tt> ' are keywords.</font></div>
+
+<br>&nbsp;
+<pre class=3D"CodeExample"><a name=3D"pgfId=3D1003229"></a><font size=3D"+1=
+">PHDRS</font></pre>
+
+<pre><font size=3D"+1">{</font></pre>
+
+<pre><font size=3D"+1">name type [ FILEHDR ] [ PHDRS ] [ AT (&nbsp;<a name=
+=3D"FILEHDR"></a><a name=3D"AT"></a>address ) ]</font></pre>
+
+<pre><font size=3D"+1">[ FLAGS (&nbsp;<a name=3D"FLAGS"></a>flags ) ] ;</fo=
+nt></pre>
+
+<pre><font size=3D"+1">}</font></pre>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003230"></a><font size=3D"+1">The `=
+ name
+' is used only for r
+ffb
+eference in the ` <tt>SECTIONS</tt> ' command of the
+linker script. It is not put into the output file. Program header names
+are stored in a separate name space, and will not conflict with symbol
+names, file names, or section names. Each program header must have a distin=
+ct
+name.</font></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003231"></a><font size=3D"+1">Certa=
+in program
+header types describe segments of memory, which the system loader will
+load from the file. In the linker script, you specify the contents of these
+segments by placing allocatable output sections in the segments. You use
+the ` <tt>:</tt> phdr ' output section attribute to place a section in
+a particular segment. See <a href=3D"https://users.informatik.haw-hamburg.d=
+e/~krabat/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.ht=
+ml#Output_section_phdr">Output section
+<tt>phdr</tt></a>.</font></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003232"></a><font size=3D"+1">It is=
+ normal
+to put certain sections in more than one segment. This merely implies that
+one segment of memory contains another. You may repeat ` <tt>:</tt> phdr
+', using it once for each segment which should contain the section.</font><=
+/div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003233"></a><font size=3D"+1">If yo=
+u place
+a section in one or more segments using ` <tt>:</tt> phdr ', then the linke=
+r
+will place all subsequent allocatable sections which do not specify ` <tt>:=
+</tt>
+phdr ' in the same segments. This is for convenience, since generally a
+whole set of contiguous sections will be placed in a single segment. To
+prevent a section from being assigned to a segment when it would normally
+default to one, use ` <tt>:NONE</tt> '.</font></div>
+
+
+<p class=3D"Body"><a name=3D"pgfId=3D1003234"></a><font size=3D"+1">You may=
+ use the
+` <tt>FILEHDR</tt> ' and ` <tt>PHDRS</tt> ' keywords appear after the progr=
+am
+header type to further describe the contents of the segment. The ` <tt>FILE=
+HDR</tt>
+' keyword means that the segment should include the ELF file header. The
+` <tt>PHDRS</tt> ' keyword means that the segment should include the ELF
+program headers themselves.</font>
+
+</p><p class=3D"Body"><a name=3D"pgfId=3D1003235"></a><font size=3D"+1">The=
+ ` type '
+may be one of the following. The numbers indicate the value of the keyword.=
+</font>
+<br>&nbsp;
+</p><ul>
+<div class=3D"BodyHang1"><a name=3D"pgfId=3D1003236"></a><tt><font size=3D"=
++1">PT_NULL
+(0)</font></tt></div>
+
+<ul><a name=3D"PT_NULL"></a><font size=3D"+1">Indicates an unused program h=
+eader.</font></ul>
+
+<div class=3D"BodyHang1"><a name=3D"pgfId=3D1003237"></a><tt><font size=3D"=
++1">PT_LOAD
+(1)</font></tt></div>
+
+<ul><a name=3D"PT_LOAD"></a><font size=3D"+1">Indicates that this program h=
+eader
+describes a segment to be loaded from the file.</font></ul>
+
+<div class=3D"BodyHang1"><a name=3D"pgfId=3D1003238"></a><tt><font size=3D"=
++1">PT_DYNAMIC
+(2)</font></tt></div>
+
+<ul><a name=3D"PT_DYNAMIC"></a><font size=3D"+1">Indicates a segment where =
+dynamic
+linking information can be found.</font></ul>
+
+<div class=3D"BodyHang1"><a name=3D"pgfId=3D1003239"></a><tt><font size=3D"=
++1">PT_INTERP
+(3)</font></tt></div>
+
+<ul><a name=3D"PT_INTERP"></a><font size=3D"+1">Indicates a segment where t=
+he
+name of the program interpreter may be found.</font></ul>
+
+<div class=3D"BodyHang1"><a name=3D"pgfId=3D1003240"></a><tt><font size=3D"=
++1">PT_NOTE
+(4)</font></tt></div>
+
+<ul><a name=3D"PT_NOTE"></a><font size=3D"+1">Indicates a segment holding n=
+ote
+information.</font></ul>
+
+<div class=3D"BodyHang1"><a name=3D"pgfId=3D1003241"></a><tt><font size=3D"=
++1">PT_SHLIB
+(5)</font></tt></div>
+
+<ul><a name=3D"PT_SHLIB"></a><font size=3D"+1">A reserved program header ty=
+pe,
+defined but not specified by the ELF ABI.</font></ul>
+
+<div class=3D"BodyHang1"><a name=3D"pgfId=3D1003242"></a><tt><font size=3D"=
++1">PT_PHDR
+(6)</font></tt></div>
+
+<ul><a name=3D"PT_PHDR"></a><font size=3D"+1">Indicates a segment where the=
+ program
+headers may be found.</font></ul>
+
+<div class=3D"BodyHang1"><a name=3D"pgfId=3D1003243"></a><i><tt><font size=
+=3D"+1">expression</font></tt></i></div>
+
+<ul><font size=3D"+1">An <i><tt>expression</tt></i> giving the numeric type
+of the program header. This may be used for types not defined above.</font>=
+</ul>
+</ul>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003244"></a><font ffb=3D"" size=3D"=
++1">You can specify
+that a segment should be loaded at a particular address in memory by using
+an ` <tt>AT</tt> ' expression. This is identical to the ` <tt>AT</tt> '
+command used as an output section attribute. The ` <tt>AT</tt> ' command
+for a program header, overrides the output section attribute. See <a href=
+=3D"https://users.informatik.haw-hamburg.de/~krabat/FH-Labor/gnupro/5_GNUPr=
+o_Utilities/c_Using_LD/ldLinker_scripts.html#Output_section_LMA">Output
+section LMA</a>.</font></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003245"></a><font size=3D"+1">The l=
+inker
+will normally set the segment flags based on the sections, which comprise
+the segment. You may use the ` <tt>FLAGS</tt> ' keyword to explicitly speci=
+fy
+the segment flags. The value of flags must be an integer. It is used to
+set the ` <tt>p_flags</tt> ' field of the program header.</font></div>
+
+
+<p class=3D"Body"><a name=3D"pgfId=3D1003246"></a><font size=3D"+1">Here is=
+ an example
+of ` <tt>PHDRS</tt> '. This shows a typical set of program headers used
+on a native ELF system.&nbsp;<a name=3D"ELF system, native"></a></font>
+</p><ul>
+<ul>
+<pre class=3D"CodeExample"><a name=3D"pgfId=3D1003247"></a><font size=3D"+1=
+">PHDRS</font></pre>
+
+<pre><font size=3D"+1">{</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp; headers PT_PHDR PHDRS ;</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp; interp PT_INTERP ;</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp; text PT_LOAD FILEHDR PHDRS ;</font></pr=
+e>
+
+<pre><font size=3D"+1">&nbsp;&nbsp; data PT_LOAD ;</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp; dynamic PT_DYNAMIC ;</font></pre>
+
+<pre><font size=3D"+1">}</font></pre>
+
+<pre><font size=3D"+1">SECTIONS</font></pre>
+
+<pre><font size=3D"+1">{</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp; . =3D SIZEOF_HEADERS;</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp; .interp : { *(.interp) } :text :interp<=
+/font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp; .text : { *(.text) } :text</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp; .rodata : { *(.rodata) } /* defaults to=
+ :text */</font></pre>
+
+<pre><font size=3D"+1">...</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp; . =3D . + 0x1000; /* move to a new page=
+ in memory */</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp; .data : { *(.data) } :data</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp; .dynamic : { *(.dynamic) } :data :dynam=
+ic</font></pre>
+
+<pre><font size=3D"+1">...</font></pre>
+
+<pre><font size=3D"+1">}</font></pre>
+</ul>
+</ul>
+
+<h3 class=3D"Heading1">
+<a name=3D"pgfId=3D1003249"></a><a name=3D"_Toc417794855"></a><a name=3D"VE=
+RSION_command"></a><tt><font size=3D"+3">VERSION</font></tt><font size=3D"+=
+2">
+<font face=3D"Arial,Helvetica">command</font></font></h3>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003250"></a><font size=3D"+1">The l=
+inker
+supports symbol versions when using ELF. Symbol versions are only useful
+when using shared libraries. The dynamic linker can use symbol versions
+to select a specific version of a function when it runs a program that
+may have been linked against an earlier version of the shared library.</fon=
+t></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003251"></a><font size=3D"+1">You c=
+an include
+a version script directly in the main linker script, or you can supply
+the version script as an implicit linker script. You can also use the `
+<tt>--version-script</tt>&nbsp;<a name=3D"--version-script linker option"><=
+/a>'
+linker option.</font></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003252"></a><font size=3D"+1">The s=
+yntax
+of the ` <tt>VERSION</tt> ' command is simply</font></div>
+
+<div class=3D"CodeExample"><a name=3D"pgfId=3D1003253"></a><tt><font size=
+=3D"+1">VERSION
+{ version-script-commands }</font></tt></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003254"></a><font size=3D"+1">The f=
+ormat
+of the version script commands is identical to that used by Sun's linker
+in Solaris 2.5. The version script defines a tree of version nodes. You
+specify the node names and interdependencies in the version script. You
+can specify which symbols are bound to which version nodes, and you can
+reduce a specified set of symbols to local scope so that they are not globa=
+lly
+visible outside of the shared library.</font></div>
+
+
+<p class=3D"Body"><a name=3D"pgfId=3D1003255"></a><font size=3D"+1">The eas=
+iest way
+to demonstrate
+ffb
+ the version script language is with a few examples.</font>
+</p><ul>
+<ul>
+<pre class=3D"CodeExample"><a name=3D"pgfId=3D1003256"></a><font size=3D"+1=
+">VERS_1.1 {</font></pre>
+
+<pre><font size=3D"+1">&nbsp; global:</font></pre>
+
+<pre><font size=3D"+1">&nbsp; foo1;</font></pre>
+
+<pre><font size=3D"+1">&nbsp; local:</font></pre>
+
+<pre><font size=3D"+1">&nbsp; old*;</font></pre>
+
+<pre><font size=3D"+1">&nbsp; original*;</font></pre>
+
+<pre><font size=3D"+1">&nbsp; new*;</font></pre>
+
+<pre><font size=3D"+1">&nbsp; };</font></pre>
+
+<pre><font size=3D"+1">&nbsp;</font></pre>
+
+<pre><font size=3D"+1">&nbsp; VERS_1.2 {</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp; foo2;</font></pre>
+
+<pre><font size=3D"+1">&nbsp; } VERS_1.1;</font></pre>
+
+<pre><font size=3D"+1">&nbsp;</font></pre>
+
+<pre><font size=3D"+1">&nbsp; VERS_2.0 {</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp; bar1; bar2;</font></pre>
+
+<pre><font size=3D"+1">&nbsp; } VERS_1.2;&nbsp;</font><a name=3D"VERS"></a>=
+</pre>
+</ul>
+</ul>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003257"></a><font size=3D"+1">This =
+example
+version script defines three version nodes. The first version node defined
+is ` <tt>VERS_1.1</tt> '; it has no other dependencies. The script binds
+the symbol `foo1' to ` <tt>VERS_1.1</tt> '. It reduces a number of symbols
+to local scope so that they are not visible outside of the shared library.<=
+/font></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003258"></a><font size=3D"+1">Next,=
+ the version
+script defines node ` <tt>VERS_1.2</tt> '. This node depends upon ` <tt>VER=
+S_1.1</tt>
+'. The script binds the symbol ` <tt>foo2</tt> ' to the version node `
+<tt>VERS_1.2</tt> '.</font></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003259"></a><font size=3D"+1">Final=
+ly, the
+version script defines node ` <tt>VERS_2.0</tt> '. This node depends upon
+` <tt>VERS_1.2</tt> '. The script binds the symbols ` <tt>bar1</tt> ' and
+` <tt>bar2</tt> ' to the version node ` <tt>VERS_2.0</tt> '.</font></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003260"></a><font size=3D"+1">When =
+the linker
+finds a symbol defined in a library, which is not specifically bound to
+a version node, it will effectively bind it to an unspecified base version
+of the library. You can bind all otherwise unspecified symbols to a given
+version node by using ` <tt>global: *</tt> ' somewhere in the version scrip=
+t.</font></div>
+
+
+<p class=3D"Body"><a name=3D"pgfId=3D1003261"></a><font size=3D"+1">The nam=
+es of
+the version nodes have no specific meaning other than what they might sugge=
+st
+to the person reading them. The ` <tt>2.0</tt> ' version could just as
+well have appeared in between ` <tt>1.1</tt> ' and ` <tt>1.2</tt> '. Howeve=
+r,
+this would be a confusing way to write a version script.</font>
+
+</p><p class=3D"Body"><a name=3D"pgfId=3D1003262"></a><font size=3D"+1">Whe=
+n you link
+an application against a shared library that has versioned symbols, the
+application itself knows which version of each symbol it requires, and
+it also knows which version nodes it needs from each shared library it
+is linked against. Thus at runtime, the dynamic loader can make a quick
+check to make sure that the libraries you have linked against do in fact
+supply all of the version nodes that the application will need to resolve
+all of the dynamic symbols. In this way it is possible for the dynamic
+linker to know with certainty that all external symbols that it needs will
+be resolvable without having to search for each symbol reference.</font>
+
+</p><p class=3D"Body"><a name=3D"pgfId=3D1003263"></a><font size=3D"+1">The=
+ symbol versioning
+is in effect a much more sophisticated way of doing minor version checking
+that SunOS does. The fundamental problem that is being addressed here is
+that typically references to external functions are bound on an as-needed
+basis, and are not all bound when the application starts up. If a shared
+library is out of date, a required interface may be missing; when the appli=
+cation
+tries to use that interface, it may suddenly and unexpectedly fail. With
+symbol versioning, the user will get a warning when they start their progra=
+m
+if the libraries being used with the application
+ffb
+ are too old.</font>
+
+</p><p class=3D"Body"><a name=3D"pgfId=3D1003264"></a><font size=3D"+1">The=
+re are several
+GNU extensions to Sun's versioning approach. The first of these is the
+ability to bind a symbol to a version node in the source file where the
+symbol is defined instead of in the versioning script. This was done mainly
+to reduce the burden on the library maintainer. You can do this by putting
+something like this in the C source file:</font>
+<br>&nbsp;
+</p><ul>
+<pre class=3D"CodeExample"><a name=3D"pgfId=3D1003265"></a><font size=3D"+1=
+">__asm__(".symver original_foo,foo@VERS_1.1");</font></pre>
+</ul>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003266"></a><font size=3D"+1">This =
+renames
+the function ` <tt>original_foo</tt> ' to be an alias for ` <tt>foo</tt>
+' bound to the version node ` <tt>VERS_1.1</tt> '. The ` <tt>local:</tt>
+' directive can be used to prevent the symbol ` <tt>original_foo</tt> '
+from being exported.</font></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003267"></a><font size=3D"+1">The s=
+econd
+GNU extension is to allow multiple versions of the same function to appear
+in a given, shared library. In this way you can make an incompatible change
+to an interface without increasing the major version number of the shared
+library, while still allowing applications linked against the old interface
+to continue to function.</font></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003268"></a><font size=3D"+1">To do=
+ this,
+you must use multiple ` <tt>.symver</tt> ' directives in the source file.
+Here is an example:</font></div>
+
+
+<p>&nbsp;
+</p><ul>
+<ul>
+<pre class=3D"CodeExample"><a name=3D"pgfId=3D1003269"></a><tt><font size=
+=3D"+1">__asm__(".symver original_foo,foo@");</font></tt></pre>
+
+<pre><tt><font size=3D"+1">__asm__(".symver old_foo,foo@VERS_1.1");</font><=
+/tt></pre>
+
+<pre><tt><font size=3D"+1">__asm__(".symver old_foo1,foo@VERS_1.2");</font>=
+</tt></pre>
+
+<pre><tt><font size=3D"+1">__asm__(".symver new_foo,foo@@VERS_2.0");</font>=
+</tt></pre>
+</ul>
+</ul>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003270"></a><font size=3D"+1">In th=
+is example,
+` <tt>foo@</tt> ' represents the symbol ` <tt>foo</tt> ' bound to the unspe=
+cified
+base version of the symbol. The source file that contains this example
+would define four C functions: ` <tt>original_foo</tt> ', ` <tt>old_foo</tt=
+>
+', ` <tt>old_foo1</tt> ', and ` <tt>new_foo</tt> '.</font></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003271"></a><font size=3D"+1">When =
+you have
+multiple definitions of a given symbol, there needs to be some way to speci=
+fy
+a default version to which external references to this symbol will be bound=
+.
+You can do this with the ` <tt>foo@@VERS_2.0</tt> ' type of ` <tt>.symver</=
+tt>
+' directive. You can only declare one version of a symbol as the default
+in this manner; otherwise you would effectively have multiple definitions
+of the same symbol.</font></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003272"></a><font size=3D"+1">If yo=
+u wish
+to bind a reference to a specific version of the symbol within the shared
+library, you can use the aliases of convenience (i.e. ` <tt>old_foo</tt>
+'), or you can use the ` <tt>.symver</tt> ' directive to specifically bind
+to an external version of the function in question.</font></div>
+
+<h2 class=3D"Heading1">
+<a name=3D"pgfId=3D1003274"></a><a name=3D"_Toc417794856"></a><a name=3D"Ex=
+pressions_in _linker_scripts"></a><font face=3D"Arial,Helvetica">Expression=
+s
+in linker scripts</font></h2>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003275"></a><font size=3D"+1">The s=
+yntax
+for expressions in the linker script language is identical to that of C
+expressions. All expressions are evaluated as integers. All expressions
+are evaluated in the same size, which is 32 bits if both the host and targe=
+t
+are 32 bits, and is otherwise 64 bits. You can use and set symbol values
+in expressions. The linker defines several special purpose builtin function=
+s
+for use in expressions.</font></div>
+
+<h4 class=3D"Heading2">
+<a name=3D"pgfId=3D1003277"></a><a name=3D"_Toc417794857"></a><a name=3D"Co=
+nstants"></a><font face=3D"Arial,Helvetica"><font size=3D"+1">Constants</fo=
+nt></font></h4>
+
+<div class=3D"Body"><a ffb=3D"" name=3D"pgfId=3D1003278"></a><font size=3D"=
++1">All constants
+are integers. As in C, the linker considers an integer beginning with `&nbs=
+p;<a name=3D"constants"></a><tt>0</tt>
+' to be octal, and an integer beginning with ` <tt>0x</tt> ' or ` <tt>0X</t=
+t>
+' to be hexadecimal.</font></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003279"></a><font size=3D"+1">The l=
+inker
+considers other integers to be decimal.</font></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003280"></a><font size=3D"+1">In ad=
+dition,
+you can use the suffixes ` <tt>K</tt> ' and ` <tt>M</tt> ' to scale a const=
+ant
+by ` <tt>1024</tt> ' or ` <tt>1024*1024</tt> ' respectively. For example,
+the following all refer to the same quantity:</font></div>
+&nbsp;
+<ul>
+<ul>
+<pre class=3D"CodeExample"><a name=3D"pgfId=3D1003281"></a><font size=3D"+1=
+">_fourk_1 =3D 4K;</font></pre>
+
+<pre><font size=3D"+1">_fourk_2 =3D 4096;</font></pre>
+
+<pre><font size=3D"+1">_fourk_3 =3D 0x1000;</font></pre>
+</ul>
+</ul>
+
+<h4 class=3D"Heading2">
+<a name=3D"pgfId=3D1003283"></a><a name=3D"_Toc417794858"></a><a name=3D"Sy=
+mbol_names"></a><font face=3D"Arial,Helvetica"><font size=3D"+1">Symbol
+names</font></font></h4>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003284"></a><font size=3D"+1">Unles=
+s quoted,
+symbol names start with a letter, underscore, or period and may include
+letters, digits, underscores, periods, and hyphens. Unquoted symbol names
+must not conflict with any keywords. You can specify a symbol, which contai=
+ns
+odd characters or has the same name as a keyword by surrounding the symbol
+name in double quotes:&nbsp;</font><a name=3D"symbol names"></a></div>
+&nbsp;
+<ul>
+<ul>
+<pre class=3D"CodeExample"><a name=3D"pgfId=3D1003285"></a><tt><font size=
+=3D"+1">"SECTION" =3D 9;</font></tt></pre>
+
+<pre><tt><font size=3D"+1">"with a space" =3D "also with a space" + 10;</fo=
+nt></tt></pre>
+</ul>
+</ul>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003286"></a><font size=3D"+1">Since=
+ symbols
+can contain many non-alphabetic characters, it is safest to delimit symbols
+with spaces. For example, ` <tt>A-B</tt> ' is one symbol, whereas ` <tt>A
+-</tt> <tt>B</tt> ' is an expression involving subtraction.</font></div>
+
+<h4 class=3D"Heading2">
+<a name=3D"pgfId=3D1003288"></a><a name=3D"_Toc417794859"></a><a name=3D"Th=
+e_location_counter"></a><font face=3D"Arial,Helvetica"><font size=3D"+1">Th=
+e
+location counter</font></font></h4>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003289"></a><font size=3D"+1">The s=
+pecial
+linker dot ` <tt>.</tt> ' variable always contains the current output locat=
+ion
+counter. Since the `&nbsp;<a name=3D"location counter"></a><tt>.</tt> ' alw=
+ays
+refers to a location in an output section, it may only appear in an express=
+ion
+within a ` <tt>SECTIONS</tt> ' command. The ` <tt>.</tt> ' symbol may appea=
+r
+anywhere that an ordinary symbol is allowed in an expression.</font></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003290"></a><font size=3D"+1">Assig=
+ning a
+value to ` <tt>.</tt> ' will cause the location counter to be moved. This
+may be used to create holes in the output section. The location counter
+may never be moved backwards.</font></div>
+&nbsp;
+<ul>
+<ul>
+<pre class=3D"CodeExample"><a name=3D"pgfId=3D1003291"></a><font size=3D"+1=
+">SECTIONS</font></pre>
+
+<pre><font size=3D"+1">&nbsp; {</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp;&nbsp; output :</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; file1(.te=
+xt)</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; . =3D . +=
+ 1000;</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; file2(.te=
+xt)</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; . +=3D 10=
+00;</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; file3(.te=
+xt)</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; } =3D 0x1234;</font><=
+/pre>
+
+<pre><font size=3D"+1">}</font></pre>
+</ul>
+</ul>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003292"></a><font size=3D"+1">In th=
+e previous
+example, the ` <tt>.text</tt> ' section from ` <tt>file1</tt> ' is located
+at the beginning of the output s
+ffb
+ection `output'. It is followed by a 1000
+byte gap. Then the ` <tt>.text</tt> ' section from ` <tt>file2</tt> ' appea=
+rs,
+also with a 1000 byte gap following before the `<tt>.text</tt> ' section
+from ` <tt>file3</tt> '. The notation ` <tt>=3D 0x1234</tt> ' specifies dat=
+a
+to write in the gaps.</font></div>
+
+<h4 class=3D"Heading2">
+<a name=3D"pgfId=3D1003294"></a><a name=3D"_Toc417794860"></a><a name=3D"Op=
+erators"></a><font face=3D"Arial,Helvetica"><font size=3D"+1">Operators</fo=
+nt></font></h4>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003295"></a><font size=3D"+1">The l=
+inker
+recognizes the standard C set of arithmetic operators, with the standard
+bindings and precedence levels; see <a href=3D"https://users.informatik.haw=
+-hamburg.de/~krabat/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldLinker_=
+scripts.html#bindings%20associations" class=3D"XRef">Table
+1: Arithmetic operators with precedence levels and bindings associations</a=
+>.&nbsp;</font><a name=3D"operators"></a></div>
+&nbsp;
+<table>
+<caption>
+<h6 class=3D"TableTitle">
+<a name=3D"pgfId=3D1004738"></a><a name=3D"30822"></a><a name=3D"bindings a=
+ssociations"></a><font size=3D"+1">Table
+1: Arithmetic operators with precedence levels and bindings associations</f=
+ont></h6>
+</caption>
+
+<tbody><tr bgcolor=3D"#C0C0C0">
+<td>
+<div class=3D"CellHeading"><a name=3D"pgfId=3D1004590"></a><b><i><font size=
+=3D"+1">Precedence&nbsp;</font></i></b><a name=3D"Precedence"></a></div>
+</td>
+
+<td>
+<div class=3D"CellHeading"><a name=3D"pgfId=3D1004592"></a><b><i><font size=
+=3D"+1">Association&nbsp;</font></i></b></div>
+</td>
+
+<td>
+<div class=3D"CellHeading"><a name=3D"pgfId=3D1004594"></a><b><i><font size=
+=3D"+1">Operators&nbsp;</font></i></b></div>
+</td>
+
+<td>
+<div class=3D"CellHeading"><a name=3D"pgfId=3D1004596"></a><b><i><font size=
+=3D"+1">Notes&nbsp;</font></i></b></div>
+</td>
+</tr>
+
+<tr>
+<td>
+<div class=3D"CellBody"><a name=3D"pgfId=3D1004598"></a><font size=3D"+1">(=
+highest)&nbsp;</font></div>
+</td>
+
+<td>
+<div class=3D"CellBody"><a name=3D"pgfId=3D1004600"></a></div>
+</td>
+
+<td>
+<div class=3D"CellBody"><a name=3D"pgfId=3D1004602"></a></div>
+</td>
+
+<td>
+<div class=3D"CellBody"><a name=3D"pgfId=3D1004604"></a></div>
+</td>
+</tr>
+
+<tr>
+<td>
+<div class=3D"CellBody"><a name=3D"pgfId=3D1004606"></a><font size=3D"+1">1=
+&nbsp;</font></div>
+</td>
+
+<td>
+<div class=3D"CellBody"><a name=3D"pgfId=3D1004608"></a><font size=3D"+1">l=
+eft&nbsp;</font></div>
+</td>
+
+<td>
+<div class=3D"CellBody"><a name=3D"pgfId=3D1004610"></a><font size=3D"+1"><=
+tt>! -
+~</tt>&nbsp;</font></div>
+</td>
+
+<td>
+<div class=3D"CellBody"><a name=3D"pgfId=3D1004615"></a><font size=3D"+1"><=
+a href=3D"https://users.informatik.haw-hamburg.de/~krabat/FH-Labor/gnupro/5=
+_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html#pgfId=3D1004614" class=
+=3D"footnote">1</a>&nbsp;</font></div>
+</td>
+</tr>
+
+<tr>
+<td>
+<div class=3D"CellBody"><a name=3D"pgfId=3D1004617"></a><font size=3D"+1">2=
+&nbsp;</font></div>
+</td>
+
+<td>
+<div class=3D"CellBody"><a name=3D"pgfId=3D1004619"></a><font size=3D"+1">l=
+eft&nbsp;</font></div>
+</td>
+
+<td>
+<div class=3D"CellBody"><a name=3D"pgfId=3D1004621"></a><font size=3D"+1"><=
+tt>* /
+%</tt>&nbsp;</font></div>
+</td>
+
+<td>
+<div class=3D"CellBody"><a name=3D"pgfId=3D1004623"></a></div>
+</td>
+</tr>
+
+<tr>
+<td>
+<div class=3D"CellBody"><a name=3D"pgfId=3D1004625"></a><font size=3D"+1">3=
+&nbsp;</font></div>
+</td>
+
+<td>
+<div class=3D"CellBody"><a name=3D"pgfId=3D1004627"></a><font size=3D"+1">l=
+eft&nbsp;</font></div>
+</td>
+
+<td>
+<div class=3D"CellBody"><a name=3D"pgfId=3D1004629"></a><font size=3D"+1"><=
+tt>+ -</tt>&nbsp;</font></div>
+</td>
+
+<td>
+<div class=3D"CellBody"><a name=3D"pgfId=3D1004631"></a></div>
+</td>
+</tr>
+
+<tr>
+<td>
+<div class=3D"CellBody"><a name=3D"pgfId=3D1004633"></a><font size=3D"+1">4=
+&nbsp;</font></div>
+</td>
+
+<td>
+<div class=3D"CellBody"><a name=3D"pgfId=3D1004635"></a><font size=3D"+1">l=
+eft&nbsp;</font></div>
+</td>
+
+<td>
+<div class=3D"CellBody"><a name=3D"pgfId=3D1004637"></a><font size=3D"+1"><=
+tt>&gt;&gt;
+&lt;&lt;</tt>&nbsp;</font></div>
+</td>
+
+<td>
+<div class=3D"CellBody"><a name=3D"pgfId=3D1004639"></a></div>
+</td>
+</tr>
+
+<tr>
+<td>
+<div class=3D"CellBody"><a name=3D"pgfId=3D1004641"></a><font size=3D"+1">5=
+&nbsp;</font></div>
+</td>
+
+<td>
+<div class=3D"CellBody"><a name=3D"pgfId=3D1004643"></a><font size=3D"+1">l=
+eft&nbsp;</font></div>
+</td>
+
+<td>
+<div class=3D"CellBody"><a name=3D"pgfId=3D1004645"></a><font size=3D"+1"><=
+tt>=3D=3D
+!=3D &gt; &lt; &lt;=3D &gt;=3D</tt>&nbsp;</font></div>
+</td>
+
+<td>
+<div class=3D"CellBody"><a name=3D"pgfId=3D1
+ffb
+004647"></a></div>
+</td>
+</tr>
+
+<tr>
+<td>
+<div class=3D"CellBody"><a name=3D"pgfId=3D1004649"></a><font size=3D"+1">6=
+&nbsp;</font></div>
+</td>
+
+<td>
+<div class=3D"CellBody"><a name=3D"pgfId=3D1004651"></a><font size=3D"+1">l=
+eft&nbsp;</font></div>
+</td>
+
+<td>
+<div class=3D"CellBody"><a name=3D"pgfId=3D1004653"></a><font size=3D"+1"><=
+tt>&amp;</tt>&nbsp;</font></div>
+</td>
+
+<td>
+<div class=3D"CellBody"><a name=3D"pgfId=3D1004655"></a></div>
+</td>
+</tr>
+
+<tr>
+<td>
+<div class=3D"CellBody"><a name=3D"pgfId=3D1004657"></a><font size=3D"+1">7=
+&nbsp;</font></div>
+</td>
+
+<td>
+<div class=3D"CellBody"><a name=3D"pgfId=3D1004659"></a><font size=3D"+1">l=
+eft&nbsp;</font></div>
+</td>
+
+<td>
+<div class=3D"CellBody"><a name=3D"pgfId=3D1004661"></a><font size=3D"+1"><=
+tt>|</tt>&nbsp;</font></div>
+</td>
+
+<td>
+<div class=3D"CellBody"><a name=3D"pgfId=3D1004663"></a></div>
+</td>
+</tr>
+
+<tr>
+<td>
+<div class=3D"CellBody"><a name=3D"pgfId=3D1004665"></a><font size=3D"+1">8=
+&nbsp;</font></div>
+</td>
+
+<td>
+<div class=3D"CellBody"><a name=3D"pgfId=3D1004667"></a><font size=3D"+1">l=
+eft&nbsp;</font></div>
+</td>
+
+<td>
+<div class=3D"CellBody"><a name=3D"pgfId=3D1004669"></a><font size=3D"+1"><=
+tt>&amp;&amp;</tt>&nbsp;</font></div>
+</td>
+
+<td>
+<div class=3D"CellBody"><a name=3D"pgfId=3D1004671"></a></div>
+</td>
+</tr>
+
+<tr>
+<td>
+<div class=3D"CellBody"><a name=3D"pgfId=3D1004673"></a><font size=3D"+1">9=
+&nbsp;</font></div>
+</td>
+
+<td>
+<div class=3D"CellBody"><a name=3D"pgfId=3D1004675"></a><font size=3D"+1">l=
+eft&nbsp;</font></div>
+</td>
+
+<td>
+<div class=3D"CellBody"><a name=3D"pgfId=3D1004677"></a><font size=3D"+1"><=
+tt>||</tt>&nbsp;</font></div>
+</td>
+
+<td>
+<div class=3D"CellBody"><a name=3D"pgfId=3D1004685"></a><font size=3D"+1"><=
+a href=3D"https://users.informatik.haw-hamburg.de/~krabat/FH-Labor/gnupro/5=
+_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html#pgfId=3D1004684" class=
+=3D"footnote">2</a>&nbsp;</font></div>
+</td>
+</tr>
+
+<tr>
+<td>
+<div class=3D"CellBody"><a name=3D"pgfId=3D1004687"></a><font size=3D"+1">1=
+0&nbsp;</font></div>
+</td>
+
+<td>
+<div class=3D"CellBody"><a name=3D"pgfId=3D1004689"></a><font size=3D"+1">r=
+ight&nbsp;</font></div>
+</td>
+
+<td>
+<div class=3D"CellBody"><a name=3D"pgfId=3D1004691"></a><font size=3D"+1"><=
+tt>? :</tt>&nbsp;</font></div>
+</td>
+
+<td>
+<div class=3D"CellBody"><a name=3D"pgfId=3D1004693"></a></div>
+</td>
+</tr>
+
+<tr>
+<td>
+<div class=3D"CellBody"><a name=3D"pgfId=3D1004695"></a><font size=3D"+1">1=
+1&nbsp;</font></div>
+</td>
+
+<td>
+<div class=3D"CellBody"><a name=3D"pgfId=3D1004697"></a><font size=3D"+1">r=
+ight&nbsp;</font></div>
+</td>
+
+<td>
+<div class=3D"CellBody"><a name=3D"pgfId=3D1004699"></a><font size=3D"+1"><=
+tt>&amp;=3D
++=3D -=3D *=3D /=3D</tt>&nbsp;</font></div>
+</td>
+
+<td>
+<div class=3D"CellBody"><a name=3D"pgfId=3D1004701"></a></div>
+</td>
+</tr>
+
+<tr>
+<td>
+<div class=3D"CellBody"><a name=3D"pgfId=3D1004703"></a><font size=3D"+1">(=
+lowest)&nbsp;</font></div>
+</td>
+
+<td>
+<div class=3D"CellBody"><a name=3D"pgfId=3D1004705"></a></div>
+</td>
+
+<td>
+<div class=3D"CellBody"><a name=3D"pgfId=3D1004707"></a></div>
+</td>
+
+<td>
+<div class=3D"CellBody"><a name=3D"pgfId=3D1004709"></a></div>
+</td>
+</tr>
+</tbody></table>
+&nbsp;
+<div class=3D"Body"><a name=3D"pgfId=3D1007149"></a></div>
+
+<hr>
+<div class=3D"footnotes">
+<div class=3D"footnote">
+<div class=3D"TableFootnote"><span class=3D"footnoteNumber"><font size=3D"+=
+1">1.</font></span><font size=3D"+1">&nbsp;<a name=3D"pgfId=3D1004614"></a>=
+Prefix
+operators&nbsp;</font><a name=3D"Prefix operators"></a></div>
+</div>
+
+<div class=3D"footnote">
+<h4 class=3D"TableFootnote">
+<span class=3D"footnoteNumber"><font size=3D"+1">2.</font></span><font size=
+=3D"+1">&nbsp;<a name=3D"pgfId=3D1004684"></a>See
+<a href=3D"https://users.informatik.haw-hamburg.de/~krabat/FH-Labor/gnupro/=
+5_GNUPro_Utilities/c_Using_LD/ld03.1.html" class=3D"XRef">Assigning values =
+to symbols</a>.</font></h4>
+</div>
+</div>
+
+<h4 class=3D"Heading2">
+<a name=3D"pgfId=3D1003420"></a><a name=3D"_Toc417794861"></a><a name=3D"Ev=
+aluation"></a><font face=3D"Arial,Helvetica"><font size=3D"+1">Evaluation</=
+font></font></h4>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003421"></a><font size=3D"+1">The l=
+inker
+evaluates expressions lazily. It only computes the value of an expression
+when absolutely necessary.&nbsp;</font><a name=3D"evaluation"></a></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003422"></a><font size=3D"+1">The l=
+inker
+needs some information, such as the value of the start address of the first
+section, and the origins and lengths of memory regions, in order to do
+
+ffb
+any linking at all. These values are computed as soon as possible when
+the linker reads in the linker script.&nbsp;</font><a name=3D"start address=
+"></a><a name=3D"memory regions"></a></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003423"></a><font size=3D"+1">Howev=
+er, other
+values (such as symbol values) are not known or needed until after storage
+allocation. Such values are evaluated later, when other information (such
+as the sizes of output sections) is available for use in the symbol assignm=
+ent
+expression.&nbsp;</font><a name=3D"storage allocation"></a></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003424"></a><font size=3D"+1">The s=
+izes of
+sections cannot be known until after allocation, so assignments dependent
+upon these are not performed until after allocation.&nbsp;</font><a name=3D=
+"assignments"></a></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003425"></a><font size=3D"+1">Some =
+expressions,
+such as those depending upon the location counter ` <tt>.</tt> ', must
+be evaluated during section allocation.</font></div>
+
+
+<p class=3D"Body"><a name=3D"pgfId=3D1003426"></a><font size=3D"+1">If the =
+result
+of an expression is required, but the value is not available, then an error
+results. For example, a script, like the following, will cause the error
+message, ` <tt>non constant expression for initial address</tt> ':</font>
+<br>&nbsp;
+</p><ul>
+<ul>
+<pre class=3D"CodeExample"><a name=3D"pgfId=3D1003427"></a><font size=3D"+1=
+">SECTIONS</font></pre>
+
+<pre><font size=3D"+1">&nbsp; {</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp;&nbsp; .text 9+this_isnt_constant :</fon=
+t></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; { *(.text) }</font></=
+pre>
+
+<pre><font size=3D"+1">&nbsp; }</font></pre>
+</ul>
+</ul>
+
+<h4 class=3D"Heading2">
+<a name=3D"pgfId=3D1003429"></a><a name=3D"_Toc417794862"></a><a name=3D"Th=
+e_section_of_an_expression"></a><font face=3D"Arial,Helvetica"><font size=
+=3D"+1">The
+section of an expression</font></font></h4>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003430"></a><font size=3D"+1">When =
+the linker
+evaluates an expression, the result is either absolute or relative to some
+section. A relative expression is expressed as a fixed offset from the
+base of a section.&nbsp;</font><a name=3D"expression"></a></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003431"></a><font size=3D"+1">The p=
+osition
+of the expression within the linker script determines whether it is absolut=
+e
+or relative. An expression, which appears within an output section definiti=
+on,
+is relative to the base of the output section. An expression, which appears
+elsewhere, will be absolute.</font></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003432"></a><font size=3D"+1">A sym=
+bol set
+to a relative expression will be relocatable if you request relocatable
+output using the ` <tt>-r</tt> ' option. That means that a further link
+operation may change the value of the symbol. The symbol's section will
+be the section of the relative expression.</font></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003433"></a><font size=3D"+1">A sym=
+bol set
+to an absolute expression will retain the same value through any further
+link operation. The symbol will be absolute, and will not have any particul=
+ar
+associated section.</font></div>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003434"></a><font size=3D"+1">You c=
+an use
+the builtin function ` <tt>ABSOLUTE</tt> ' to force an expression to be
+absolute when it would otherwise be relative. For example, to create an
+absolute symbol set to the address of the end of the output section ` <tt>.=
+data</tt>
+':</font></div>
+
+<br>&nbsp;
+<ul>
+<ul>
+<ul>
+<pre class=3D"CodeExample"><a name=3D"pgfId=3D1003435"></a><font size=3D"+1=
+">SECTIONS</font></pre>
+
+<pre><font size=3D"+1">&nbsp; {</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp;&nbsp; .data : { *(.data) _edata =3D ABS=
+OLUTE(.); }</font></pre>
+
+<pre><font size=3D"+1">}</font></pre>
+</ul>
+</ul>
+</ul>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003436"></a><font size=3D"+1">If ` =
+<tt>ABSOLUTE</tt>
+' were not used, ` <tt>_edata</tt> ' would be relative to the ` <tt>.data</=
+tt>
+' section.</font></div>
+
+<h4 class=3D"Heading2">
+<a name=3D"pgfId=3D1003438"></a><a name=3D"_Toc417794863">&lt;
+ffb
+/A&gt;</a><a name=3D"Builtin_functions"></a><font face=3D"Arial,Helvetica">=
+<font size=3D"+1">Builtin
+functions</font></font></h4>
+
+<div class=3D"Body"><a name=3D"pgfId=3D1003439"></a><font size=3D"+1">The l=
+inker
+script language includes a number of builtin functions for use in linker
+script expressions.&nbsp;</font><a name=3D"builtin functions"></a></div>
+
+<div class=3D"BodyHang1"><a name=3D"pgfId=3D1003440"></a><font size=3D"+1">=
+<tt>ABSOLUTE(</tt>&nbsp;<a name=3D"ABSOLUTE"></a><i><tt>exp</tt></i>
+<tt>)</tt></font></div>
+
+<ul><font size=3D"+1">Return the absolute (non-relocatable, as opposed to n=
+on-negative)
+value of the ` <i><tt>exp</tt></i> ' expression. Primarily useful to assign
+an absolute value to a symbol within a section definition, where symbol
+values are normally section relative. See <a href=3D"https://users.informat=
+ik.haw-hamburg.de/~krabat/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldL=
+inker_scripts.html#Expressions_in%20_linker_scripts">Expressions
+in linker scripts</a>.</font></ul>
+
+<div class=3D"BodyHang1"><a name=3D"pgfId=3D1003441"></a><font size=3D"+1">=
+<tt>ADDR(</tt>&nbsp;<a name=3D"ADDR"></a><i><tt>section</tt></i>
+<tt>)</tt></font></div>
+
+<ul><font size=3D"+1">Return the absolute address (the VMA ) of the named s=
+ection
+. Your script must previously have defined the location of that section.
+In the following example, ` <tt>symbol_1</tt> ' and ` <tt>symbol_2</tt>
+' are assigned identical values:</font></ul>
+&nbsp;
+<ul>
+<ul>
+<pre class=3D"CodeExample2"><a name=3D"pgfId=3D1003442"></a><font size=3D"+=
+1">SECTIONS { ...</font></pre>
+
+<pre><font size=3D"+1">&nbsp; .output1 :</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp;&nbsp; {</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp;&nbsp; start_of_output_1 =3D ABSOLUTE(.)=
+;</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp;&nbsp; ...</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp;&nbsp; }</font></pre>
+
+<pre><font size=3D"+1">&nbsp; .output :</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp;&nbsp; {</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp;&nbsp; symbol_1 =3D ADDR(.output1);</fon=
+t></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp;&nbsp; symbol_2 =3D start_of_output_1;</=
+font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp;&nbsp; }</font></pre>
+
+<pre><font size=3D"+1">...</font></pre>
+
+<pre><font size=3D"+1">}</font></pre>
+</ul>
+</ul>
+
+<div class=3D"BodyHang1"><a name=3D"pgfId=3D1003443"></a><font size=3D"+1">=
+<tt>ALIGN(</tt>&nbsp;<a name=3D"ALIGN"></a><i><tt>exp</tt></i>
+<tt>)</tt></font></div>
+
+<ul><font size=3D"+1">Return the location counter (` <tt>.</tt> ') aligned
+to the next ` <i><tt>exp</tt></i> ' boundary. ` <i><tt>exp</tt></i> ' must
+be an expression whose value is a power of two. This is equivalent to:</fon=
+t></ul>
+&nbsp;
+<ul>
+<ul>
+<ul>
+<ul>
+<pre class=3D"CodeExample2"><a name=3D"pgfId=3D1003444"></a><font size=3D"+=
+1">(. + <i>exp</i> - 1) &amp; ~( <i>exp</i> - 1)</font></pre>
+</ul>
+</ul>
+</ul>
+</ul>
+&nbsp;
+<ul>
+<div class=3D"BodyListFollow"><a name=3D"pgfId=3D1003445"></a><font size=3D=
+"+1">`
+<tt>ALIGN</tt> ' doesn't change the value of the location counter, it just
+does arithmetic on it. Here is an example which aligns the output ` <tt>.da=
+ta</tt>
+' section to the next ` <tt>0x2000</tt> ' byte boundary after the preceding
+section and sets a variable within the section to the next ` <tt>0x8000</tt=
+>
+' boundary after the input sections:</font></div>
+</ul>
+&nbsp;
+<ul>
+<ul>
+<ul>
+<ul>
+<pre class=3D"CodeExample2"><a name=3D"pgfId=3D1005462"></a><font size=3D"+=
+1">SECTIONS { ...</font></pre>
+
+<pre><font size=3D"+1">&nbsp; .data ALIGN(0x2000): {</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp;&nbsp; *(.data)</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp;&nbsp; variable =3D ALIGN(0x8000);</font=
+></pre>
+
+<pre><font size=3D"+1">&nbsp; }</font></pre>
+
+<pre><font size=3D"+1">...</font></pre>
+
+<pre><font size=3D"+1">}</font></pre>
+</ul>
+</ul>
+</ul>
+</ul>
+&nbsp;
+<ul>
+<div class=3D"Body"><a name=3D"pgfId=3D1005463"></a><font size=3D"+1">The f=
+irst use
+of ` <tt>ALIGN</tt> ' in this example specifies the location of a section
+because it is used as the optional ` <tt>ADDRESS</tt> ' attribute of a
+section definition. The second use of ` <tt>ALIGN</tt> ' is to define the
+value of a symbol. The builtin function ` <tt>NEXT</tt> ' is closely relate=
+d
+to ` <tt>ALIGN</tt> '. See <a href=3D"https://users.informatik.haw-hamburg.=
+de/~krabat/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.h=
+tml#Of6eutput_section_address">Output section
+address</a>.</font></div>
+</ul>
+
+<div class=3D"BodyHang1"><a name=3D"pgfId=3D1003448"></a><font size=3D"+1">=
+<tt>BLOCK(</tt>&nbsp;<a name=3D"BLOCK"></a><i><tt>exp</tt></i>
+<tt>)</tt></font></div>
+
+<ul><font size=3D"+1">This is a synonym for ` <tt>ALIGN</tt> ', for compati=
+bility
+with older linker scripts. It is most often seen when setting the address
+of an output section.</font></ul>
+
+<div class=3D"BodyHang1"><a name=3D"pgfId=3D1003449"></a><font size=3D"+1">=
+<tt>DEFINED(</tt>&nbsp;<a name=3D"DEFINED"></a><i><tt>symbol</tt></i>
+<tt>)</tt></font></div>
+
+<ul><font size=3D"+1">Return ` <tt>1</tt> ' if ` <i><tt>symbol</tt></i> ' i=
+s
+in the linker global symbol table and is defined, otherwise return ` <tt>0<=
+/tt>
+'. You can use this function to provide default values for symbols. For
+example, the following script fragment shows how to set a global symbol
+` <tt>begin</tt> ' to the first location in the ` <tt>.text</tt> ' section,
+but if a symbol called ` <tt>begin</tt> ' already existed, its value is
+preserved:</font></ul>
+&nbsp;
+<ul>
+<ul>
+<ul>
+<ul>
+<pre class=3D"CodeExample2"><a name=3D"pgfId=3D1003450"></a><font size=3D"+=
+1">SECTIONS{ ...</font></pre>
+
+<pre><font size=3D"+1">&nbsp; .text : {</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp;&nbsp; begin =3D DEFINED(begin) ? begin =
+: . ;</font></pre>
+
+<pre><font size=3D"+1">...</font></pre>
+
+<pre><font size=3D"+1">&nbsp; }</font></pre>
+
+<pre><font size=3D"+1">...</font></pre>
+
+<pre><font size=3D"+1">}</font></pre>
+</ul>
+</ul>
+</ul>
+</ul>
+
+<div class=3D"BodyHang1"><a name=3D"pgfId=3D1003451"></a><font size=3D"+1">=
+<tt>LOADADDR(</tt>&nbsp;<a name=3D"LOADADDR"></a><tt><i>section
+</i>)</tt></font></div>
+
+<ul><font size=3D"+1">Return the absolute ` <tt>LMA</tt> ' of the named ` <=
+tt>SECTION</tt>
+'. This is normally the same as ` <tt>ADDR</tt> ', but it may be different
+if the ` <tt>AT</tt> ' attribute is used in the output section definition.<=
+/font></ul>
+
+<div class=3D"BodyHang1"><a name=3D"pgfId=3D1003452"></a><font size=3D"+1">=
+<tt>MAX(</tt>&nbsp;<a name=3D"MAX"></a><i><tt>exp1
+, exp2</tt></i> <tt>)</tt></font></div>
+
+<ul><font size=3D"+1">Returns the maximum of ` <i><tt>exp1</tt></i> ' and `
+<i><tt>exp2</tt></i> '.</font></ul>
+
+<div class=3D"BodyHang1"><a name=3D"pgfId=3D1003453"></a><font size=3D"+1">=
+<tt>MIN(</tt>&nbsp;<a name=3D"MIN"></a><i><tt>exp1
+, exp2</tt></i> <tt>)</tt></font></div>
+
+<ul><font size=3D"+1">Returns the minimum of ` <i><tt>exp1</tt></i> ' and `
+<i><tt>exp2</tt></i> '.</font></ul>
+
+<div class=3D"BodyHang1"><a name=3D"pgfId=3D1003454"></a><font size=3D"+1">=
+<tt>NEXT(</tt>&nbsp;<a name=3D"NEXT"></a><i><tt>exp</tt></i>
+<tt>)</tt></font></div>
+
+<ul><font size=3D"+1">Return the next unallocated address that is a multipl=
+e
+of ` <i><tt>exp</tt></i> '. This function is closely related to ` <tt>ALIGN=
+(</tt>&nbsp;<a name=3D"ALIGN"></a><i><tt>exp</tt></i>
+<tt>)</tt> '; unless you use the ` <tt>MEMORY</tt> ' command to define
+discontinuous memory for the output file, the two functions are equivalent.=
+</font></ul>
+
+<div class=3D"BodyHang1"><a name=3D"pgfId=3D1003455"></a><font size=3D"+1">=
+<tt>SIZEOF(</tt>&nbsp;<a name=3D"SIZEOF"></a><i><tt>section</tt></i>
+<tt>)</tt></font></div>
+
+<ul><font size=3D"+1">Return the size in bytes of the named ` <i><tt>sectio=
+n</tt></i>
+', if that section has been allocated. If the section has not been allocate=
+d
+when this is evaluated, the linker will report an error. See <a href=3D"htt=
+ps://users.informatik.haw-hamburg.de/~krabat/FH-Labor/gnupro/5_GNUPro_Utili=
+ties/c_Using_LD/ldLinker_scripts.html#PHDRS_command"><tt>PHDRS</tt>
+command</a>. In the following example, ` <tt>symbol_1</tt> ' and ` <tt>symb=
+ol_2</tt>
+' are assigned identical values:</font></ul>
+&nbsp;
+<ul>
+<ul>
+<ul>
+<pre class=3D"CodeExample2"><a name=3D"pgfId=3D1003456"></a><font size=3D"+=
+1">SECTIONS{ ...</font></pre>
+
+<pre><font size=3D"+1">&nbsp; .output {</font></pre>
+
+<pre><font size=3D"+1">&nbsp;&nbsp;&nbsp; .start =3D . ;</font></pre>
+
+<pre><font size=3D"+1">...</font></pre>
+
+<pre>&nbsp;</pre>
+</ul>
+</ul>
+</ul>
+
+<div class=3D"footnotes">
+<div class=3D"footnote">&nbsp;</div>
+</div>
+
+
+
+
+0
+
+</tt></body></html>
+------MultipartBoundary--SBJxxZjC1xm4sRVQ2swi826he3r955mDgCC2dSETRt------

@@ -1,0 +1,69 @@
+
+Emulates same supported FS functions
+
+Can mount a provider(Another EXFS instance) to nonconflicting path
+
+Providers can be LOCFS(Local persistent filesystem), RAMFS(Empty temporary FS, base in WASM), NETFS(HTTP,???), RESFS(A local file or any memory pointer)
+
+https://emscripten.org/docs/api_reference/Filesystem-API.html
+
+{
+ int Mount(ExFs* Parent, astr Path, uint32 opts);
+ int Unmount(astr Path);
+// int Sync();  ???
+ mkdir(path, mode)
+ rmdir(path)
+ unlink(path)
+ symlink(oldpath, newpath)  // link
+ rename(oldpath, newpath)
+ readlink(path)
+ stat(path, info, opts) // lstat(path)
+ chmod(path, mode, opts)  // lchmod
+
+ fchmod(fd, mode)
+ truncate(path, len)
+ ftruncate(fd, len)
+ utime(path, atime, mtime) ???
+ open(path, flags[, mode])
+ close(stream)
+ llseek(stream, offset, whence)  // seek
+ read(stream, buffer, offset, length[, position])
+ write(stream, buffer, offset, length[, position])
+
+ readFile(path, opts)
+ writeFile(path, data, opts)
+
+ watch(path, opts)  // trackingDelegate
+
+// Static base:
+ isFile(mode)
+ isDir
+ isLink
+ cwd()
+ chdir(path)
+ readdir(path)
+ getPath(node) // Gets the absolute path to node, accounting for mounts.
+}
+
+trackingDelegate[callback name]
+Users can specify callbacks to receive different filesystem events. This is useful for tracking changes in the filesystem. This requires -sFS_DEBUG.
+
+willMovePath — Indicates path is about to be moved.
+
+onMovePath — Indicates path is moved.
+
+willDeletePath — Indicates path is about to be deleted.
+
+onDeletePath — Indicates path deleted.
+
+onOpenFile — Indicates file is opened.
+
+onWriteToFile — Indicates file is being written to and number of bytes written.
+
+onReadFile — Indicates file is being read and number of bytes read.
+
+onSeekFile — Indicates seeking within a file, position, and whence.
+
+onCloseFile — Indicates a file being closed.
+
+NETFS: Firefox and Chrome have recently disabled synchronous binary XHRs, which means this cannot work for JavaScript in regular HTML pages (but it works within Web Workers). ???

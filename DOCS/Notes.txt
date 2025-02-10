@@ -1,0 +1,62 @@
+Should be compatible with Windows, MacOS, Linux, Android
+
+/* Memory allocations:
+Hard faults are what you are thinking of - these are where data is not in RAM and has to pulled in from the swap file. 
+They cripple performance (being 10 000's of times slower than RAM access for mechanical hard drives).
+
+Soft faults, however, are triggered by pages that the program requests to be zero (demand zero pages), 
+when a page is written to for the first time (if it was a copy on write page) or if the page is already in memory 
+somewhere else (usually when shared between multiple processes). These are not so bad for performance.
+*/
+
+
+// LinkedList: Less excess operations but many cache misses(But equal perfamance for a CPU wilh a small cache)
+//        PRO: Fast sorted insertion(No memory movement required as for arrays)
+//        CON: Slow sequential access(Cache misses)
+//  Good for StringPool, when strings are owned by some objects and accessed through them
+//
+
+It is slightly biased towards sacrificing memory for perfomance.
+--------------------------
+llvm-project-main\clang\lib\Driver\ToolChains\CommonArgs.cpp
+    tools::addMCModel  // No Arm X32 support!!!!!!!!
+------------------------------------
+https://stackoverflow.com/questions/64053597/how-do-i-enable-sse4-1-and-sse3-but-not-avx-in-msvc
+/d2archSSE42
+Note: Codegen in MSVC mode is broken. It won't generate POPCNT even if Arch:AVX2
+
+Use "/clang: -msse4.2" or "/clang: -mpopcnt" specifically to override all that compatibility nonsense.
+TODO: Make VS to use the provided compilation scripts but keep PDB debug info somehow.
+
+https://clang.llvm.org/docs/MSVCCompatibility.html
+----------------------------------------------------
+Reliable(i hope) windows syscall retrieving.
+
+
+
+
+
+
+AARCH64: Ok = (CM == "tiny" || CM == "small" || CM == "large");
+x86_64: Ok = {"small", "kernel", "medium", "large", "tiny"}
+
+-------------------
+Linux: clang download:
+wget -qO- https://apt.llvm.org/llvm.sh  -> /home/user/instclang.sh 
+# make executable
+sudo instclang.sh 19
+sudo apt install clang-19
+# path: /usr/lib/llvm-19/bin/
+
+---
+sudo apt-get install open-vm-tools
+sudo apt-get install open-vm-tools-desktop
+----------------------------------
+$ llvm-objcopy --only-keep-debug product.exe product.dbg
+$ llvm-objcopy --strip-all product.exe
+$ llvm-objcopy --add-gnu-debuglink=product.dbg product.exe
+----------------------
+PIE
+https://patchwork.ozlabs.org/project/glibc/patch/20190312130235.8E82C89CE49C@oldenburg2.str.redhat.com/
+Check for DF_1_PIE and fail when called from dlopen.
+----------------------------
