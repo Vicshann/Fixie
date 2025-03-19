@@ -854,7 +854,7 @@ struct SDirEnt     // linux_dirent64  // For getdents64
 
 //using PSDirEnt = MPTR<SDirEnt, PHT>;
 
-// Queries a directory atomically, advances the file position if the buffer too small to fit all entries
+// Queries a directory atomically, advances the file position if the buffer is too small to fit all entries
 static int PXCALL getdentsGD(fdsc_t fd, PVOID buf, SIZE_T bufsize);   // General definition
 static int PXCALL getdents32(fdsc_t fd, PVOID buf, SIZE_T bufsize);      // Unused
 static int PXCALL getdents64(fdsc_t fd, PVOID buf, SIZE_T bufsize);      // unsigned int count
@@ -863,8 +863,10 @@ static int PXCALL getdents64(fdsc_t fd, PVOID buf, SIZE_T bufsize);      // unsi
 static int PXCALL getdirentries32(fdsc_t fd, PVOID buf, SIZE_T bufsize, PSSIZE_T basep);    // BSD: 196;  XNU: 196  [freebsd11] getdirentries   // Returns SSIZE_T?
 static int PXCALL getdirentries64(fdsc_t fd, PVOID buf, SIZE_T bufsize, PSSIZE_T basep);    // BSD: 554;  XNU: 344                              // Returns SSIZE_T?
 
-// New, For Arm64
+// Kernel 2.6.16 (Released 20 March, 2006) (Arm64 have only openat)
+// https://stackoverflow.com/questions/1670135/what-non-linux-unixes-support-openat
 static int PXCALL openat(fdsc_t dirfd, PCCHAR pathname, int flags, mode_t mode);
+
 static int PXCALL mknodat(fdsc_t dirfd, PCCHAR pathname, mode_t mode, dev_t dev);
 static int PXCALL mkdirat(fdsc_t dirfd, PCCHAR pathname, mode_t mode);
 static int PXCALL linkat(fdsc_t olddirfd, PCCHAR oldpath, fdsc_t newdirfd, PCCHAR newpath, int flags);

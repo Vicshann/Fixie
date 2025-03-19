@@ -757,7 +757,7 @@ in the CreateOptions or OpenOptions parameter. Be sure that you do not also spec
 
 FILE_OPEN_REPARSE_POINT is probably needed together with FILE_DIRECTORY_FILE|FILE_OPEN_FOR_BACKUP_INTENT when opening a directory // FindFirstFile doesn`t use FILE_OPEN_REPARSE_POINT, but uses FILE_OPEN_FOR_BACKUP_INTENT
 */
-FUNC_WRAPPERNI(PX::open,       open       )
+FUNC_WRAPPERNI(PX::openat,       openat       )
 {
  NT::IO_STATUS_BLOCK iosb = {};
  NT::HANDLE FileHandle = 0;
@@ -768,9 +768,11 @@ FUNC_WRAPPERNI(PX::open,       open       )
  NT::ULONG CreateDisposition = 0;
  NT::ACCESS_MASK DesiredAccess = NT::SYNCHRONIZE;    // The File handle will be waitable. The handle is signaled each time that an I/O operation that was issued on the handle completes. However, the caller must not wait on a handle that was opened for synchronous file access (FILE_SYNCHRONOUS_IO_NONALERT or FILE_SYNCHRONOUS_IO_ALERT). In this case, ZwReadFile waits on behalf of the caller and does not return until the read operation is complete.
 
- const achar* path  = (achar*)GetParFromPk<0>(args...);
- const uint   flags = GetParFromPk<1>(args...);
-// const uint   mode  = GetParFromPk<2>(args...);
+ NT::HANDLE hroot = (NT::HANDLE)GetParFromPk<0>(args...);  // ???
+ if((int)hroot == PX::AT_FDCWD)hroot = 0;
+ const achar* path  = (achar*)GetParFromPk<1>(args...);
+ const uint   flags = GetParFromPk<2>(args...);
+// const uint   mode  = GetParFromPk<3>(args...);  // Unused for now
 
  if(!(flags & PX::O_CLOEXEC))ObjAttributes |= NT::OBJ_INHERIT;
  if(flags & PX::O_SYMLINK)ObjAttributes |= NT::OBJ_OPENLINK;       // NOTE: There is no O_SYMLINK on Linux
@@ -808,10 +810,15 @@ FUNC_WRAPPERNI(PX::open,       open       )
   }
   else CreateOptions |= NT::FILE_NON_DIRECTORY_FILE;    // File object: a data file, a logical, virtual, or physical device, or a volume
 
- NT::NTSTATUS res = NTX::OpenFileObject(&FileHandle, path, DesiredAccess, ObjAttributes, FileAttributes, ShareAccess, CreateDisposition, CreateOptions, &iosb);
+ NT::NTSTATUS res = NTX::OpenFileObject(&FileHandle, path, DesiredAccess, ObjAttributes, FileAttributes, ShareAccess, CreateDisposition, CreateOptions, &iosb, hroot);
  if(!res)return (PX::fdsc_t)FileHandle;
 // iosb.Status : EFIOStatus
  return -NTX::NTStatusToLinuxErr(res);   // TODO: Verify conformance with https://man7.org/linux/man-pages/man2/open.2.html
+}
+//------------------------------------------------------------------------------------------------------------
+FUNC_WRAPPERNI(PX::open,       open       )
+{
+ return NAPI::openat(PX::AT_FDCWD, args...);
 }
 //------------------------------------------------------------------------------------------------------------
 FUNC_WRAPPERNI(PX::pipe2,      pipe       ) {return 0;}

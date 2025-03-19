@@ -71,7 +71,7 @@ class CParseCpp
    csInDQRawStrBeg,
    csInSQRawStrEnd,
    csInDQRawStrEnd,
-   csInBOM1,        // BOM IS EVIL: https://stackoverflow.com/questions/2223882/whats-the-difference-between-utf-8-and-utf-8-with-bom
+   csInBOM1,
    csInBOM2,
   };
 //-----------------------------------------------------------------------
@@ -117,25 +117,15 @@ enum EScpGroup
 NLEX::CLexer<STRM::CStrmBuf> lex;
 NLEX::SRangeLst Ranges;  // May be Shared 
 //------------------------------------------------------------------------------------------------------------
-void RegRanges_Base(void)      // Registers all printable(Graphic, spaced) ranges
-{
- this->Ranges.Add(csBase, 0x00,0xFF, csBase, sgNone, ttWhSpace, ttNone, NLEX::tfNonSpaced|NLEX::tfBadToken);  
-
- this->Ranges.Add(csBase,   0xEF,0xEF, csInBOM1,   sgNone, ttWhSpace, ttNone, NLEX::tfNonSpaced);
- this->Ranges.Add(csInBOM1, 0xBB,0xBB, csInBOM2,   sgNone, ttWhSpace, ttNone, NLEX::tfNonSpaced);
- this->Ranges.Add(csInBOM2, 0xBF,0xBF, csBase,     sgNone, ttWhSpace, ttNone, NLEX::tfNonSpaced|NLEX::tfTknLSplit);
-}
-//------------------------------------------------------------------------------------------------------------
-// '\t'(horizontal tab), '\r'(carriage return), '\n'(new line), '\v'(vertical tab), '\f'(form feed), ' '(space), U+0085 (NEL), U+00A0 (NBSP)
 void RegRanges_WS(void)
 {
  // Whitespaces          
- this->Ranges.Add(csBase|(csWhitespc << 8), 0x09,0x0D, csWhitespc, sgNone, ttWhSpace, ttNone, NLEX::tfWhtspc);
- this->Ranges.Add(csBase|(csWhitespc << 8), 0x20,0x20, csWhitespc, sgNone, ttWhSpace, ttNone, NLEX::tfWhtspc);
- //this->Ranges.Add(csBase|(csWhitespc << 8), 0x01,0x20, csWhitespc, sgNone, ttWhSpace, ttNone, NLEX::tfWhtspc);  // Whitespace: 01-20, 7F  // No messing up text parsing/display - treat all special chars as whitespaces (If you put them in your source code you are responsible if some text editor(or a terminal emulator) will choke on it)
- //this->Ranges.Add(csBase|(csWhitespc << 8), 0x7F,0x7F, csWhitespc, sgNone, ttWhSpace, ttNone, NLEX::tfWhtspc);
+ this->Ranges.Add(csBase|(csWhitespc << 8), 0x01,0x20, csWhitespc, sgNone, ttWhSpace, ttNone, NLEX::tfWhtspc);  // Whitespace: 01-20, 7F  // No messing up text parsing/display - treat all special chars as whitespaces (If you put them in your source code you are responsible if some text editor(or a terminal emulator) will choke on it)
+ this->Ranges.Add(csBase|(csWhitespc << 8), 0x7F,0x7F, csWhitespc, sgNone, ttWhSpace, ttNone, NLEX::tfWhtspc);
 
-
+ this->Ranges.Add(csBase,   0xEF,0xEF, csInBOM1,   sgNone, ttWhSpace, ttNone, NLEX::tfWhtspc);
+ this->Ranges.Add(csInBOM1, 0xBB,0xBB, csInBOM2,   sgNone, ttWhSpace, ttNone, NLEX::tfWhtspc);
+ this->Ranges.Add(csInBOM2, 0xBF,0xBF, csWhitespc, sgNone, ttWhSpace, ttNone, NLEX::tfWhtspc);
 }
 //------------------------------------------------------------------------------------------------------------
 // https://en.cppreference.com/w/cpp/language/operator_alternative
@@ -151,7 +141,6 @@ void RegRanges_Names(void)
  this->Ranges.Add(csBase|(csInTkName << 8)|(csInPossRStr << 16), 0x80,0xFF, csInTkName, sgNone, ttName);   // UTF-8 multi-byte chars  // Too much to manage - just allow any of this to be in names as 'a - z'  // Means no special chars in extended codepoints will be supported (Too slow to parse)  // Aliasing will solve this at the Lexer level
                                    
  this->Ranges.Add(csInTkName|(csInPossRStr << 8), '0','9', csInTkName, sgNone, ttNone  );
- // TODO: Other allowed chars
 } 
 //------------------------------------------------------------------------------------------------------------
 void RegRanges_Specials(void)          // TODO: Use @ for aliasing by default
@@ -175,7 +164,7 @@ void RegRanges_Specials(void)          // TODO: Use @ for aliasing by default
   
 // Comments  (Multiline comments are nestable)
  this->Ranges.Add(csBase|(csTSpecial << 8),           '/','/', csInCmnBeg,      sgNone, ttNone,     ttNone, NLEX::tfTknRSplit);    // Always starts a new token (Div or a comment)
- this->Ranges.Add(csInCmnBeg,                         '/','/', csInCmntSL,      sgNone, ttComment,  ttNone, NLEX::tfComment);      // Comments are usually reported with their markers
+ this->Ranges.Add(csInCmnBeg,                         '/','/', csInCmntSL,      sgNone, ttComment,  ttNone, NLEX::tfComment); 
  this->Ranges.Add(csInCmnBeg|(csInCmntBegML << 8),    '*','*', csInCmntML,    sgCmntML, ttComment,  ttNone, NLEX::tfComment|NLEX::tfScopeOpn);    // Increase scope depth and continue the comment
                                                                                   
  this->Ranges.Add(csInCmntSL,                       0x01,0xFF, csInCmntSL,      sgNone, ttComment,  ttNone, NLEX::tfComment);
@@ -191,6 +180,9 @@ void RegRanges_Specials(void)          // TODO: Use @ for aliasing by default
 // Just consume and ignore anything up to '\n' includin it. Anything on a next line will continue the token
 // This would mean that we must add such behaviour in EVERY state(Every name, number and every composed token) and it MUST be an unique state for proper continuation!
 // I am too lazy to implement that ugly nonsence!    // May be allow a char to be assigned globally to skip rest of the line(Same as '\n' is works globally)?
+
+////////
+ this->Ranges.Add(csBase, '.','.', csBase, sgIndent, ttWhSpace, ttNone, NLEX::tfDepthIndent);   // |(csWhitespc << 8)
 }                                            
 //------------------------------------------------------------------------------------------------------------
 void RegRanges_Strings(void) 
@@ -298,7 +290,6 @@ public:
 void Initialize(void)
 {
  //tkn.Initialize();
- this->RegRanges_Base();
  this->RegRanges_WS();
  this->RegRanges_Specials();  // Must be after WS and before everything else
  this->RegRanges_Strings();
@@ -315,7 +306,7 @@ sint ParseFile(const achar* Path)
  //NLEX::SCtx<STRM::CStrmBuf> lctx{};
  this->Initialize();
  this->lex.Stream.Init(Text.Data(), Text.Size());
- this->lex.Init(&this->Ranges, NLEX::lfKeepBraces);
+ this->lex.Init(&this->Ranges, 0);
  sint pres = this->lex.Tokenize();
  if(pres < 0)
   {

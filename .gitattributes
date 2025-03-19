@@ -1,0 +1,3 @@
+
+# https://stackoverflow.com/questions/17263604/github-incorrectly-recognizes-programming-language-used-in-the-project
+*.hpp linguist-language=C++

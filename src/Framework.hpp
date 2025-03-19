@@ -149,7 +149,7 @@ namespace NCRYPT     // https://github.com/abbbaf/Compile-time-hash-functions
 
 //--- Extra
 #include "StrLocalizer.hpp"
-#include "Containers/ByteJam.hpp"
+#include "Containers/BitTrie.hpp"
 #include "Parsers/Tokenizer.hpp"
 //---
 #ifdef FWK_CFG_USE_RCE

@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Copy this fite and _SET_EVARS.sh into your project't root dorectory and run it
+# Copy this fite and _SET_EVARS.sh into your project't root directory and run it
 # The project directory name must be unique
  
 WORKDIR="$(dirname "$(realpath "$0")")" 

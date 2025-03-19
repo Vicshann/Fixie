@@ -323,7 +323,10 @@ static uint BruteForIndex(size_t ObjIdx, size_t& Idx)  // For testing
 template<uint32 StratType, size_t LBlkMin=0, size_t UnitLen=0x100, size_t PageLen=0x1000, size_t FHdrLen=0, size_t NHdrLen=0> struct SSel
 {
  STASRT(StratType <= afGrowExp, "Wrong grow strategy!");
- using T = TSW<StratType==afGrowExp, SBASExp<UnitLen,PageLen,FHdrLen,NHdrLen,LBlkMin>, typename TSW<StratType==afGrowLin, SBASLin<UnitLen,PageLen,FHdrLen,NHdrLen,LBlkMin>, SBASUni<UnitLen,PageLen,FHdrLen,NHdrLen,LBlkMin> >::T>::T;
+ using T = TSW<LBlkMin,
+               TSW<StratType==afGrowExp, SBASExp<UnitLen,PageLen,FHdrLen,NHdrLen,LBlkMin>, typename TSW<StratType==afGrowLin, SBASLin<UnitLen,PageLen,FHdrLen,NHdrLen,LBlkMin>, SBASUni<UnitLen,PageLen,FHdrLen,NHdrLen,LBlkMin> >::T>::T,
+               TSW<StratType==afGrowExp, SBASExp<UnitLen,PageLen,FHdrLen,NHdrLen>, typename TSW<StratType==afGrowLin, SBASLin<UnitLen,PageLen,FHdrLen,NHdrLen>, SBASUni<UnitLen,PageLen,FHdrLen,NHdrLen> >::T>::T
+              >::T;
 };
 //============================================================================================================
 //                                          The Allocator
@@ -337,7 +340,7 @@ SCVR bool   EmptyTB   = sizeof(TBIfo) <= 1;
 SCVR bool   EmptyTC   = sizeof(TCIfo) <= 1;
 SCVR uint32 StratType = Flg & afGrowMask;
 
-using TBStrat = SSel<StratType>::T;    // To get access to range constants
+using TBStrat = SSel<StratType,LBlkMin>::T;    // To get access to range constants
 
 SCVR bool SepBlkIdx = TBStrat::RangeMax != TBStrat::RangeMin;    // Block index array is a separate allocation (For strategies that require large indexes for blocks)
 SCVR bool MetaInBlk = (Flg & afBlkTrcOwner);                     // Metadata is added to every block (To find the block owner)  // Forces context to be in the first block
@@ -436,7 +439,7 @@ SCVR size_t AlUnitLen = (Flg & afObjAlign)  ? ( (Flg & afAlignPow2)?(AlignToP2Up
 SCVR size_t AlNHdrLen = (sizeof(SNHdr) > 1) ? ( (!(Flg & afLimitHdrAl) || (AlUnitLen <= MaxAlign))?(AlignFrwd(sizeof(SNHdr),AlUnitLen)):(AlignP2Frwd(sizeof(SNHdr),MaxAlign)) ):0;              // May align to UnitSize
 SCVR size_t AlFHdrLen = CtxInFBlk ? ( (!(Flg & afLimitHdrAl) || (AlUnitLen <= MaxAlign))?(AlignFrwd(sizeof(SFHdrEx),AlUnitLen)):(AlignP2Frwd(sizeof(SFHdrEx),MaxAlign)) ): AlNHdrLen;
 
-using Strat = SSel<StratType, AlUnitLen, PageLen, AlFHdrLen, AlNHdrLen>::T;
+using Strat = SSel<StratType, LBlkMin, AlUnitLen, PageLen, AlFHdrLen, AlNHdrLen>::T;
 //static_assert(size_t(Strat::UnitSize) != size_t(0), "UnitSize is zero!");
 
 TSW< CtxInFBlk, SFHdr*, SFHdr >::T Context;
@@ -676,7 +679,7 @@ inline bool IsElmExist(size_t ElmIdx)     // Checks if a block for the element i
  return (bool)ctx->GetBlkPtr(Strat::CalcForIndex(ElmIdx, ElmIdx));
 }
 //-------------------------------------------------------------
-Ty* GetElm(size_t ElmIdx)   // Returns NULL if the element is not present
+Ty* GetElm(size_t ElmIdx)   // Returns NULL if the element's block is not present
 {
  SFHdr* ctx = this->GetCtx();
  if constexpr (CtxInFBlk) {if(!ctx)return nullptr;}
@@ -688,7 +691,7 @@ Ty* GetElm(size_t ElmIdx)   // Returns NULL if the element is not present
  return ((Ty*)(blkp + HSize)) + BEIdx;
 }
 //-------------------------------------------------------------
-Ty* GetElm(size_t ElmIdx, size_t* EndSeqIdx)   // Returns NULL if the element is not present
+Ty* GetElm(size_t ElmIdx, size_t* EndSeqIdx)   // Returns NULL if the element's block is not present
 {
  SFHdr* ctx = this->GetCtx();
  if constexpr (CtxInFBlk) {if(!ctx)return nullptr;}

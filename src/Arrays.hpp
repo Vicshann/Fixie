@@ -153,9 +153,9 @@ sint SetLength(uint Len)    // In bytes!     // Preserves old data!
  return 0;
 }
 //----------------------------------------------------------
-sint FromFile(const achar* FileName)
+sint FromFile(const achar* FileName, sint RootDir=PX::AT_FDCWD)
 {
- int df = NPTM::NAPI::open(FileName,PX::O_RDONLY,0);
+ sint df = NPTM::NAPI::openat(RootDir,FileName,PX::O_RDONLY,0);
  if(df < 0){ DBGERR("Failed to open the file %i: '%s'!",df,FileName); return (sint)df; }
  sint flen = NPTM::NAPI::lseek(df, 0, PX::SEEK_END);    // TODO: Use fstat
  if(flen < 0){NPTM::NAPI::close(df); return flen;}
@@ -168,14 +168,14 @@ sint FromFile(const achar* FileName)
  return sint(rlen / sizeof(T));
 }
 //----------------------------------------------------------
-sint IntoFile(const achar* FileName, uint Length=0, uint Offset=0)       // TODO: Bool Append    // From - To
+sint IntoFile(const achar* FileName, uint Length=0, uint Offset=0, sint RootDir=PX::AT_FDCWD)       // TODO: Bool Append    // From - To
 {
  uint DataSize = this->Size();
  if(Offset >= DataSize)return 0;  // Beyond the data
  if(!Length)Length = DataSize;
  if((Offset+Length) > DataSize)Length = (DataSize - Offset);
  if(!Length)return 0;
- int df = NPTM::NAPI::open(FileName,PX::O_CREAT|PX::O_WRONLY|PX::O_TRUNC, 0666);   // O_TRUNC  O_EXCL   // 0666
+ sint df = NPTM::NAPI::openat(RootDir,FileName,PX::O_CREAT|PX::O_WRONLY|PX::O_TRUNC, 0666);   // O_TRUNC  O_EXCL   // 0666
  if(df < 0){ DBGERR("Failed to create the output data file(%i): '%s'!",df,FileName); return (sint)df; }
  sint wlen = NPTM::NAPI::write(df, &((uint8*)this->AData)[Offset], Length);
  NPTM::NAPI::close(df);

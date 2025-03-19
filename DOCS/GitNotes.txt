@@ -1,0 +1,15 @@
+https://stackoverflow.com/questions/27379818/git-possible-to-use-same-submodule-working-copy-by-multiple-projects
+
+sharedproject="/home/projects/library_XYZ"
+superproject="/home/projects/project1"
+submodule="library_XYZ"
+cd "$superproject"
+(cd -- "$submodule" && git status) # Verify that no uncommited changes exist!
+(cd -- "$submodule" && git push -- "$sharedproject") # Save any local-only commits
+git submodule deinit -- "$submodule" # Get rid of submodule's check-out
+rm -rf .git/modules/"$submodule" # as well as of its local repository
+mkdir -p .submods
+git mv -- "$submodule" .submods/
+echo "gitdir: $sharedproject/.git" > ".submods/$submodule/.git"
+ln -s -- "$sharedproject" "$submodule"
+echo "/$submodule" >> .gitignore

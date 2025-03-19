@@ -9,6 +9,7 @@ when a page is written to for the first time (if it was a copy on write page) or
 somewhere else (usually when shared between multiple processes). These are not so bad for performance.
 */
 
+ TODO: Push/Pop states (State+PUSH; POP+State)   // Will allow kind of functions for the state machine (Helps with parsing of numbers)    ?????????   TODO: Move to some state machine
 
 // LinkedList: Less excess operations but many cache misses(But equal perfamance for a CPU wilh a small cache)
 //        PRO: Fast sorted insertion(No memory movement required as for arrays)
@@ -31,10 +32,12 @@ TODO: Make VS to use the provided compilation scripts but keep PDB debug info so
 https://clang.llvm.org/docs/MSVCCompatibility.html
 ----------------------------------------------------
 Reliable(i hope) windows syscall retrieving.
+----------------------------------------------------
+NMyObj  / MyObj  - Grouping object (namespace). Only static members
+CMyObj  - Have some nonstatic members and requires some initialization(A constructor, Init function)
+SMyObj  - A simple struct, usually POD. May have couple of simple static/nonstatic member functions. Usually does not requires initialization or it is a simple memset.
 
-
-
-
+----------------------------------------------------
 
 
 AARCH64: Ok = (CM == "tiny" || CM == "small" || CM == "large");

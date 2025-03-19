@@ -17,6 +17,8 @@
 // https://gcc.gnu.org/onlinedocs/gcc/Other-Builtins.html
 // __builtin_bit_cast
 // __builtin_trap (void)
+// 
+// https://github.com/DaemonEngine/Daemon/blob/master/src/common/Compiler.h
 //------------------------------------------------------------------------------------------------------------
 
 #ifdef __GNUC__              // CLANG defines it too
@@ -532,10 +534,12 @@ pointer	    64	    64	    64	    32	    32
  using sint    = decltype(ChangeTypeSign(sizeof(void*)));   // NOTE: use of arch`s default type size by default is better for ARM(no easy way to get/set half of a register) and worse for X86(wasted register halves could be used for something else)
  using vptr    = void*;
  using cvptr   = const void*;
+ using usize   = uint;    // Should replace size_t (altough just using 'uint' is more intuitive (If size is not specified then it is of the current arch's default size))
+ using ssize   = sint;    // isize?   // ui,si,u8,u16,u32,u64 (too short, hard to notice)? 
 
  using time_t    = int64; // Modern time_t is 64-bit
  using size_t    = uint;  // To write a familiar type convs
- using ssize_t   = sint;
+ using ssize_t   = sint;  // TODO: Stop spreading this '_t' naming ?
  using uintptr_t = uint;
  using nullptr_t = decltype(nullptr);
 

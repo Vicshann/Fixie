@@ -260,6 +260,14 @@ https://stackoverflow.com/questions/52329604/how-to-get-the-file-desciptor-of-a-
 https://man7.org/linux/man-pages/man7/symlink.7.html
 */
 FUNC_WRAPPERFI(PX::open,       open       ) { CALL_IFEXISTR(open,openat,(args...),(PX::AT_FDCWD, args...)) }
+FUNC_WRAPPERFI(PX::openat,     openat       ) 
+{ 
+ PX::fdsc_t dfd = GetParFromPk<0>(args...);
+ if(dfd == PX::AT_FDCWD)return NAPI::open(GetParFromPk<1>(args...),GetParFromPk<2>(args...),GetParFromPk<3>(args...));  // Try not to use openat if not required?
+ // TODO: Emulate if 'openat' is not available 
+ return SAPI::openat(args...);
+}
+//------------------------------------------------------------------------------------------------------------
 FUNC_WRAPPERFI(PX::pipe2,      pipe       ) {return SAPI::pipe2(args...);}
 //------------------------------------------------------------------------------------------------------------
 FUNC_WRAPPERFI(PX::pollGD,     poll       )

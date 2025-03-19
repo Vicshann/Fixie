@@ -263,7 +263,7 @@ static vptr LdrLoadLibrary(achar* LibName, vptr pLdrLoadDll)
  return ModBase;
 }
 //---------------------------------------------------------------------------
-enum EPathType {ptUnknown=0,ptAbsolute=1,ptSysRootRel=2,ptCurrDirRel=3,ptWinUsrLevel=0x10000};
+enum EPathType {ptUnknown=0,ptAbsolute=1,ptSysRootRel=2,ptCurrDirRel=3,ptWinUsrLevel=0x10000,ptWinUsrAtRel=0x10001};
 
 template<typename T> static EPathType GetPathTypeNt(T Src)
 {
@@ -277,7 +277,7 @@ static _minline size_t CalcFilePathBufSize(const achar* Path, uint& plen, EPathT
 {
  bool Extra = ((uint32)ptype < ptWinUsrLevel); 
  plen  = NUTF::Len8To16(Path);  //  NSTR::StrLen(Path);      // TODO: Check that it is fast enough
- ptype = EPathType((uint32)NTX::GetPathTypeNt(Path) | (uint32)ptype);
+ if(!(uint16)ptype)ptype = EPathType((uint32)NTX::GetPathTypeNt(Path) | (uint32)ptype);  // If ptUnknown
  uint ExtraLen = Extra?(4+10):0;  // +10 for size of "\\GLOBAL??\\"
  NT::UNICODE_STRING* CurrDir = &NT::NtCurrentTeb()->ProcessEnvironmentBlock->ProcessParameters->CurrentDirectory.DosPath;    // 'C:\xxxxx\yyyyy\'
  if((uint16)ptype == NTX::ptSysRootRel)ExtraLen += NSTR::StrLen((wchar*)&fwsinf.SysDrive);
@@ -302,6 +302,8 @@ static _minline size_t InitFilePathBuf(const achar* Path, uint plen, EPathType p
 }
 //------------------------------------------------------------------------------------
 // Volume symlinks are \GLOBAL??\C:
+// https://stackoverflow.com/questions/14192887/status-invalid-parameter-from-ntcreatefile
+//
 static void InitFileObjectAttributes(const achar* Path, uint plen, EPathType ptype, uint32 ObjAttributes, wchar* buf_path, NT::UNICODE_STRING* buf_ustr, NT::OBJECT_ATTRIBUTES* oattr, NT::HANDLE RootDir=0)
 {
  size_t DstLen = InitFilePathBuf(Path, plen, ptype, buf_path);
@@ -326,7 +328,7 @@ static NT::NTSTATUS OpenFileObject(NT::PHANDLE FileHandle, const achar* Path, NT
  NT::UNICODE_STRING FilePathUS;
 
  uint plen;
- NTX::EPathType ptype = ptUnknown;
+ NTX::EPathType ptype = RootDir?ptWinUsrAtRel:ptUnknown;
  uint PathLen = CalcFilePathBufSize(Path, plen, ptype);
 
  wchar FullPath[PathLen];    // NOTE: VLA
