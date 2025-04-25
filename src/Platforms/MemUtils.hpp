@@ -1,17 +1,17 @@
 
 //------------------------------------------------------------------------------------------------------------
-enum EMemMode {mmNone=0, mmShared=0x08, mmExec=0x04, mmWrite=0x02, mmRead=0x01};
+enum EMemMode {mmNone=0, mmRead=0x01, mmWrite=0x02, mmExec=0x04, mmShared=0x08};   // Mapped to EMapProt
 
 struct SMemRange
 {
- size_t RangeBeg;
- size_t RangeEnd;
- size_t FMOffs;
- size_t INode;   // FileID
- uint32 Mode;    // rwxp
+ usize  RangeBeg;
+ usize  RangeEnd;
+ usize  FMOffs;
+ usize  INode;     // FileID
+ uint32 Mode;      // EMemMode // rwxp
  uint32 DevH;
  uint32 DevL;
- uint32 FPathLen;
+ uint32 FPathLen;  // Not including term 0
  achar* FPath;     // ProcfsParseMMapLine sets it pointing inside the Line that has been parsed
 
  SMemRange(void){FPathLen=0;}
@@ -19,10 +19,10 @@ struct SMemRange
 
 struct SMemMap
 {
- size_t    NextAddr;      // 0 if  no more
- size_t    RangesCnt;
- ssize_t   TmpBufOffs;    // Must be set to 0 initially
- size_t    TmpBufLen;
+ usize     NextAddr;      // 0 if  no more
+ usize     RangesCnt;
+ ssize     TmpBufOffs;    // Must be set to 0 initially
+ usize     TmpBufLen;
  uint8*    TmpBufPtr;     // For reading from the system
  SMemRange Ranges[0];
 
@@ -30,38 +30,64 @@ struct SMemMap
 };
 //------------------------------------------------------------------------------------------------------------
 // NOTE: Range->FPath and Range->FPathLen must be set to actual buffer address and size or NULL if not needed
+// TODO: MacOS
+// TODO: WASM stub
 //
-static sint FindMappedRangeByAddr(sint ProcId, size_t Addr, SMemRange* Range)
+static sint FindMappedRangeByAddr(sint ProcId, usize Addr, SMemRange* Range)
 {
- return 0;
+#if defined(SYS_WINDOWS)
+ return NTX::FindMappedRangeByAddr((sint32)ProcId, Addr, Range);
+#else
+ return NPFS::FindMappedRangeByAddr(ProcId, Addr, Range);
+#endif
 }
 //------------------------------------------------------------------------------------------------------------
-static sint FindMappedRangesByPath(sint ProcId, size_t Addr, const achar* ModPath, SMemMap* MappedRanges, size_t BufSize)
+static sint FindMappedRangesByPath(sint ProcId, usize Addr, const achar* ModPath, SMemMap* MappedRanges, usize BufSize)
 {
- return 0;
+#if defined(SYS_WINDOWS)
+ return NTX::FindMappedRangesByPath((sint32)ProcId, Addr, ModPath, MappedRanges, BufSize);
+#else
+ return NPFS::FindMappedRangesByPath(ProcId, Addr, ModPath, MappedRanges, BufSize);
+#endif
 }
 //------------------------------------------------------------------------------------------------------------
-static sint ReadMappedRanges(sint ProcId, size_t AddrFrom, size_t AddrTo, SMemMap* MappedRanges, size_t BufSize)  // Windows: QueryVirtualMemory; Linux: ProcFS; BSD:?; MacOS:?
+static sint ReadMappedRanges(sint ProcId, usize AddrFrom, usize AddrTo, SMemMap* MappedRanges, usize BufSize)  // Windows: QueryVirtualMemory; Linux: ProcFS; BSD:?; MacOS:?
 {
- return 0;
+#if defined(SYS_WINDOWS)
+ return NTX::ReadMappedRanges((sint32)ProcId, AddrFrom, AddrTo, MappedRanges, BufSize);
+#else
+ return NPFS::ReadMappedRanges(ProcId, AddrFrom, AddrTo, MappedRanges, BufSize);
+#endif
 }
 //------------------------------------------------------------------------------------------------------------
-static bool IsValidMemPtr(vptr ptr, size_t len)
+static bool IsValidMemPtr(vptr ptr, usize len)
 {
- size_t PageLen = GetPageSize();
- len += (size_t)ptr & (PageLen - 1);
- ptr  = (vptr)AlignP2Bkwd((size_t)ptr, PageLen);
- len  = AlignP2Frwd(len, PageLen);
+ usize PageLen = GetPageSize();
+ len += (usize)ptr & (PageLen - 1);
+ ptr  = (vptr)AlignBkwdP2((usize)ptr, PageLen);
+ len  = AlignFrwdP2(len, PageLen);
  return !NAPI::msync(ptr, len, PX::MS_ASYNC);   // Returns ENOMEM if the memory (or part of it) was not mapped
 }
 //------------------------------------------------------------------------------------------------------------
-static sint MemProtect(vptr Addr, size_t Size, int Prot)
+static sint MemProtect(vptr Addr, usize Size, uint32 Prot, uint32* Prev=nullptr)
 {
- size_t pageSize = 4096;  //sysconf(_SC_PAGESIZE);
- size_t end = (size_t)Addr + Size;
- size_t pageStart = (size_t)Addr & -pageSize;
- int res = NPTM::NAPI::mprotect((void *)pageStart, end - pageStart, Prot);     // PROT_READ | PROT_WRITE | PROT_EXEC
+ usize pageSize = 4096;  //sysconf(_SC_PAGESIZE);    MEMPAGESIZE  ???   GetPageSize() ???  // Or always 4K?
+ usize end = (usize)Addr + Size;
+ usize pageStart = (usize)Addr & -pageSize;
+ int res = NPTM::NAPI::mprotect((void *)pageStart, end - pageStart, Prot, Prev);     // PROT_READ | PROT_WRITE | PROT_EXEC
 // LOGMSG("Addr=%08X, Size=%08X, Res=%i", Addr, Size, res);
  return res;
+}
+//------------------------------------------------------------------------------------------------------------
+// Addr is IN/OUT
+static sint MemQuery(vptr* Addr, usize* Size, uint32* Prot)
+{
+ SMemRange Range;
+ sint res = FindMappedRangeByAddr(-1, (usize)*Addr, &Range);
+ if(res < 0)return res;
+ if(Size)*Size = Range.RangeEnd - Range.RangeBeg;
+ if(Prot)*Prot = Range.Mode;
+ *Addr = (vptr)Range.RangeBeg;
+ return 0;
 }
 //------------------------------------------------------------------------------------------------------------

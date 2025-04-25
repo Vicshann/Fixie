@@ -6,7 +6,7 @@ static sint GetEnvVar(sint& AOffs, achar* DstBuf, uint DstCCnt=uint(-1))   // En
  uint SrcLen = 0;
  const syschar* evar = GetEnvVar(AOffs, &SrcLen);
  if(!evar)return 0;
- if(!DstBuf)return (sint)SizeOfWStrAsUtf8(evar, SrcLen, 0) + 4;       // Calculate buffer size for current name+value    // +Space for terminating 0
+ if(!DstBuf)return (sint)WStrSizeAsUtf8(evar, SrcLen, 0) + 4;       // Calculate buffer size for current name+value    // +Space for terminating 0
  WStrToUtf8(DstBuf, evar, DstCCnt, SrcLen, 0);
  return (sint)DstCCnt;
 }
@@ -25,7 +25,7 @@ static sint GetEnvVar(const achar* Name, achar* DstBuf, uint DstCCnt=uint(-1))  
     {
      uint offs = uint(spos+1);
      Size -= offs;
-     if(!DstBuf)return (sint)SizeOfWStrAsUtf8(&evar[offs], Size, 0) + 4;       // Calculate buffer size for current value    // +Space for terminating 0
+     if(!DstBuf)return (sint)WStrSizeAsUtf8(&evar[offs], Size, 0) + 4;       // Calculate buffer size for current value    // +Space for terminating 0
      WStrToUtf8(DstBuf, &evar[offs], DstCCnt, Size, 0);
      return (sint)DstCCnt;
     }
@@ -73,7 +73,7 @@ static sint GetAuxInfo(uint InfoID, void* DstBuf, size_t BufSize)
 #elif defined(PLT_LIN_USR)    // BSD, MacOS ?
 static sint GetEnvVar(sint& AOffs, achar* DstBuf, uint DstCCnt=uint(-1))   // Enumerate and copy     // NOTE: Copying is inefficient!
 {
- return UELF::GetStrFromArr(&AOffs, NPTM::GetEnvP(), DstBuf, DstCCnt);
+ return UNIX::GetStrFromArr(&AOffs, NPTM::GetEnvP(), DstBuf, DstCCnt);
 }
 //------------------------------------------------------------------------------------------------------------
 static _ninline sint GetEnvVar(const achar* Name, achar* DstBuf, uint DstCCnt=uint(-1))   // Find by name and copy   // NOTE: Copying is inefficient!  // NOTE: Broken on ARM64 if inlined! Why?
@@ -124,7 +124,7 @@ static sint GetAuxInfo(uint InfoID, vptr DstBuf=nullptr, size_t BufSize=0)
 {
  if(!fwsinf.AuxInf)return -3;
  if(DstBuf && (BufSize < sizeof(size_t)))return -2;
- for(ELF::SAuxVecRec* Rec=fwsinf.AuxInf;Rec->type != ELF::AT_NULL;Rec++)
+ for(UNIX::SAuxVecRec* Rec=fwsinf.AuxInf;Rec->type != UNIX::AT_NULL;Rec++)
   {
    if(Rec->type == InfoID)
     {

@@ -652,7 +652,7 @@ uint AppendRecord(uint DstOffs, uint SrcOffs, const achar* SrcPtr, sint dlen, si
  if(dlen < 0)dlen = 0;    // NOTE: Will break any name compare operations!
  if(flen < 0)flen = 0;
  if(ValLnCnt > 1)ExtrLen += CalcMultilineValueInfo(dptr, dlen, 0, nullptr);    // Indent chars is already there
- uint alsize  = AlignP2Frwd(flen+ExtrLen, sizeof(SRecHdr)) + sizeof(SRecHdr);
+ uint alsize  = AlignFrwdP2(flen+ExtrLen, sizeof(SRecHdr)) + sizeof(SRecHdr);
  uint ResOffs = DstOffs + alsize;
  uint CurSize = this->GetBufLen();
  if(ResOffs >= CurSize)this->Data.SetSize(ResOffs + (CurSize/4) + 8);    // NOTE: No separate Size/Prealloc in CArray yet
@@ -907,7 +907,7 @@ uint InsertNewRecord(SRecHdr* PrvRec, const achar* TextA, const achar* TextB, ui
    if(this->Format & efNameValSpacing){NValSpc = NameValSpaces * 2; PostLen += NValSpc;}  // ' = '
    if((this->Format & efNameValAlign) && (SizeA < ExtraB)){NIndLen = ExtraB - SizeA; PostLen += NIndLen;}    // Alignment space  // ExtraB is max indent of '='
    NRMdLen  = SizeA + PostLen;     // For FSize of the name record
-   NRLenAl += AlignP2Frwd(sizeof(SRecHdr) + NRMdLen, sizeof(SRecHdr));    // NRLast is size of name + header
+   NRLenAl += AlignFrwdP2(sizeof(SRecHdr) + NRMdLen, sizeof(SRecHdr));    // NRLast is size of name + header
    NRLast   = sizeof(SRecHdr) + SizeB + ExtraValLen;    // Value is last
    PostLen  = EolLen;
   }
@@ -936,8 +936,8 @@ uint InsertNewRecord(SRecHdr* PrvRec, const achar* TextA, const achar* TextB, ui
    TailLen  = NRLast = 0;   // No body
   }
 
- uint AlgPrvLen = AlignP2Frwd(ExtPrev+PrvSize+PrefLen, sizeof(SRecHdr));       // No need to allocate Bytes for PrvSize, only to align with them
- uint AlgLstLen = AlignP2Frwd(NRLast+TailLen+PostLen, sizeof(SRecHdr));        // Accounts for alignment WITH TailLen but does not allocates space for TailLen   // Name for Name/Value must be already aligned
+ uint AlgPrvLen = AlignFrwdP2(ExtPrev+PrvSize+PrefLen, sizeof(SRecHdr));       // No need to allocate Bytes for PrvSize, only to align with them
+ uint AlgLstLen = AlignFrwdP2(NRLast+TailLen+PostLen, sizeof(SRecHdr));        // Accounts for alignment WITH TailLen but does not allocates space for TailLen   // Name for Name/Value must be already aligned
  uint SizeToAdd = (AlgPrvLen + AlgLstLen + NRLenAl + NewBLen) - (PrvSize + TailLen + PSlkSpc);
  this->Data.Insert(nullptr, SizeToAdd, AtOffs);          // Inserting right before and old tail
 
@@ -1127,7 +1127,7 @@ sint EditRecTextAt(uint RecOffs, uint PrvRecOffs, const achar* NewTxt, uint TxtS
  uint RecALen = Rec->ASize;  // Should include header size   // Now does
  uint TailLen = RecFLen - RecDLen;
  uint DataLen = TxtSize + ExtraValLen;
- uint NewALen = AlignP2Frwd(TailLen + DataLen, sizeof(SRecHdr));      // New text may fit and no memmove will be required
+ uint NewALen = AlignFrwdP2(TailLen + DataLen, sizeof(SRecHdr));      // New text may fit and no memmove will be required
  if(NewALen > RecALen)       // Record grows
   {
    bool LstRec = IsLastRecHdr(Rec);

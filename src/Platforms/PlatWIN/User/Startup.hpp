@@ -67,7 +67,7 @@ size_t ReadBytes(vptr Addr, size_t len, size_t At=size_t(-1))     // A circular 
  if(end > this->DllSize){end = this->DllSize; len = end - At;}
  if((At < this->BufOffs)||(end >= (this->BufOffs + BufMax)))   // Need reread
   {
-   this->BufOffs = AlignP2Bkwd(At, 16);   // sizeof(uint64) ?
+   this->BufOffs = AlignBkwdP2(At, 16);   // sizeof(uint64) ?
    size_t Size = ((this->BufOffs + BufMax) > this->DllSize)?(this->DllSize - this->BufOffs):BufMax;
 #ifdef ARCH_X32
    if(this->DllBase > 0xFFFFFFFFull)WOW64E::getMem64(&this->Buffer, this->DllBase + this->BufOffs, Size);     // Beyond 4GB (WOW64)
@@ -369,6 +369,7 @@ struct SSINF       // Cannot put it on some thread`s stack. Must be persistent t
  sint32 MemGranSize;
  sint32 UTCOffs; // In seconds
  uint32 Flags;
+ vptr   pNtDll;
  NTHD::STDesc thd;
 
  PX::fdsc_t DevNull;
@@ -379,7 +380,6 @@ struct SSINF       // Cannot put it on some thread`s stack. Must be persistent t
 static _finline size_t GetArgC(void){return 1;}   // On Windows should be always 1?
 static _finline const wchar* GetArgV(void){return NT::NtCurrentTeb()->ProcessEnvironmentBlock->ProcessParameters->CommandLine.Buffer;}     // Single string, space separated, args in quotes
 static _finline const wchar* GetEnvP(void){return NT::NtCurrentTeb()->ProcessEnvironmentBlock->ProcessParameters->Environment;}            // Block of null-terminated strings, last is 0
-static _finline bool IsInitialized(void){return  fwsinf.Flags & sfInitialized;}
 static _finline void UpdateTZOffsUTC(void){fwsinf.UTCOffs = sint32(-NTX::GetTimeZoneBias() / NDT::SECS_TO_FT_MULT);}   // Number of 100-ns intervals in a second
 static _finline NTHD::STDesc* GetThDesc(void){return &fwsinf.thd;}
 //------------------------------------------------------------------------------------------------------------
@@ -389,22 +389,31 @@ public:
 static _finline uint32 GetPageSize(void)  {return fwsinf.MemPageSize;}
 static _finline uint32 GetGranSize(void)  {return fwsinf.MemGranSize;}
 //------------------------------------------------------------------------------------------------------------
+// NOTE: Te handles will be 0 if PE subsystem is not 'Windows Console'. Must init those somehow
 static _finline PX::fdsc_t GetStdIn(void)  {return (PX::fdsc_t)NT::NtCurrentTeb()->ProcessEnvironmentBlock->ProcessParameters->StandardInput; }
-static _finline PX::fdsc_t GetStdOut(void) {return (PX::fdsc_t)NT::NtCurrentTeb()->ProcessEnvironmentBlock->ProcessParameters->StandardOutput;}
+static _finline PX::fdsc_t GetStdOut(void) {return (PX::fdsc_t)NT::NtCurrentTeb()->ProcessEnvironmentBlock->ProcessParameters->StandardOutput;}  
 static _finline PX::fdsc_t GetStdErr(void) {return (PX::fdsc_t)NT::NtCurrentTeb()->ProcessEnvironmentBlock->ProcessParameters->StandardError; }
 
 static _finline PX::fdsc_t GetStdNull(void) {return fwsinf.DevNull;}
 static _finline PX::fdsc_t GetStdRand(void) {return fwsinf.DevRand;}
 //------------------------------------------------------------------------------------------------------------
 static _finline sint32 GetTZOffsUTC(void){return fwsinf.UTCOffs;}   // In seconds
+static _finline bool   IsInitialized(void) {return fwsinf.Flags & sfInitialized;}
 static _finline bool   IsLoadedByLdr(void) {return fwsinf.Flags & sfLoadedByLdr;}  // If loaded by loader then should return to the loader   // OnWindows, Any DLL that loaded by loader
 static _finline bool   IsDynamicLib(void) {return fwsinf.Flags & sfDynamicLib;}
 //------------------------------------------------------------------------------------------------------------
+static _finline vptr   GetMainBase(void) {return fwsinf.MainModBase;}
+static _finline size_t GetMainSize(void) {return fwsinf.MainModSize;}
 static _finline vptr   GetModuleBase(void){return fwsinf.ModBase;}
 static _finline size_t GetModuleSize(void){return fwsinf.ModSize;}
 //------------------------------------------------------------------------------------------------------------
+static sint GetMainPath(achar* DstBuf, size_t BufSize=uint(-1)) 
+{
+ return 0;
+}
+//------------------------------------------------------------------------------------------------------------
 // Returns full path to current module and its name in UTF8
-static sint _finline GetModulePath(achar* DstBuf, size_t BufSize=size_t(-1))
+static _finline sint GetModulePath(achar* DstBuf, size_t BufSize=size_t(-1))
 {
  sint aoffs = 0;
  return (size_t)GetCLArg(aoffs, DstBuf, BufSize);       // TODO TODO TODO !!!
@@ -414,6 +423,17 @@ static sint _finline GetModulePath(achar* DstBuf, size_t BufSize=size_t(-1))
 // Search by memory mapping
 
  return 0;
+}
+//------------------------------------------------------------------------------------------------------------
+static vptr LoadModule(const achar* Path)
+{
+ static vptr paddr = 0;
+ if(!paddr)
+  {
+   paddr = NPE::GetProcAddrSafe(fwsinf.pNtDll, "LdrLoadDll"); 
+   if(!paddr)return nullptr;
+  }   
+ return NTX::LdrLoadLibrary(Path, paddr);
 }
 //------------------------------------------------------------------------------------------------------------
 static sint InitStartupInfo(vptr StkFrame=nullptr, vptr ArgA=nullptr, vptr ArgB=nullptr, vptr ArgC=nullptr)
@@ -427,6 +447,7 @@ static sint InitStartupInfo(vptr StkFrame=nullptr, vptr ArgA=nullptr, vptr ArgB=
   }
    else fwsinf.Flags |= sfLoadedByLdr;      // Normal processes`s entry point is called by some loader stub  // TODO: Support native process creation then there will be no such stub
  if((ArgA != NT::NtCurrentPeb())&&(((size_t)ArgA & ~(MEMGRANSIZE-1)) == ((size_t)fwsinf.ModBase & ~(MEMGRANSIZE-1))))fwsinf.Flags |= sfDynamicLib;   // System passes PEB as first argument to EXE`s entry point then it is safe to exit from entry point without calling 'exit'
+ fwsinf.pNtDll = NTX::GetBaseOfNtdll();
 
  UpdateTZOffsUTC();
  fwsinf.MemPageSize = MEMPAGESIZE;

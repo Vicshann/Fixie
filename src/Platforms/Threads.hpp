@@ -1,5 +1,7 @@
 
 //============================================================================================================
+// https://libc-alpha.sourceware.narkive.com/zVXSM4qu/using-clone-with-glibc
+//
 struct NTHD
 {
 enum EThDefs: sint    // Internal
@@ -475,11 +477,11 @@ private:
 //------------------------------------------------------------------------------------------------------------
 static NTHD::SThCtx* InitThreadRec(vptr ThProc, vptr ThData, size_t StkSize, size_t TlsSize, size_t DatSize, size_t** StkFrame)
 {
- DatSize = AlignP2Frwd(DatSize, 16);
- if(StkSize)StkSize = AlignP2Frwd(StkSize, MEMPAGESIZE);   // NOTE: As StkSize is aligned to a page size, there will be at least one page wasted for ThreadContext struct (Assume it always available for some thread local data?)
+ DatSize = AlignFrwdP2(DatSize, 16);
+ if(StkSize)StkSize = AlignFrwdP2(StkSize, MEMPAGESIZE);   // NOTE: As StkSize is aligned to a page size, there will be at least one page wasted for ThreadContext struct (Assume it always available for some thread local data?)
    else StkSize = 0x10000;  // 64K should be optimal
- TlsSize = AlignP2Frwd(TlsSize, 16);   // Slots is at least of pointer size
- size_t FStkLen = AlignP2Frwd(DatSize+StkSize+TlsSize+sizeof(NTHD::SThCtx), MEMGRANSIZE);     // NOTE: MEMGRANSIZE may be more than MEMPAGESIZE (On windows)
+ TlsSize = AlignFrwdP2(TlsSize, 16);   // Slots is at least of pointer size
+ size_t FStkLen = AlignFrwdP2(DatSize+StkSize+TlsSize+sizeof(NTHD::SThCtx), MEMGRANSIZE);     // NOTE: MEMGRANSIZE may be more than MEMPAGESIZE (On windows)
 
 // Find/alloc a new thread rec                  / TODO: Init several pages if available
  uint8* StkPtr = nullptr;
@@ -507,7 +509,7 @@ static NTHD::SThCtx* InitThreadRec(vptr ThProc, vptr ThData, size_t StkSize, siz
   {
    DBGMSG("Allocating another thread list page");
 #ifdef SYS_WINDOWS
-   vptr Addr = vptr(AlignP2Bkwd((size_t)PNewPagePtr, MEMPAGESIZE) + MEMPAGESIZE);  // Next page in the reserved 64K block  // PNewPagePtr is in the last page
+   vptr Addr = vptr(AlignBkwdP2((size_t)PNewPagePtr, MEMPAGESIZE) + MEMPAGESIZE);  // Next page in the reserved 64K block  // PNewPagePtr is in the last page
 #else
    vptr Addr = nullptr;
 #endif
@@ -578,7 +580,7 @@ _scall ThProcCallStub(NT::PVOID Data, NT::SIZE_T Size)       // Static, no inlin
 #else
 _fcall ThProcCallStub(void)       // Static, no inlining, args in registers
 {
- NTHD::SThCtx* ThrFrame = (NTHD::SThCtx*)AlignP2Frwd((size_t)GETSTKFRAME(), 16);   // Should be same ptr or something is pushed
+ NTHD::SThCtx* ThrFrame = (NTHD::SThCtx*)AlignFrwdP2((size_t)GETSTKFRAME(), 16);   // Should be same ptr or something is pushed
 #endif
  DBGMSG("ThrFrame=%p, GroupID=%i, ProcesssID=%i, ThreadID=%i: %p",ThrFrame,ThrFrame->GroupID,ThrFrame->ProcesssID,ThrFrame->ThreadID,GetThreadByID(ThrFrame->ThreadID));
  sint res = PXERR(EFAULT);

@@ -1,0 +1,2717 @@
+From: <Saved by Blink>
+Snapshot-Content-Location: http://utf8everywhere.org/
+Subject: UTF-8 Everywhere
+Date: Fri, 11 Apr 2025 18:19:04 -0000
+MIME-Version: 1.0
+Content-Type: multipart/related;
+	type="application/xhtml+xml";
+	boundary="----MultipartBoundary--vEhxoPioWMGorMRbMXyC8nHxN26ozCtj0GBoauDUIP----"
+
+
+------MultipartBoundary--vEhxoPioWMGorMRbMXyC8nHxN26ozCtj0GBoauDUIP----
+Content-Type: application/xhtml+xml
+Content-ID: <frame-AA9BE94A4D724CC7D332CB01020D90D6@mhtml.blink>
+Content-Transfer-Encoding: quoted-printable
+Content-Location: http://utf8everywhere.org/
+
+<?xml version=3D"1.0" encoding=3D"UTF-8"?><!DOCTYPE html><html xmlns=3D"htt=
+p://www.w3.org/1999/xhtml" lang=3D"en" xml:lang=3D"en">
+<head><meta http-equiv=3D"Content-Type" content=3D"application/xhtml+xml; c=
+harset=3DUTF-8" />
+	<title>UTF-8 Everywhere</title>
+	<link rel=3D"stylesheet" type=3D"text/css" href=3D"http://utf8everywhere.o=
+rg/data/style.css" />
+	<meta name=3D"viewport" content=3D"width=3Ddevice-width, initial-scale=3D1=
+" />
+</head>
+<body>
+<main>
+<nav><a href=3D"http://utf8everywhere.org/zh-cn">=E4=B8=AD=E6=96=87=EF=BC=
+=88=E4=B8=AD=E5=9B=BD=EF=BC=89</a> <a href=3D"http://utf8everywhere.org/he"=
+>=D7=A2=D7=91=D7=A8=D7=99=D7=AA</a></nav>
+
+<h1><a href=3D"http://utf8everywhere.org/#">UTF-8 Everywhere</a></h1>
+<p class=3D"subtitle">Manifesto</p>
+
+<h2 id=3D"intro"><a href=3D"http://utf8everywhere.org/#intro">Purpose of th=
+is document</a></h2>
+
+<aside>This document contains special characters. Without proper rendering =
+support, you may see question marks, boxes, or other symbols.</aside>
+
+<p>Our goal is to promote usage and support of the UTF-8 encoding and to co=
+nvince that it should be the default choice of encoding for storing text st=
+rings in memory or on disk, for communication and all other uses. We believ=
+e that our approach improves performance, reduces complexity of software an=
+d helps prevent many Unicode-related bugs. We suggest that other encodings =
+of Unicode (or text, in general) belong to rare edge-cases of optimization =
+and should be avoided by mainstream users.</p>
+
+<p>In particular, we believe that the very popular UTF-16 encoding (often m=
+istakenly referred to as =E2=80=98widechar=E2=80=99 or simply =E2=80=98Unic=
+ode=E2=80=99 in the Windows world) has no place in library APIs except for =
+specialized text processing libraries, e.g. ICU.</p>
+
+<p>This document also recommends choosing UTF-8 for internal string represe=
+ntation in Windows applications, despite the fact that this standard is les=
+s popular there, both due to historical reasons and the lack of native UTF-=
+8 support by the API. We believe that, even on this platform, the following=
+ arguments outweigh the lack of native support. Also, we recommend forgetti=
+ng forever what =E2=80=98ANSI codepages=E2=80=99 are and what they were use=
+d for. It is in the user=E2=80=99s bill of rights to mix any number of lang=
+uages in any text string.</p>
+
+<p>Across the industry, many localization-related bugs have been <a href=3D=
+"http://www.joelonsoftware.com/articles/Unicode.html" rel=3D"nofollow">blam=
+ed</a> on programmers=E2=80=99 lack of knowledge in Unicode. We, however, b=
+elieve that for an application that is not supposed to specialize in text, =
+the infrastructure can and should make it possible for the program to be un=
+aware of encoding issues. For instance, a file copy utility should not be w=
+ritten differently to support non-English file names. In this manifesto, we=
+ will also explain what a programmer should be doing if they do not want to=
+ dive into all complexities of Unicode and do not really care about <a href=
+=3D"http://utf8everywhere.org/#cookie">what=E2=80=99s inside the string</a>=
+.</p>
+
+<p>Furthermore, we would like to suggest that counting or otherwise iterati=
+ng over Unicode code points should not be seen as a particularly important =
+task in text processing scenarios. Many developers mistakenly see code poin=
+ts as a kind of a successor to ASCII characters. This lead to software desi=
+gn decisions such as Python=E2=80=99s string O(1) code point access. The tr=
+uth, however, is that Unicode is inherently more complicated and there is n=
+o universal definition of such thing as <em>Unicode character</em>. We see =
+no particular reason to favor Unicode code points over Unicode grapheme clu=
+sters, code units or perhaps even words in a language for that. On the othe=
+r hand, seeing UTF-8 code units (bytes) as a basic unit of text seems parti=
+cularly useful for many tasks, such as parsing commonly used textual data f=
+ormats. This is due to a particular feature of this encoding. Graphemes, co=
+de units, code points and other relevant Unicode terms are explained in <a =
+href=3D"http://utf8everywhere.org/#characters">Section=C2=A05</a>. Operatio=
+ns on encoded text strings are discussed in <a href=3D"http://utf8everywher=
+e.org/#textops">Section=C2=A07</a>.</p>
+
+<h2 id=3D"background"><a href=3D"http://utf8everywhere.org/#background">Bac=
+kground</a></h2>
+
+<p>In 1988, Joseph D. Becker published the <a href=3D"http://unicode.org/hi=
+story/unicode88.pdf">first Unicode draft proposal</a>. At the basis of his =
+design was the na=C3=AFve assumption that 16 bits per character would suffi=
+ce. In 1991, the first version of the Unicode standard was published, with =
+code points limited to 16 bits. In the following years many systems have ad=
+ded support for Unicode and switched to the UCS-2 encoding. It was especial=
+ly attractive for new technologies, such as the Qt framework (1992), Window=
+s NT 3.1 (1993) and Java (1995).</p>
+
+<p>However, it was soon discovered that 16 bits per character will not do f=
+or Unicode. In 1996, the UTF-16 encoding was created so existing systems wo=
+uld be able to work with non-16-bit characters. This effectively nullified =
+the rationale behind choosing 16-bit encoding in the first place, namely be=
+ing a fixed-width encoding. Currently Unicode spans over 109449 characters,=
+ about 74500 of them being CJK ideographs.</p>
+
+<figure>
+	<img src=3D"http://utf8everywhere.org/data/nagoya-museum.jpg" width=3D"480=
+" height=3D"360" alt=3D"A little child playing an encodings game in front o=
+f a large poster about encodings." />
+	<figcaption>Nagoya City Science Museum. Photo by Vadim Zlotnik.</figcaptio=
+n>
+</figure>
+
+<p>Microsoft has often mistakenly used =E2=80=98Unicode=E2=80=99 and =E2=80=
+=98widechar=E2=80=99 as synonyms for both =E2=80=98UCS-2=E2=80=99 and =E2=
+=80=98UTF-16=E2=80=99. Furthermore, since UTF-8 cannot be set as the encodi=
+ng for narrow string WinAPI, one must compile his code with <code>UNICODE</=
+code> define. Windows C++ programmers are educated that Unicode must be don=
+e with =E2=80=98widechars=E2=80=99 (Or worse=E2=80=94the compiler setting-d=
+ependent TCHARs, which allow programmer to opt-out from supporting all Unic=
+ode code points). As a result of this mess, many Windows programmers are no=
+w quite confused about what is the right thing to do about text.</p>
+
+<p>At the same time, in the Linux and the Web worlds, there is a silent agr=
+eement that UTF-8 is the best encoding to use for Unicode. Even though it p=
+rovides shorter representation for English and therefore to computer langua=
+ges (such as C++, HTML, XML, etc) over any other text, it is seldom less ef=
+ficient than UTF-16 for commonly used character sets.</p>
+
+<h2 id=3D"facts"><a href=3D"http://utf8everywhere.org/#facts">The facts</a>=
+</h2>
+
+<ul>
+	<li>In both UTF-8 and UTF-16 encodings, code points may take up to 4 bytes=
+.</li>
+
+	<li>UTF-8 is endianness independent. UTF-16 comes in two flavors: UTF-16LE=
+ and UTF-16BE (for the two different byte orders, respectively). Here we na=
+me them collectively as UTF-16.</li>
+
+	<li>Widechar is 2 bytes in size on some platforms, 4 on others.</li>
+
+	<li>UTF-8 and UTF-32 yield the same order when sorted lexicographically. U=
+TF-16 does not.</li>
+
+	<li>UTF-8 favors efficiency for English letters and other ASCII characters=
+ (one byte per character) while UTF-16 favors several Asian character sets =
+(2 bytes instead of 3 in UTF-8). This is what made UTF-8 the favorite choic=
+e in the Web world, where English HTML/XML tags are intermixed with any-lan=
+guage text. Cyrillic, Hebrew and several other popular Unicode blocks are 2=
+ bytes both in UTF-16 and UTF-8.</li>
+
+	<li>UTF-16 is often misused as a fixed-width encoding, even by the Windows=
+ package programs themselves: in plain Windows edit control (until Vista), =
+it takes two backspaces to delete a character which takes 4 bytes in UTF-16=
+. On Windows 7, the console displays such characters as two invalid charact=
+ers, regardless of the font being used.</li>
+
+	<li>Many third-party libraries for Windows do not support Unicode: they ac=
+cept narrow string parameters and pass them to the ANSI API. Sometimes, eve=
+n for file names. In the general case, it is impossible to work around this=
+, as a string may not be representable completely in any ANSI code page (if=
+ it contains characters from a mix of Unicode blocks). What is normally don=
+e by Windows programmers for file names is getting an 8.3 path to the file =
+(if it already exists) and feeding it into such a library. It is not possib=
+le if the library is supposed to create a non-existing file. It is not poss=
+ible if the path is very long and the 8.3 form is longer than <code>MAX_PAT=
+H</code>. It is not possible if short-name generation is disabled in OS set=
+tings.</li>
+
+	<li>In C++, there is no way to return Unicode from <code>std::exception::w=
+hat()</code> other than using UTF-8. There is no way to support Unicode for=
+ <code>localeconv</code> other than using UTF-8.</li>
+
+	<li>UTF-16 remains popular today, even outside the Windows world. Qt, Java=
+, C#, Python (prior to the CPython v3.3 reference implementation, <a href=
+=3D"http://utf8everywhere.org/#faq.python">see below</a>) and the <a href=
+=3D"http://en.wikipedia.org/wiki/International_Components_for_Unicode">ICU<=
+/a>=E2=80=94they all use UTF-16 for internal string representation.</li>
+</ul>
+
+
+<h2 id=3D"cookie"><a href=3D"http://utf8everywhere.org/#cookie">Opaque data=
+ argument</a></h2>
+
+<p>Let=E2=80=99s go back to the file copy utility. In the UNIX world, narro=
+w strings are considered UTF-8 by default almost everywhere. Because of tha=
+t, the author of the file copy utility would not need to care about Unicode=
+. Once tested on ASCII strings for file name arguments, it would work corre=
+ctly for file names in any language, as arguments are treated as <a href=3D=
+"http://en.wikipedia.org/wiki/Opaque_data_type">cookies</a>. The code of th=
+e file copy utility would not need to change <em>at all</em> to support for=
+eign languages. <code>fopen()</code> would accept Unicode seamlessly, and s=
+o would <code>argv</code>.</p>
+
+<p>Now let=E2=80=99s see how to do this on Microsoft Windows, a UTF-16 base=
+d architecture. To make a file copy utility that can accept file names in a=
+ mix of several different Unicode blocks (languages) here requires advanced=
+ trickery. First, the application must be compiled as Unicode-aware. In thi=
+s case, it cannot have <code>main()</code> function with standard-C paramet=
+ers. It will then accept UTF-16 encoded <code>argv</code>. To convert a Win=
+dows program written with narrow text in mind to support Unicode, one has t=
+o refactor deep and to take care of each and every string variable.</p>
+
+<p>The standard library shipped with MSVC is poorly implemented with respec=
+t to Unicode support. It forwards narrow-string parameters directly to the =
+OS ANSI API. There is no way to override this. Changing <code>std::locale</=
+code> does not work. It=E2=80=99s impossible to open a file with a Unicode =
+name on MSVC using standard features of C++. The standard way to open a fil=
+e is:</p>
+
+<pre>std::fstream fout("abc.txt");</pre>
+
+<p>The proper way to get around is by using Microsoft=E2=80=99s own hack th=
+at accepts wide-string parameter, which is a non-standard extension.</p>
+
+<p>On Windows, the <code>HKLM\SYSTEM\CurrentControlSet\Control\Nls\CodePage=
+\ACP</code> registry key enables receiving non-ASCII characters, but only f=
+rom a single ANSI codepage. An unimplemented value of 65001 would probably =
+resolve the cookie issue, on Windows. If Microsoft implements support of th=
+is <abbr title=3D"ANSI Code Page">ACP</abbr> value, this will help wider ad=
+option of UTF-8 on Windows platform.</p>
+
+<p>For Windows programmers and multi-platform library vendors, we further d=
+iscuss our approach to handling text strings and refactoring programs for b=
+etter Unicode support in the <a href=3D"http://utf8everywhere.org/#windows"=
+>How to do text on Windows</a> section.</p>
+
+
+<h2 id=3D"characters"><a href=3D"http://utf8everywhere.org/#characters">Gly=
+phs, graphemes and other Unicode species</a></h2>
+<p>Here is an excerpt of the definitions regarding characters, code points,=
+ code units and grapheme clusters according to the Unicode Standard with ou=
+r comments. You are encouraged to refer to the relevant sections of the sta=
+ndard for a more detailed description.</p>
+
+<aside><p class=3D"display" style=3D"font-size:1.5em">=D0=9F=D1=80=D0=B8=D0=
+=B2=D0=B5=CC=81=D1=82 =E0=A4=A8=E0=A4=AE=E0=A4=B8=E0=A5=8D=E0=A4=A4=E0=A5=
+=87 =D7=A9=D6=B8=D7=81=D7=9C=D7=95=D6=B9=D7=9D</p><p>How many <em>character=
+s</em> do you see?</p></aside>
+
+<ul>
+	<li><p><b>Code point</b> =E2=80=94
+	Any numerical value in the Unicode codespace.<sup>[=C2=A73.4, D10]</sup> F=
+or instance: U+3243F. </p></li>
+
+	<li><p><b>Code unit</b> =E2=80=94
+	The minimal bit combination that can represent a unit of encoded text.<sup=
+>[=C2=A73.9, D77]</sup> For example, UTF-8, UTF-16 and UTF-32 use 8-bit, 16=
+-bit and 32-bit code units respectively. The above code point will be encod=
+ed as four code units =E2=80=98<code>f0 b2 90 bf</code>=E2=80=99 in UTF-8, =
+two code units =E2=80=98<code>d889 dc3f</code>=E2=80=99 in UTF-16 and as a =
+single code unit =E2=80=98<code>0003243f</code>=E2=80=99 in UTF-32. Note th=
+at these are just sequences of <em>groups of bits</em>; how they are stored=
+ on an octet-oriented media depends on the endianness of the particular enc=
+oding. When storing the above UTF-16 code units, they will be converted to =
+=E2=80=98<code>d8 89 dc 3f</code>=E2=80=99 in UTF-16BE and to =E2=80=98<cod=
+e>89 d8 3f dc</code>=E2=80=99 in UTF-16LE.</p></li>
+
+	<li><p><b>Abstract character</b> =E2=80=94
+	A unit of information used for the organization, control, or representatio=
+n of textual data.<sup>[=C2=A73.4, D7]</sup> The standard further says in =
+=C2=A73.1:</p>
+
+	<blockquote><p>For the Unicode Standard, [...] the repertoire is inherentl=
+y open. Because Unicode is a universal encoding, any abstract character tha=
+t could ever be encoded is a potential candidate to be encoded, regardless =
+of whether the character is currently known.</p></blockquote>
+
+	<p>The definition is indeed abstract. Whatever one can think of as a chara=
+cter=E2=80=94<em>is</em> an abstract character. For example, <img src=3D"ht=
+tp://utf8everywhere.org/data/glyph-ungwe.png" style=3D"vertical-align: -1ex=
+" alt=3D"" /> <em>tengwar letter ungwe</em> is an abstract character, altho=
+ugh it is not yet representable in Unicode.</p></li>
+
+	<li><p><b>Encoded character</b>, <b>Coded character</b> =E2=80=94
+	A mapping between a code point and an abstract character.<sup>[=C2=A73.4, =
+D11]</sup> For example, U+1F428 is a coded character which represents the a=
+bstract character =F0=9F=90=A8 <span class=3D"uniname">koala</span>.</p>
+
+	<p>This mapping is neither total, nor injective, nor surjective:</p>
+
+	<ul>
+		<li>Surragates, noncharacters and unassigned code points do not correspon=
+d to abstract characters at all.</li>
+		<li>Some abstract characters can be encoded by different code points; U+0=
+3A9 <span class=3D"uniname">greek capital letter omega</span> and U+2126 <s=
+pan class=3D"uniname">ohm sign</span> both correspond to the same abstract =
+character =E2=80=98=CE=A9=E2=80=99, and <em>must be treated identically</em=
+>.</li>
+		<li>Some abstract characters cannot be encoded by a single code point. Th=
+ese are represented by <em>sequences</em> of coded characters. For example,=
+ the only way to represent the abstract character =D1=8E=CC=81 <em>cyrillic=
+ small letter yu with acute</em> is by the sequence U+044E <span class=3D"u=
+niname">cyrillic small letter yu</span> followed by U+0301 <span class=3D"u=
+niname">combining acute accent</span>.</li>
+	</ul>
+
+	<p>Moreover, for some abstract characters, there exist representations usi=
+ng multiple code points, <em>in addition</em> to the single coded character=
+ form. The abstract character =C7=B5 can be coded by the single code point =
+U+01F5 <span class=3D"uniname">latin small letter g with acute</span>, or b=
+y the sequence &lt;U+0067 <span class=3D"uniname">latin small letter g</spa=
+n>, U+0301 <span class=3D"uniname">combining acute accent</span>&gt;.</p>
+	</li>
+
+	<li><p><b>User-perceived character</b> =E2=80=94
+	Whatever the end user thinks of as a character. This notion is language de=
+pendent. For instance, =E2=80=98ch=E2=80=99 is two letters in English and L=
+atin, but considered to be one letter in Czech and Slovak.</p></li>
+
+	<li><p><b>Grapheme cluster</b> =E2=80=94
+	A sequence of coded characters that =E2=80=98should be kept together=E2=80=
+=99.<sup>[=C2=A72.11]</sup> Grapheme clusters approximate the notion of use=
+r-perceived characters in a language independent way. They are used for, e.=
+g., cursor movement and selection.</p></li>
+
+	<li><p><b>Glyph</b> =E2=80=94
+	A particular shape within a font. Fonts are collections of glyphs designed=
+ by a type designer. It=E2=80=99s the text shaping and rendering engine res=
+ponsibility to convert a sequence of code points into a sequence of glyphs =
+within the specified font. The rules for this conversion might be complicat=
+ed, locale dependent, and are beyond the scope of the Unicode standard.</p>=
+</li>
+</ul>
+
+<p>=E2=80=98Character=E2=80=99 may refer to any of the above. The Unicode S=
+tandard uses it as a synonym for <em>coded character</em>.<sup>[=C2=A73.4]<=
+/sup>
+When a programming language or a library documentation says =E2=80=98charac=
+ter=E2=80=99, it typically means a code unit. When an end user is asked abo=
+ut the number of characters in a string, he will count the user-perceived c=
+haracters. A programmer might count characters as code units, code points, =
+or grapheme clusters, according to the level of the programmer=E2=80=99s Un=
+icode expertise. For example, <a href=3D"https://developer.twitter.com/en/d=
+ocs/basics/counting-characters.html">this is how Twitter counts characters<=
+/a>. In our opinion, a string length function should not necessarily return=
+ one for the string =E2=80=98=F0=9F=90=A8=E2=80=99 to be considered Unicode=
+-compliant.</p>
+
+<h2 id=3D"asian"><a href=3D"http://utf8everywhere.org/#asian">Asian texts: =
+UTF-8 vs. UTF-16</a></h2>
+<p>So, most Unicode code points take the same number of bytes in UTF-8 and =
+in UTF-16. This includes Russian, Hebrew, Greek and all non-BMP code points=
+ take 2 or 4 bytes in both encodings. Latin letters, together with punctuat=
+ion marks and the rest of ASCII take more space in UTF-16, while some Asian=
+ characters take more in UTF-8. Couldn=E2=80=99t Asian programmers, theoret=
+ically, object dumping UTF-16=E2=80=94which saves them 50% of the memory pe=
+r character?</p>
+
+<p>Here=E2=80=99s reality. Saving half the memory is true only in artificia=
+lly constructed examples containing only characters in the U+0800 to U+FFFF=
+ range. However, computer-to-computer text interfaces dominate over all oth=
+er usages of text. This includes XML, HTTP, filesystem paths and configurat=
+ion files=E2=80=94they all use almost exclusively ASCII characters, and in =
+fact UTF-8 is very popular in respective Asian countries.</p>
+
+<p>For a dedicated storage of Chinese books, UTF-16 may still be used as a =
+fair optimization. As soon as the text is retrieved from such storage, it s=
+hould be converted to the standard compatible with the rest of the world. I=
+n either case, if storage is at premium, a lossless compression will be use=
+d. In such cases, UTF-8 and UTF-16 will take roughly the same space. Furthe=
+rmore, =E2=80=98in the said languages, a glyph conveys more information tha=
+n a [L]atin character so it is justified for it to take more space.=E2=80=
+=99 (Tronic, <a href=3D"http://programmers.stackexchange.com/a/102211/34925=
+">UTF-16 considered harmful</a>).</p>
+
+<p>Here are the results of a simple experiment. The space used by the HTML =
+source of some web page (<em>Japan</em> article, retrieved from the Japanes=
+e Wikipedia on 2012=E2=80=9301=E2=80=9301) is shown in the first column. Th=
+e second column shows the results for text with markup removed, that is =E2=
+=80=98select all, copy, paste into plain text file=E2=80=99.</p>
+
+<table>
+	<tbody>
+		<tr><th></th><th>HTML Source (=CE=94 UTF-8)</th><th>Dense text (=CE=94 UT=
+F-8)</th></tr>
+		<tr><th>UTF-8</th><td>767 KB (0%)</td><td>222 KB (0%)</td></tr>
+		<tr><th>UTF-16</th><td>1=E2=80=89186 KB (+55%)</td><td>176 KB (=E2=88=922=
+1%)</td></tr>
+		<tr><th>UTF-8 zipped</th><td>179 KB (=E2=88=9277%)</td><td>83 KB (=E2=88=
+=9263%)</td></tr>
+		<tr><th>UTF-16LE zipped</th><td>192 KB (=E2=88=9275%)</td><td>76 KB (=E2=
+=88=9266%)</td></tr>
+		<tr><th>UTF-16BE zipped</th><td>194 KB (=E2=88=9275%)</td><td>77 KB (=E2=
+=88=9265%)</td></tr>
+	</tbody>
+</table>
+
+<p>As can be seen, UTF-16 takes about 50% more space than UTF-8 on real dat=
+a, it only saves 20% for dense Asian text, and hardly competes with general=
+ purpose compression algorithms. The <a href=3D"http://utf8everywhere.org/z=
+h-cn">Chinese translation</a> of this manifesto takes 58.8 KiB in UTF-16, a=
+nd only 51.7 KiB in UTF-8.</p>
+
+<h2 id=3D"textops"><a href=3D"http://utf8everywhere.org/#textops">Text oper=
+ations on encoded strings</a></h2>
+
+<p>The popular text-based data formats (e.g. CSV, XML, HTML, JSON, RTF and =
+source codes of computer programs) often contain ASCII characters as struct=
+ure control elements and may contain both ASCII and non-ASCII text data str=
+ings. Working with a variable length encoding, where ASCII-inherited code p=
+oints are shorter than other code points may seem like a difficult task, be=
+cause encoded character boundaries within the string are not immediately kn=
+own. This has driven software architects to opt for UCS-4 fixed-width encod=
+ing. (e.g. <a href=3D"http://utf8everywhere.org/#faq.python">Python v3.3</a=
+>). In fact, this is both unnecessary and does not solve any real problem w=
+e know.</p>
+
+<p>By design of this encoding, UTF-8 guarantees that an ASCII character val=
+ue or a substring will never match a part of a multi-byte encoded character=
+. The same is true for UTF-16. In both encodings, the code units of multi-p=
+art encoded code point will have <abbr title=3D"Most Significant Bit">MSB</=
+abbr> set to 1.</p>
+
+<p>To find, say, =E2=80=98&lt;=E2=80=99 sign marking a beginning of an HTML=
+ tag, or an apostrophe (') in a UTF-8 encoded SQL statement to defend again=
+st an SQL injection, do as you would for an all-English plaintext ASCII str=
+ing. The encoding guarantees this to work. Specifically, that every non-ASC=
+II character is encoded in UTF-8 as a sequence of bytes, each of them havin=
+g a value greater than 127. This leaves no place for collision for a na=C3=
+=AFve algorithm=E2=80=94simple, fast and elegant, and no need to care about=
+ encoded character boundaries.</p>
+
+<p>Also, you can search for a non-ASCII, UTF-8 encoded substring in a UTF-8=
+ string as if it was a plain byte array=E2=80=94there is no need to mind co=
+de point boundaries. This is thanks to another design feature of UTF-8=E2=
+=80=94a leading byte of an encoded code point can never hold value correspo=
+nding to one of trailing bytes of any other code point.</p>
+
+
+<h2 id=3D"myths"><a href=3D"http://utf8everywhere.org/#myths">Further myths=
+ on counting characters</a></h2>
+
+<p>As we already noted, there is a popular idea that counting, splitting, i=
+ndexing or otherwise iterating over code points in a Unicode string should =
+be considered a frequent and important operation. In this section, we revie=
+w this in further detail.</p>
+
+<h3 id=3D"myth.utf16.o1"><a href=3D"http://utf8everywhere.org/#myth.utf16.o=
+1">Counting characters can be done in constant time with UTF-16.</a></h3>
+
+<p>This is a common mistake by those who think that UTF-16 is a fixed-width=
+ encoding. It is not. In fact UTF-16 is a variable length encoding. Refer t=
+o <a href=3D"http://utf8everywhere.org/#faq.almostfw">this FAQ</a> if you d=
+eny the existence of non-BMP characters.</p>
+
+<h3 id=3D"myth.utf32.o1"><a href=3D"http://utf8everywhere.org/#myth.utf32.o=
+1">Counting characters can be done in constant time with UTF-32.</a></h3>
+
+<p>This depends on the meaning of the misused word =E2=80=98character=E2=80=
+=99. It is true that we can count code units and code points in constant ti=
+me in UTF-32. However, code points do not correspond to user-perceived char=
+acters. Even in the Unicode formalism some code points correspond to <em>co=
+ded character</em> and some to <em>non-characters</em>.</p>
+
+<h3 id=3D"myth.strlen"><a href=3D"http://utf8everywhere.org/#myth.strlen">C=
+ounting coded characters or code points is important.</a></h3>
+
+<p>We think that the importance of code points is frequently overstated. Th=
+is is due to common misunderstanding of the complexity of Unicode, which me=
+rely reflects the complexity of human languages. It is easy to tell how man=
+y characters are there in =E2=80=98Abracadabra=E2=80=99, but let=E2=80=99s =
+go back to the following string:</p>
+
+<p class=3D"display">=D0=9F=D1=80=D0=B8=D0=B2=D0=B5=CC=81=D1=82 =E0=A4=A8=
+=E0=A4=AE=E0=A4=B8=E0=A5=8D=E0=A4=A4=E0=A5=87 =D7=A9=D6=B8=D7=81=D7=9C=D7=
+=95=D6=B9=D7=9D</p>
+
+<p>It consists of 22 (!) code points, but only 16 grapheme clusters. It may=
+ be reduced to 20 code points if converted to <a href=3D"http://unicode.org=
+/reports/tr15/">NFC</a>. Yet, the number of code points in it is irrelevant=
+ to almost any software engineering task, with perhaps the only exception o=
+f converting the string to UTF-32. For example:</p>
+
+<ul>
+	<li>For cursor movement, text selection and alike, <em>grapheme clusters</=
+em> shall be used. <!-- 5.11 --></li>
+
+	<li>For limiting the length of a string in input fields, file formats, pro=
+tocols, or databases, the length is measured in <em>code units</em> of some=
+ predetermined encoding. The reason is that any length limit is derived fro=
+m the fixed amount of memory allocated for the string at a lower level, be =
+it in memory, disk or in a particular data structure.</li>
+
+	<li>The size of the string as it appears on the screen is unrelated to the=
+ number of code points in the string. One has to communicate with the rende=
+ring engine for this. Code points do not occupy one column even in monospac=
+e fonts and terminals. POSIX takes this into account. <!-- POSIX, 3.103 Col=
+umn Position --></li>
+</ul>
+
+<h3 id=3D"myth.nfc"><a href=3D"http://utf8everywhere.org/#myth.nfc">In NFC =
+each code point corresponds to one user-perceived character.</a></h3>
+
+<p>No, because the number of user-perceived characters that can be represen=
+ted in Unicode is virtually infinite. Even in practice, most characters do =
+not have a fully composed form. For example, the NFD string from the exampl=
+e above, which consists of three <em>real</em> words in three <em>real</em>=
+ languages, will consist of 20 code points in NFC. This is still far more t=
+han the 16 user-perceived characters it has.</p>
+
+<h3 id=3D"myth.strlen.correctness"><a href=3D"http://utf8everywhere.org/#my=
+th.strlen.correctness">The string <code>length()</code> operation must coun=
+t user-perceived or coded characters. If not, it does not support Unicode p=
+roperly.</a></h3>
+
+<p>Unicode support of libraries and programming languages is frequently jud=
+ged by the value returned for the =E2=80=98length of the string=E2=80=99 op=
+eration. According to this evaluation of Unicode support, most popular lang=
+uages, such as C#, Java, and even the ICU itself, would not support Unicode=
+. For example, the length of the one character string =E2=80=98=F0=9F=90=A8=
+=E2=80=99 will be often reported to be 2 where UTF-16 is used as for the in=
+ternal string representation and 4 for the languages that internally use UT=
+F-8. The source of the misconception is that the specification of these lan=
+guages use the word =E2=80=98character=E2=80=99 to mean a code unit, while =
+the programmer expects it to be something else.</p>
+
+<p>That said, the code unit count returned by those APIs is of the highest =
+practical importance. When writing a UTF-8 string to a file, it is the leng=
+th in bytes which is important. Counting any other type of =E2=80=98charact=
+ers=E2=80=99 is, on the other hand, not very helpful.</p>
+
+<h2 id=3D"conclusions"><a href=3D"http://utf8everywhere.org/#conclusions">O=
+ur conclusions</a></h2>
+
+<p>UTF-16 is the worst of both worlds, being both variable length and too w=
+ide. It exists only for historical reasons and creates a lot of confusion. =
+We hope that its usage will further decline.</p>
+
+<p>Portability, cross-platform interoperability and simplicity are more imp=
+ortant than interoperability with existing platform APIs. So, the best appr=
+oach is to use UTF-8 narrow strings everywhere and convert them back and fo=
+rth when using platform APIs that don=E2=80=99t support UTF-8 and accept wi=
+de strings (e.g. Windows API). <a href=3D"http://utf8everywhere.org/#faq.cv=
+t.perf">Performance is seldom an issue</a> of any relevance when dealing wi=
+th string-accepting system APIs (e.g. UI code and file system APIs), and th=
+ere is a great advantage to using the same encoding everywhere else in the =
+application, so <a href=3D"http://utf8everywhere.org/#faq.liberal">we see n=
+o sufficient reason to do otherwise</a>.</p>
+
+<p>Speaking of performance, machines often use strings to communicate (e.g.=
+ HTTP headers, XML, SOAP). Many see this as a mistake by itself, but regard=
+less of that it is nearly always done in English and ASCII, giving UTF-8 fu=
+rther advantage there. Using different encodings for different kinds of str=
+ings significantly increases complexity and resulting bugs.</p>
+
+<p>In particular, we believe that adding <code>wchar_t</code> to the C++ st=
+andard was a mistake, and so are the Unicode additions to C++11. What must =
+be demanded from the implementations though, is that the <em>basic executio=
+n character set</em> would be capable of storing any Unicode data. Then, ev=
+ery <code>std::string</code> or <code>char*</code> parameter would be Unico=
+de-compatible. =E2=80=98If this accepts text, it should be Unicode compatib=
+le=E2=80=99=E2=80=94and with UTF-8, it is easy to achieve.</p>
+
+<p><a href=3D"http://www.boost.org/doc/libs/1_58_0/libs/locale/doc/html/rat=
+ionale.html">The standard facets have many design flaws</a>. This includes =
+<code>std::numpunct</code>, <code>std::moneypunct</code> and <code>std::cty=
+pe</code> not supporting variable-length encoded characters (non-ASCII UTF-=
+8 and non-BMP UTF-16), or not having the information to perform the convers=
+ions. They must be fixed:</p>
+
+<ul>
+	<li><code>decimal_point()</code> and <code>thousands_sep()</code> shall re=
+turn a string rather than a single code unit. This is how C locales do this=
+ through the <code>localeconv</code> function, albeit not customizable.</li=
+>
+
+	<li><code>toupper()</code> and <code>tolower()</code> shall not be phrased=
+ in terms of code units, as it does not work in Unicode. For example, the L=
+atin =EF=AC=84 ligature must be converted to FFL and the German =C3=9F to S=
+S (there is a capital form =E1=BA=9E, but the casing rules follow the tradi=
+tional ones). In addition, some languages (e.g. Greek) have special final f=
+orms of some lower case letters, so case conversion routines must be aware =
+of their position to perform the conversion correctly.</li>
+</ul>
+
+
+<h2 id=3D"windows"><a href=3D"http://utf8everywhere.org/#windows">How to do=
+ text on Windows</a></h2>
+
+<p>This section is dedicated to developing multi-platform library developme=
+nt and to Windows programming. The problem with Windows platform is that it=
+ does not (yet) support Unicode-compatible narrow string system APIs. The o=
+nly way to pass Unicode strings to Windows API is by converting to UTF-16 (=
+also known as wide strings).</p>
+
+<p>Note that our guidelines differ significantly from the Microsoft=E2=80=
+=99s original guide to Unicode conversion. Our approach based on performing=
+ the wide string conversion as close to API calls as possible, and never ho=
+lding wide string data. In the previous sections we explained that this wil=
+l typically result in better performance, stability, code simplicity and in=
+teroperability with other software.</p>
+
+<ul>
+	<li>Do not use <code>wchar_t</code> or <code>std::wstring</code> in any pl=
+ace other than adjacent point to APIs accepting UTF-16.</li>
+
+	<li>Do not use <code>_T("")</code> or <code>L""</code> literals in any pla=
+ce other than parameters to APIs accepting UTF-16.</li>
+
+	<li>Do not use types, functions, or their derivatives that are sensitive t=
+o the <code>UNICODE</code> constant, such as <code>LPTSTR</code>, <code>Cre=
+ateWindow()</code> or the <code>_T()</code>macro. Instead, use <code>LPWSTR=
+</code>, <code>CreateWindowW()</code> and explicit <code>L""</code> literal=
+s.</li>
+
+	<li>Yet, <code>UNICODE</code> and <code>_UNICODE</code> are always defined=
+, to avoid passing narrow UTF-8 strings to ANSI WinAPI getting silently com=
+piled. This can be done by VS project settings, under code name <em>Use Uni=
+code character set</em>.</li>
+
+	<li><code>std::string</code> and <code>char*</code> variables are consider=
+ed UTF-8, anywhere in the program.</li>
+
+	<li>If you have the privilege of writing in C++, the <code>narrow()</code>=
+/<code>widen()</code> conversion functions below can be handy for inline co=
+nversion syntax. Of course, any other UTF-8/UTF-16 coversion code would do.=
+</li>
+
+	<li>
+		<p>Only use Win32 functions that accept widechars (<code>LPWSTR</code>), =
+never those which accept <code>LPTSTR</code> or <code>LPSTR</code>. Pass pa=
+rameters this way:</p>
+		<pre>::SetWindowTextW(widen(someStdString or "string litteral").c_str())<=
+/pre>
+		<p>The policy uses conversion functions described below. See also, <a hre=
+f=3D"http://utf8everywhere.org/#faq.cvt.perf">a note on conversion performa=
+nce</a>.</p>
+	</li>
+
+	<li>
+		<p>With MFC strings:</p>
+		<pre>CString someoneElse; // something that arrived from MFC.
+
+// Converted as soon as possible, before passing any further away from the =
+API call:
+std::string s =3D str(boost::format("Hello %s\n") % narrow(someoneElse));
+AfxMessageBox(widen(s).c_str(), L"Error", MB_OK);</pre>
+	</li>
+
+	<li>For .NET developers: using the native UTF-16 based string class may be=
+ hard to avoid. Remember that this implementation detail leaks heavily thro=
+ugh the interface of this class. For example, <code>string[index]</code> op=
+eration may return part of a character (as it would be with a UTF-8 byte ar=
+ray). When serializing strings into output files or communication devices, =
+remember to specify <code>Encoding.UTF8</code>. Be ready to pay the perform=
+ance penalities for conversion, e.g. in ASP.NET web applications, which typ=
+ically generate UTF-8 HTML output.</li>
+</ul>
+
+<h3 id=3D"how.files"><a href=3D"http://utf8everywhere.org/#how.files">Worki=
+ng with files, filenames and fstreams on Windows</a></h3>
+
+<ul>
+	<li>Always produce text output files in UTF-8.</li>
+
+	<li>Using <code>fopen()</code> should anyway be avoided for <a href=3D"htt=
+p://en.wikipedia.org/wiki/RAII">RAII/OOD</a> reasons. However, if necessary=
+, use <code>_wfopen()</code> and WinAPI conventions as described above.</li=
+>
+
+	<li>Never pass <code>std::string</code> or <code>const char*</code> filena=
+me arguments to the <code>fstream</code> family. MSVC CRT does not support =
+UTF-8 arguments, but it has a non-standard extension which should be used a=
+s follows:</li>
+
+	<li>
+		<p>Convert <code>std::string</code> arguments to <code>std::wstring</code=
+> with <code>widen</code>:</p>
+		<pre>std::ifstream ifs(widen("hello"), std::ios_base::binary);</pre>
+		<p>We will have to manually remove the conversion, when MSVC=E2=80=99s at=
+titude to <code>fstream</code> changes.</p>
+	</li>
+
+	<li>This code is not multi-platform and may have to be changed manually in=
+ the future.</li>
+
+	<li>Alternatively use a set of wrappers that hide the conversions.</li>
+</ul>
+
+
+<h3 id=3D"how.cvt"><a href=3D"http://utf8everywhere.org/#how.cvt">Conversio=
+n functions</a></h3>
+
+<p>This guideline uses the conversion functions from the <a href=3D"http://=
+cppcms.com/files/nowide/html/">Boost.Nowide library</a> (it is not yet a pa=
+rt of boost):</p>
+
+<pre>std::string narrow(const wchar_t *s);
+std::wstring widen(const char *s);
+std::string narrow(const std::wstring &amp;s);
+std::wstring widen(const std::string &amp;s);</pre>
+
+<p>The library also provides a set of wrappers for commonly used standard C=
+ and C++ library functions that deal with files, as well as means of readin=
+g and writing UTF-8 through iostreams.</p>
+
+<p>These functions and wrappers are easy to implement using Windows=E2=80=
+=99 <code>MultiByteToWideChar</code> and <code>WideCharToMultiByte</code> f=
+unctions. Any other (possibly faster) conversion routines can be used.</p>
+
+
+<h2 id=3D"faq"><a href=3D"http://utf8everywhere.org/#faq">FAQ</a></h2>
+
+<h3 id=3D"faq.linuxer"><a href=3D"http://utf8everywhere.org/#faq.linuxer">Q=
+: Are you a linuxer? Is this a concealed religious fight against Windows?</=
+a></h3>
+<p>A: No, I grew up on Windows, and I am primarily a Windows developer. I b=
+elieve Microsoft made a wrong design choice in the text domain, because the=
+y did it earlier than others.</p>
+
+<h3 id=3D"faq.anglophile"><a href=3D"http://utf8everywhere.org/#faq.angloph=
+ile">Q: Are you an Anglophile? Do you secretly think English alphabet and c=
+ulture are superior to any other?</a></h3>
+<p>A: No, and my country is non-ASCII speaking. I do not think that using a=
+ format which encodes ASCII characters in single byte is Anglo-centrism, or=
+ has anything to do with human interaction. Even though one can argue that =
+source codes of programs, web pages and XML files, OS file names and other =
+computer-to-computer text interfaces should never have existed, as long as =
+they do exist, text is not always composed for human audiences.</p>
+
+<h3 id=3D"faq.why.care"><a href=3D"http://utf8everywhere.org/#faq.why.care"=
+>Q: Why do you guys care? I program in C# and/or Java and I don=E2=80=99t n=
+eed to care about encodings at all.</a></h3>
+<p>A: This is false. Both C# and Java offer a 16 bit <code>char</code> type=
+, which is less than a Unicode character, congratulations. The .NET indexer=
+ <code>str[i]</code> works in units of the internal representation, hence a=
+ leaky abstraction once again. Substring methods will happily return an inv=
+alid string, cutting a non-BMP character in parts.</p>
+
+<p>Furthermore, you have to mind encodings when you are writing your text t=
+o files on disk, network communications, external devices, or any place for=
+ other program to read from. Please be kind to use <code>System.Text.Encodi=
+ng.UTF8</code> (.NET) in these cases, never <code>Encoding.ASCII</code>, UT=
+F-16 or cellphone PDU, regardless of the assumptions about the contents.</p=
+>
+
+<p>Web frameworks like ASP.NET do suffer from the poor choice of internal s=
+tring representation in the underlying framework: the expected string outpu=
+t (and input) of a web application is nearly always UTF-8, resulting in sig=
+nificant conversion overhead in high-throughput web applications and web se=
+rvices.</p>
+
+<h3 id=3D"faq.utf8.fossil"><a href=3D"http://utf8everywhere.org/#faq.utf8.f=
+ossil">Q: Isn=E2=80=99t UTF-8 merely an attempt to be compatible with ASCII=
+? Why keep this old fossil?</a></h3>
+<p>A: Regardless of whether UTF-8 was originally created as a compatibility=
+ hack, today it is a better and a more popular encoding of Unicode than any=
+ other.</p>
+
+<h3 id=3D"faq.almostfw"><a href=3D"http://utf8everywhere.org/#faq.almostfw"=
+>Q: UTF-16 characters that take more than two bytes are extremely rare in t=
+he real world. This practically makes UTF-16 a fixed-width encoding, giving=
+ it a whole bunch of advantages. Can=E2=80=99t we just neglect these charac=
+ters?</a></h3>
+<p>A: Are you serious about not supporting all of Unicode in your software =
+design? And, if you are going to support it anyway, how does the fact that =
+non-BMP characters are rare practically change anything, except for making =
+software testing harder? What does matter, however, is that text manipulati=
+ons are relatively rare in real applications=E2=80=94compared to just passi=
+ng strings around as-is. This means the "almost fixed width" has little per=
+formance advantage (see Performance), while having shorter strings may be s=
+ignificant.</p>
+
+<h3 id=3D"faq.liberal"><a href=3D"http://utf8everywhere.org/#faq.liberal">Q=
+: Why not just let any programmer use their favorite encoding internally, a=
+s long as they knows how to use it?</a></h3>
+<p>A: We have nothing against correct usage of any encoding. However, it be=
+comes a problem when the same type, such as <code>std::string</code>, means=
+ different things in different contexts. While it is =E2=80=98ANSI codepage=
+=E2=80=99 for some, for others, it means =E2=80=98this code is broken and d=
+oes not support non-English text=E2=80=99. In our programs, it means Unicod=
+e-aware UTF-8 string. This diversity is a source of many bugs and much mise=
+ry. This additional complexity is something the world does not really need.=
+ The result is lots of Unicode-broken software, industry-wide. JoelOnSoftwa=
+re <a href=3D"http://www.joelonsoftware.com/articles/Unicode.html" rel=3D"n=
+ofollow">suggests</a> that having every programmer be aware of encodings is=
+ the solution to Unicode-broken software. We believe that with one mainstre=
+am encoding becoming the default for software APIs, one will be able to wri=
+te a correct file copy program <a href=3D"http://utf8everywhere.org/#cookie=
+">without being an expert in text and language issues</a>.</p>
+
+<h3 id=3D"faq.win.liberal"><a href=3D"http://utf8everywhere.org/#faq.win.li=
+beral">Q: My application is GUI-only. It does not do IP communications or f=
+ile IO. Why should I convert strings back and forth all the time for Window=
+s API calls, instead of simply using wide state variables?</a></h3>
+<p>This is a valid shortcut. Indeed, it may be a legitimate case for using =
+wide strings. But, if you are planning to add some configuration or a log f=
+ile in future, please consider converting the whole thing to narrow strings=
+. That would be future-proof.</p>
+
+<h3 id=3D"faq.def.unicode"><a href=3D"http://utf8everywhere.org/#faq.def.un=
+icode">Q: Why do you turn on the <code>UNICODE</code> define, if you do not=
+ intend to use Windows=E2=80=99 <code>LPTSTR</code>/<code>TCHAR</code>/etc =
+macros?</a></h3>
+<p>A: This is an additional safety mechanism against plugging a UTF-8 <code=
+>char*</code> string into ANSI-expecting function variants of Windows API. =
+We want it to generate a compiler error. It is the same kind of a hard-to-f=
+ind bug as passing an <code>argv[]</code> string to <code>fopen()</code> on=
+ Windows: it assumes that the user will never pass non-current-codepage fil=
+enames. You will be unlikely to find this kind of a bug by manual testing, =
+unless your testers are trained to supply Chinese file names occasionally, =
+and yet it is a broken program logic. Thanks to the <code>UNICODE</code> de=
+fine, you get a compiler error for that.</p>
+
+<h3 id=3D"faq.naive"><a href=3D"http://utf8everywhere.org/#faq.naive">Q: Is=
+n=E2=80=99t it quite na=C3=AFve to think that Microsoft will stop using wid=
+echars one day?</a></h3>
+<p>A: Let=E2=80=99s first see when they start supporting <code>CP_UTF8</cod=
+e> as a valid codepage. This should not be very hard to do. Then, we see no=
+ reason why any Windows developer would continue using the widechar APIs. A=
+lso, adding support for <code>CP_UTF8</code> would =E2=80=98unbreak=E2=80=
+=99 some of existing unicode-broken programs and libraries.</p>
+
+<p>Some say that adding <code>CP_UTF8</code> support would <em>break</em> e=
+xisting applications that use the ANSI API, and that this was supposedly th=
+e reason why Microsoft had to resort to creating the wide string API. This =
+is not true. Even some popular ANSI encodings are variable length (Shift JI=
+S, for example), so no correct code would become broken. The reason Microso=
+ft chose UCS-2 is purely historical. Back then UTF-8 hasn=E2=80=99t yet exi=
+sted, Unicode was believed to be =E2=80=98just a wider ASCII=E2=80=99, and =
+it was considered important to use a fixed-width encoding.</p>
+
+
+<h3 id=3D"faq.boms"><a href=3D"http://utf8everywhere.org/#faq.boms">Q: What=
+ do you think about Byte Order Marks?</a></h3>
+<p>A: According to the Unicode Standard (v6.2, p.30): <q>Use of a BOM is ne=
+ither required nor recommended for UTF-8</q>.</p>
+<p>Byte order issues are yet another reason to avoid UTF-16. UTF-8 has no e=
+ndianness issues, and the UTF-8 BOM exists only to manifest that this is a =
+UTF-8 stream. If UTF-8 remains the only popular encoding (as it already is =
+in the internet world), the BOM becomes redundant. In practice, most UTF-8 =
+text files omit BOMs today.</p>
+<p>Using BOMs would require all existing code to be aware of them, even in =
+simple scenarios as file concatenation. This is unacceptable.</p>
+
+<h3 id=3D"faq.crlf"><a href=3D"http://utf8everywhere.org/#faq.crlf">Q: What=
+ do you think about line endings?</a></h3>
+<p>A: Always use <code>\n (0x0a)</code> line endings, even on Windows. File=
+s should be read and written in binary mode, which guarantees interoperabil=
+ity=E2=80=94a program will always give the same output on any system. Since=
+ the C and C++ standards use <code>\n</code> as in-memory line endings, thi=
+s will cause all files to be written in the POSIX convention. It may cause =
+trouble when the file is opened in Notepad on Windows; however, any decent =
+text editor understands such line endings.</p>
+<p>We also prefer SI units, the <a href=3D"https://en.wikipedia.org/?title=
+=3DISO_8601" rel=3D"nofollow">ISO-8601</a> date format, and floating point =
+to the <a href=3D"https://en.wikipedia.org/wiki/Decimal_mark#Countries_usin=
+g_Arabic_numerals_with_decimal_comma" rel=3D"nofollow">floating comma</a>.<=
+/p>
+
+<h3 id=3D"faq.uni.perf"><a href=3D"http://utf8everywhere.org/#faq.uni.perf"=
+>Q: But what about performance of text processing algorithms, byte alignmen=
+t, etc?</a></h3>
+<p>A: Is it really better with UTF-16? Maybe so. ICU uses UTF-16 for histor=
+ical reasons, thus it is quite hard to measure. However, most of the times =
+strings are treated as cookies, not sorted or reversed every second use. A =
+denser encoding is then favorable for performance.</p>
+
+<h3 id=3D"faq.utf16.fault"><a href=3D"http://utf8everywhere.org/#faq.utf16.=
+fault">Q: Is it really a fault of UTF-16 that people misuse it, assuming th=
+at it is 16 bits per character?</a></h3>
+<p>A: Not really. But yes, safety is an important feature of every design, =
+and encodings are no exception.</p>
+
+<h3 id=3D"faq.confuse"><a href=3D"http://utf8everywhere.org/#faq.confuse">Q=
+: If <code>std::string</code> means UTF-8, wouldn=E2=80=99t that get confus=
+ed with code that stores plain text in <code>std::string</code>s?</a></h3>
+<p>A: There is no such thing as plain text. There is no reason for storing =
+codepage-ANSI or ASCII-only text in a class named =E2=80=98string=E2=80=99.=
+</p>
+
+<h3 id=3D"faq.cvt.perf"><a href=3D"http://utf8everywhere.org/#faq.cvt.perf"=
+>Q: Won=E2=80=99t the conversions between UTF-8 and UTF-16 when passing str=
+ings to Windows slow down my application?</a></h3>
+
+<p>A: First, you will do <em>some</em> conversion either way. It=E2=80=99s =
+either when calling the system, or when interacting with the rest of the wo=
+rld, e.g. when sending a text string over TCP. Also, those of OS APIs which=
+ accept strings often perform tasks which are inherently slow, such as UI o=
+r file system operations. If your interaction with the system APIs dominate=
+ your application, here is a little experiment.</p>
+
+<p>One typical use of the OS APIs is to open files. This function executes =
+in (184=E2=80=89=C2=B1=E2=80=893)=CE=BCs on my machine:</p>
+
+<pre>void f(const wchar_t* name)
+{
+    HANDLE f =3D CreateFile(name, GENERIC_WRITE, FILE_SHARE_READ, 0, CREATE=
+_ALWAYS, 0, 0);
+    DWORD written;
+    WriteFile(f, "Hello world!\n", 13, &amp;written, 0);
+    CloseHandle(f);
+}</pre>
+
+<p>While this runs in (186=E2=80=89=C2=B1=E2=80=890.7)=CE=BCs:</p>
+
+<pre>void f(const char* name)
+{
+    HANDLE f =3D CreateFile(widen(name).c_str(), GENERIC_WRITE, FILE_SHARE_=
+READ, 0, CREATE_ALWAYS, 0, 0);
+    DWORD written;
+    WriteFile(f, "Hello world!\n", 13, &amp;written, 0);
+    CloseHandle(f);
+}</pre>
+
+<p>(Run with <code>name=3D"D:\\a\\test\\subdir\\subsubdir\\this is the sub =
+dir\\a.txt"</code> in both cases. It was averaged over 5 runs. We used an o=
+ptimized <code>widen</code> that relies on <code>std::string</code> contigu=
+ous storage guarantee given by C++11.)</p>
+
+<p>This is just (1=E2=80=89=C2=B1=E2=80=892)% overhead. Also, <code>MultiBy=
+teToWideChar</code> is not the fastest UTF-8=E2=86=94UTF-16 conversion func=
+tion.</p>
+
+<h3 id=3D"faq.literal"><a href=3D"http://utf8everywhere.org/#faq.literal">Q=
+: How do I write UTF-8 string literal in my C++ code?</a></h3>
+
+<p>A: If you internationalize your software then all non-ASCII strings will=
+ be loaded from an external translation database, so it is not a problem.</=
+p>
+
+<p>If you still want to embed a special character you can do it as follows.=
+ In C++11 you can do it as:</p>
+
+<p class=3D"display"><code>u8"=E2=88=83y =E2=88=80x =C2=AC(x =E2=89=BA y)"<=
+/code></p>
+
+<p>With compilers that do not support =E2=80=98u8=E2=80=99 you can hard-cod=
+e the UTF-8 code units as follows:</p>
+
+<p class=3D"display"><code>"\xE2\x88\x83y \xE2\x88\x80x \xC2\xAC(x \xE2\x89=
+\xBA y)"</code></p>
+
+<p>However the most straightforward way is to just write the string as-is a=
+nd save the source file encoded in UTF-8:</p>
+
+<p class=3D"display"><code>"=E2=88=83y =E2=88=80x =C2=AC(x =E2=89=BA y)"</c=
+ode></p>
+
+<p>Unfortunately, MSVC converts it to some ANSI codepage, corrupting the st=
+ring. To work around this, save the file in UTF-8 <em>without BOM</em>. MSV=
+C will assume that it is in the correct codepage and will not touch your st=
+rings. However, it renders it impossible to use Unicode identifiers and wid=
+e string literals (that you will not be using anyway).</p>
+
+<h3 id=3D"faq.convert"><a href=3D"http://utf8everywhere.org/#faq.convert">Q=
+: I have a complex large char-based Windows application. What is the easies=
+t way to make it Unicode-aware?</a></h3>
+<p>Keep the chars. Define <code>UNICODE</code> and <code>_UNICODE</code> to=
+ get compiler errors where <code>narrow()</code>/<code>widen()</code> shoul=
+d be used (this is done automatically by setting <strong>Use Unicode Charac=
+ter Set</strong> in Visual Studio project settings). Find all <code>fstream=
+</code> and <code>fopen()</code> uses, and use wide overloads as described =
+above. By now, you are almost done.</p>
+<p>If you use 3rd-party libraries that do not support Unicode, e.g. forward=
+ing file name strings as-is to <code>fopen()</code>, you will have to work =
+around with tools such as <code>GetShortPathName()</code> as shown above.</=
+p>
+
+<h3 id=3D"faq.python"><a href=3D"http://utf8everywhere.org/#faq.python">Q: =
+What about Python? I heard they worked hard in v3.3 to support Unicode bett=
+er.</a></h3>
+<p>A: Perhaps, they should have done less and the support would have been b=
+etter. In the CPython v3.3 reference implementation, the internal string re=
+presentation was changed. The UTF-16 was replaced by one of three possible =
+encodings (ISO-8859-1, UCS-2 or UCS-4) depending on the actual string conte=
+nt. To add a single non-ASCII or non-BMP character, the entire string will =
+often be implicitly converted to a different encoding. The internal encodin=
+g is transparent to the script. This design is meant to <em>optimize the pe=
+rformance of indexing operations</em> on Unicode code points. However, we a=
+rgue that counting or indexing code points <a href=3D"http://utf8everywhere=
+.org/#myth.strlen">should not be important</a> for the majority of uses=E2=
+=80=94compared, for instance, to grapheme clusters. To our knowledge, Pytho=
+n currently provides no support of the latter.</p>
+
+<p>Therefore, we oppose representation-agnostic handling of strings, in fav=
+or of representation-transparent API with a UTF-8 internal representation. =
+Indexing operations would be counting code units rather than the code point=
+s, as they in fact did before the change. This would also simplify the impl=
+ementation and also improve performance, e.g. in scripts dealing with the W=
+eb, which is already dominated by UTF-8 encoded text, thus making the Pytho=
+n programming language more applicable in the server-side world. One may ar=
+gue about the safety of string-cutting operations by script programmers, bu=
+t then again, the same argument is valid for splitting grapheme clusters. E=
+ven though Unicode is now fully supported, we believe that Python, as a mod=
+ern tool with less historical burden to carry, must do better job in text h=
+andling.</p>
+
+<p>Other than that, JPython and IronPython continue to rely on the less for=
+tunate encoding used by their hosting platforms (Java and .NET, respectivel=
+y) and care must be taken to handle the surrogate pairs correctly there.</p=
+>
+
+<h3 id=3D"faq.ood"><a href=3D"http://utf8everywhere.org/#faq.ood">Q: But wh=
+y <code>std::string</code>? Wouldn=E2=80=99t it be a better, object-oriente=
+d approach to have a UTF-8 aware string class?</a></h3>
+<p>A: Not every piece of code dealing with strings is actually involved in =
+processing and validation of text. A file copy program which receives Unico=
+de file names and passes them to file IO routines, would do just fine with =
+a simple byte buffer. If you design a library that accepts strings, the sim=
+ple, standard and lightweight <code>std::string</code> would do just fine. =
+On the contrary, it would be a mistake to reinvent a new string class and f=
+orce everyone through your peculiar interface. Of course, if one needs more=
+ than just passing strings around, he should then use appropriate text proc=
+essing tools. However, such tools are better to be independent of the stora=
+ge class used, in the spirit of the container/algorithm separation in the S=
+TL. In fact, <a href=3D"http://www.gotw.ca/gotw/084.htm">some consider</a> =
+<code>std::string</code> interface too bloated, as most of it was better to=
+ be moved out of the <code>std::string</code> class.</p>
+
+<h3 id=3D"faq.whats.now"><a href=3D"http://utf8everywhere.org/#faq.whats.no=
+w">Q: I already use this approach and I want to make our vision come true. =
+What can I do?</a></h3>
+<p>A: Spread the word.</p>
+<p>Review your code and see what library is most painful to use in portable=
+ Unicode-aware code. Open a bug report to the authors. If you are a C or C+=
++ library author, use <code>char*</code> and <code>std::string</code> with =
+UTF-8 implied, and refuse to support ANSI code pages=E2=80=94since they are=
+ inherently Unicode-broken.</p>
+<p>If you are a Microsoft employee, push for implementing support of the <c=
+ode>CP_UTF8</code> as one of narrow API code pages.</p>
+<p>Further ideas:</p>
+<ul>
+	<li>Create a repository for patches of commonly used 3rd-party libraries f=
+or UTF-8 support (e.g. PugiXML, LibTIFF, etc.) These are written in standar=
+d C and do not care about Windows.</li>
+	<li>Create a link-time patch for standard library functions (e.g. <code>fo=
+pen()</code>) on Windows, which would do the proper parameter conversion. T=
+his can be done for <code>main()</code> and the global environment variable=
+s.</li>
+</ul>
+
+
+<h2 id=3D"about"><a href=3D"http://utf8everywhere.org/#about">About the aut=
+hors</a></h2>
+
+<p>This manifesto was written by <a href=3D"http://meshnotes.com/9SrRpAypTr=
+8e">Pavel Radzivilovsky</a>, <a href=3D"http://stannum.io/">Yakov Galka</a>=
+ and <a href=3D"http://slavanov.com/">Slava Novgorodov</a>. It is a result =
+of our experience and research of real-world Unicode issues and mistakes do=
+ne by real-world programmers. Our goal here is to improve awareness of text=
+ issues and to inspire industry-wide changes to make Unicode-aware programm=
+ing easier, ultimately improving the experience of users of those programs =
+written by human engineers. Neither of us is involved in the Unicode consor=
+tium.</p>
+
+<p>Special thanks to Glenn Linderman for providing information about Python=
+, and to Markus K=C3=BCnne, Jelle Geerts, Lazy Rui and Jan R=C3=BCegg for r=
+eporting bugs and typos in this document.</p>
+
+<p>Much of the text was inspired by <a href=3D"http://programmers.stackexch=
+ange.com/questions/102205/should-utf-16-be-considered-harmful">discussions =
+on StackOverflow initiated by Artyom Beilis</a>, the author of Boost.Locale=
+. Additional inspiration came from the development conventions at <a href=
+=3D"http://www.visionmap.com/">VisionMap</a> and Michael Hartl=E2=80=99s <a=
+ href=3D"http://tauday.com/tau-manifesto">tauday.org</a>.</p>
+
+
+<h2 id=3D"extern"><a href=3D"http://utf8everywhere.org/#extern">External li=
+nks</a></h2>
+
+<ul>
+	<li><a href=3D"http://www.unicode.org/">The Unicode Consortium</a> (The Un=
+icode Standard, <a href=3D"http://www.unicode.org/versions/Unicode6.2.0/Uni=
+codeStandard-6.2.pdf">PDF</a>)</li>
+
+	<li><a href=3D"http://site.icu-project.org/">International Components for =
+Unicode</a> (ICU)</li>
+
+	<li><a href=3D"http://cppcms.sourceforge.net/boost_locale/html/">Boost.Loc=
+ale</a>=E2=80=94high quality localization facilities in a C++ way.</li>
+
+	<li><a href=3D"http://programmers.stackexchange.com/questions/102205/shoul=
+d-utf-16-be-considered-harmful">Should UTF-16 be considered harmful</a> on =
+StackOverflow, started by Artyom Beilis.</li>
+
+	<li><a href=3D"https://developer.twitter.com/en/docs/basics/counting-chara=
+cters.html">How twitter counts characters</a></li>
+</ul>
+
+<h2 id=3D"donate"><a href=3D"http://utf8everywhere.org/#donate">Feedback</a=
+></h2>
+
+<p>You can leave comments/feedback on the Facebook <a href=3D"https://www.f=
+acebook.com/UTF8Everywhere">UTF-8 Everywhere</a> page. Your help and feedba=
+ck are much appreciated.</p>
+
+<figure>
+	<img src=3D"http://utf8everywhere.org/data/utf8donate.png" alt=3D"1UTF8gQm=
+vChQ4MwUHT6XmydjUt9TsuDRn" />
+	<figcaption>
+		Bitcoin donate to: <code>1UTF8gQmvChQ4MwUHT6XmydjUt9TsuDRn</code><br />
+		The cash will be used for research and promotion.
+	</figcaption>
+</figure>
+
+</main>
+
+
+</body>
+</html>
+------MultipartBoundary--vEhxoPioWMGorMRbMXyC8nHxN26ozCtj0GBoauDUIP----
+Content-Type: text/css
+Content-Transfer-Encoding: quoted-printable
+Content-Location: http://utf8everywhere.org/data/style.css
+
+@charset "utf-8";
+
+@import url("https://fonts.googleapis.com/css?family=3DEB+Garamond:400,400i=
+,700");
+
+body { background-color: white; font-family: "EB Garamond", serif; line-hei=
+ght: 1.5; margin: 0px auto; max-width: 48em; text-align: justify; overflow-=
+wrap: break-word; }
+
+pre, code, kbd, samp, tt { font-family: monospace, monospace; font-size: 0.=
+9em; }
+
+code, kbd, samp, tt { padding-left: 0.25em; padding-right: 0.25em; }
+
+h1 { font-variant: small-caps; text-align: center; margin-top: 4em; }
+
+h2 { border-bottom: 1px solid silver; margin-top: 1.5em; margin-bottom: 0.5=
+em; }
+
+h3 { font-size: large; margin-top: 1em; margin-bottom: 0.5em; }
+
+pre { border: 1px dotted silver; overflow: auto; padding: 0.5em; text-align=
+: left; }
+
+img { border-style: none; max-width: 100%; }
+
+li { margin-top: 0.5em; margin-bottom: 0.5em; }
+
+main { margin: 0px 1em; }
+
+ul, ol { margin: 0px; }
+
+p { margin: 1em 0px; }
+
+p:first-child { margin-top: 0px; }
+
+p:last-child { margin-bottom: 0px; }
+
+dt { font-weight: bold; }
+
+dd { margin-bottom: 1em; }
+
+figure, .display { text-align: center; }
+
+figcaption { font-style: italic; margin: 0.5em; }
+
+.uniname { font-variant: small-caps; }
+
+.subtitle { font-variant: small-caps; text-align: center; margin-bottom: 4e=
+m; }
+
+aside { font-size: 0.9em; float: right; max-width: 20em; border: 1px solid =
+silver; margin: 0em 0em 0em 1em; padding: 0.5em 1em; }
+
+a:link { color: rgb(0, 119, 204); text-decoration: none; }
+
+a:hover { color: rgb(0, 119, 204); text-decoration: underline; }
+
+a:visited { color: rgb(68, 102, 136); }
+
+h1 > a:link, h1 > a:visited, h2 > a:link, h2 > a:visited, h3 > a:link, h3 >=
+ a:visited { color: inherit; text-decoration: none; }
+
+table { border: none; margin-top: 0.75em; margin-bottom: 0.75em; border-col=
+lapse: collapse; width: 100%; }
+
+th { border-left: 1px solid black; text-align: center; padding: 0.25em; }
+
+tr:first-child { border-top: none; border-bottom: 1px solid silver; }
+
+td { border-left: 1px solid black; text-align: center; padding: 0.25em; }
+
+th:first-child { border-left: none; }
+
+tr:first-child th { padding-top: 0.75em; padding-bottom: 0.75em; }
+
+nav { text-align: right; font-size: 0.9em; margin: 0.5em 0px; }
+
+body { counter-reset: h2 0; }
+
+h2 { counter-reset: h3 0; }
+
+h3 { counter-reset: h4 0; }
+
+h2::before { counter-increment: h2 1; content: counter(h2) ". "; }
+
+h3::before { counter-increment: h3 1; content: counter(h2) "." counter(h3) =
+". "; }
+------MultipartBoundary--vEhxoPioWMGorMRbMXyC8nHxN26ozCtj0GBoauDUIP----
+Content-Type: text/css
+Content-Transfer-Encoding: quoted-printable
+Content-Location: https://fonts.googleapis.com/css?family=EB+Garamond:400,400i,700
+
+@charset "utf-8";
+
+@font-face { font-family: "EB Garamond"; font-style: italic; font-weight: 4=
+00; src: url("https://fonts.gstatic.com/s/ebgaramond/v30/SlGFmQSNjdsmc35JDF=
+1K5GRwUjcdlttVFm-rI7e8QL9wU6ingQ.woff2") format("woff2"); unicode-range: U+=
+460-52F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F; }
+
+@font-face { font-family: "EB Garamond"; font-style: italic; font-weight: 4=
+00; src: url("https://fonts.gstatic.com/s/ebgaramond/v30/SlGFmQSNjdsmc35JDF=
+1K5GRwUjcdlttVFm-rI7e8QL95U6ingQ.woff2") format("woff2"); unicode-range: U+=
+301, U+400-45F, U+490-491, U+4B0-4B1, U+2116; }
+
+@font-face { font-family: "EB Garamond"; font-style: italic; font-weight: 4=
+00; src: url("https://fonts.gstatic.com/s/ebgaramond/v30/SlGFmQSNjdsmc35JDF=
+1K5GRwUjcdlttVFm-rI7e8QL9xU6ingQ.woff2") format("woff2"); unicode-range: U+=
+1F00-1FFF; }
+
+@font-face { font-family: "EB Garamond"; font-style: italic; font-weight: 4=
+00; src: url("https://fonts.gstatic.com/s/ebgaramond/v30/SlGFmQSNjdsmc35JDF=
+1K5GRwUjcdlttVFm-rI7e8QL9-U6ingQ.woff2") format("woff2"); unicode-range: U+=
+370-377, U+37A-37F, U+384-38A, U+38C, U+38E-3A1, U+3A3-3FF; }
+
+@font-face { font-family: "EB Garamond"; font-style: italic; font-weight: 4=
+00; src: url("https://fonts.gstatic.com/s/ebgaramond/v30/SlGFmQSNjdsmc35JDF=
+1K5GRwUjcdlttVFm-rI7e8QL9yU6ingQ.woff2") format("woff2"); unicode-range: U+=
+102-103, U+110-111, U+128-129, U+168-169, U+1A0-1A1, U+1AF-1B0, U+300-301, =
+U+303-304, U+308-309, U+323, U+329, U+1EA0-1EF9, U+20AB; }
+
+@font-face { font-family: "EB Garamond"; font-style: italic; font-weight: 4=
+00; src: url("https://fonts.gstatic.com/s/ebgaramond/v30/SlGFmQSNjdsmc35JDF=
+1K5GRwUjcdlttVFm-rI7e8QL9zU6ingQ.woff2") format("woff2"); unicode-range: U+=
+100-2BA, U+2BD-2C5, U+2C7-2CC, U+2CE-2D7, U+2DD-2FF, U+304, U+308, U+329, U=
++1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2=
+113, U+2C60-2C7F, U+A720-A7FF; }
+
+@font-face { font-family: "EB Garamond"; font-style: italic; font-weight: 4=
+00; src: url("https://fonts.gstatic.com/s/ebgaramond/v30/SlGFmQSNjdsmc35JDF=
+1K5GRwUjcdlttVFm-rI7e8QL99U6g.woff2") format("woff2"); unicode-range: U+0-F=
+F, U+131, U+152-153, U+2BB-2BC, U+2C6, U+2DA, U+2DC, U+304, U+308, U+329, U=
++2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;=
+ }
+
+@font-face { font-family: "EB Garamond"; font-style: normal; font-weight: 4=
+00; src: url("https://fonts.gstatic.com/s/ebgaramond/v30/SlGUmQSNjdsmc35JDF=
+1K5GR4SDktYw.woff2") format("woff2"); unicode-range: U+460-52F, U+1C80-1C8A=
+, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F; }
+
+@font-face { font-family: "EB Garamond"; font-style: normal; font-weight: 4=
+00; src: url("https://fonts.gstatic.com/s/ebgaramond/v30/SlGUmQSNjdsmc35JDF=
+1K5GRxSDktYw.woff2") format("woff2"); unicode-range: U+301, U+400-45F, U+49=
+0-491, U+4B0-4B1, U+2116; }
+
+@font-face { font-family: "EB Garamond"; font-style: normal; font-weight: 4=
+00; src: url("https://fonts.gstatic.com/s/ebgaramond/v30/SlGUmQSNjdsmc35JDF=
+1K5GR5SDktYw.woff2") format("woff2"); unicode-range: U+1F00-1FFF; }
+
+@font-face { font-family: "EB Garamond"; font-style: normal; font-weight: 4=
+00; src: url("https://fonts.gstatic.com/s/ebgaramond/v30/SlGUmQSNjdsmc35JDF=
+1K5GR2SDktYw.woff2") format("woff2"); unicode-range: U+370-377, U+37A-37F, =
+U+384-38A, U+38C, U+38E-3A1, U+3A3-3FF; }
+
+@font-face { font-family: "EB Garamond"; font-style: normal; font-weight: 4=
+00; src: url("https://fonts.gstatic.com/s/ebgaramond/v30/SlGUmQSNjdsmc35JDF=
+1K5GR6SDktYw.woff2") format("woff2"); unicode-range: U+102-103, U+110-111, =
+U+128-129, U+168-169, U+1A0-1A1, U+1AF-1B0, U+300-301, U+303-304, U+308-309=
+, U+323, U+329, U+1EA0-1EF9, U+20AB; }
+
+@font-face { font-family: "EB Garamond"; font-style: normal; font-weight: 4=
+00; src: url("https://fonts.gstatic.com/s/ebgaramond/v30/SlGUmQSNjdsmc35JDF=
+1K5GR7SDktYw.woff2") format("woff2"); unicode-range: U+100-2BA, U+2BD-2C5, =
+U+2C7-2CC, U+2CE-2D7, U+2DD-2FF, U+304, U+308, U+329, U+1D00-1DBF, U+1E00-1=
+E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+=
+A720-A7FF; }
+
+@font-face { font-family: "EB Garamond"; font-style: normal; font-weight: 4=
+00; src: url("https://fonts.gstatic.com/s/ebgaramond/v30/SlGUmQSNjdsmc35JDF=
+1K5GR1SDk.woff2") format("woff2"); unicode-range: U+0-FF, U+131, U+152-153,=
+ U+2BB-2BC, U+2C6, U+2DA, U+2DC, U+304, U+308, U+329, U+2000-206F, U+20AC, =
+U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+
+@font-face { font-family: "EB Garamond"; font-style: normal; font-weight: 7=
+00; src: url("https://fonts.gstatic.com/s/ebgaramond/v30/SlGUmQSNjdsmc35JDF=
+1K5GR4SDktYw.woff2") format("woff2"); unicode-range: U+460-52F, U+1C80-1C8A=
+, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F; }
+
+@font-face { font-family: "EB Garamond"; font-style: normal; font-weight: 7=
+00; src: url("https://fonts.gstatic.com/s/ebgaramond/v30/SlGUmQSNjdsmc35JDF=
+1K5GRxSDktYw.woff2") format("woff2"); unicode-range: U+301, U+400-45F, U+49=
+0-491, U+4B0-4B1, U+2116; }
+
+@font-face { font-family: "EB Garamond"; font-style: normal; font-weight: 7=
+00; src: url("https://fonts.gstatic.com/s/ebgaramond/v30/SlGUmQSNjdsmc35JDF=
+1K5GR5SDktYw.woff2") format("woff2"); unicode-range: U+1F00-1FFF; }
+
+@font-face { font-family: "EB Garamond"; font-style: normal; font-weight: 7=
+00; src: url("https://fonts.gstatic.com/s/ebgaramond/v30/SlGUmQSNjdsmc35JDF=
+1K5GR2SDktYw.woff2") format("woff2"); unicode-range: U+370-377, U+37A-37F, =
+U+384-38A, U+38C, U+38E-3A1, U+3A3-3FF; }
+
+@font-face { font-family: "EB Garamond"; font-style: normal; font-weight: 7=
+00; src: url("https://fonts.gstatic.com/s/ebgaramond/v30/SlGUmQSNjdsmc35JDF=
+1K5GR6SDktYw.woff2") format("woff2"); unicode-range: U+102-103, U+110-111, =
+U+128-129, U+168-169, U+1A0-1A1, U+1AF-1B0, U+300-301, U+303-304, U+308-309=
+, U+323, U+329, U+1EA0-1EF9, U+20AB; }
+
+@font-face { font-family: "EB Garamond"; font-style: normal; font-weight: 7=
+00; src: url("https://fonts.gstatic.com/s/ebgaramond/v30/SlGUmQSNjdsmc35JDF=
+1K5GR7SDktYw.woff2") format("woff2"); unicode-range: U+100-2BA, U+2BD-2C5, =
+U+2C7-2CC, U+2CE-2D7, U+2DD-2FF, U+304, U+308, U+329, U+1D00-1DBF, U+1E00-1=
+E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+=
+A720-A7FF; }
+
+@font-face { font-family: "EB Garamond"; font-style: normal; font-weight: 7=
+00; src: url("https://fonts.gstatic.com/s/ebgaramond/v30/SlGUmQSNjdsmc35JDF=
+1K5GR1SDk.woff2") format("woff2"); unicode-range: U+0-FF, U+131, U+152-153,=
+ U+2BB-2BC, U+2C6, U+2DA, U+2DC, U+304, U+308, U+329, U+2000-206F, U+20AC, =
+U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+------MultipartBoundary--vEhxoPioWMGorMRbMXyC8nHxN26ozCtj0GBoauDUIP----
+Content-Type: image/jpeg
+Content-Transfer-Encoding: base64
+Content-Location: http://utf8everywhere.org/data/nagoya-museum.jpg
+
+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
+AAAAAAAQ+wmmvQdMKjadj+LMV6mshThCSU0D7QAAAAAAEABIAAAAAQACAEgAAAABAAI4QklNBCYA
+AAAAAA4AAAAAAAAAAAAAP4AAADhCSU0EDQAAAAAABAAAAB44QklNBBkAAAAAAAQAAAAeOEJJTQPz
+AAAAAAAJAAAAAAAAAAABADhCSU0ECgAAAAAAAQAAOEJJTScQAAAAAAAKAAEAAAAAAAAAAjhCSU0D
+9QAAAAAASAAvZmYAAQBsZmYABgAAAAAAAQAvZmYAAQChmZoABgAAAAAAAQAyAAAAAQBaAAAABgAA
+AAAAAQA1AAAAAQAtAAAABgAAAAAAAThCSU0D+AAAAAAAcAAA////////////////////////////
+/wPoAAAAAP////////////////////////////8D6AAAAAD/////////////////////////////
+A+gAAAAA/////////////////////////////wPoAAA4QklNBAgAAAAAABAAAAABAAACQAAAAkAA
+AAAAOEJJTQQeAAAAAAAEAAAAADhCSU0EGgAAAAADPQAAAAYAAAAAAAAAAAAAAWgAAAHgAAAABABp
+AG0AZwAwAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAHgAAABaAAAAAAAAAAAAAAA
+AAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAABAAAAABAAAAAAAAbnVsbAAAAAIAAAAGYm91bmRzT2Jq
+YwAAAAEAAAAAAABSY3QxAAAABAAAAABUb3AgbG9uZwAAAAAAAAAATGVmdGxvbmcAAAAAAAAAAEJ0
+b21sb25nAAABaAAAAABSZ2h0bG9uZwAAAeAAAAAGc2xpY2VzVmxMcwAAAAFPYmpjAAAAAQAAAAAA
+BXNsaWNlAAAAEgAAAAdzbGljZUlEbG9uZwAAAAAAAAAHZ3JvdXBJRGxvbmcAAAAAAAAABm9yaWdp
+bmVudW0AAAAMRVNsaWNlT3JpZ2luAAAADWF1dG9HZW5lcmF0ZWQAAAAAVHlwZWVudW0AAAAKRVNs
+aWNlVHlwZQAAAABJbWcgAAAABmJvdW5kc09iamMAAAABAAAAAAAAUmN0MQAAAAQAAAAAVG9wIGxv
+bmcAAAAAAAAAAExlZnRsb25nAAAAAAAAAABCdG9tbG9uZwAAAWgAAAAAUmdodGxvbmcAAAHgAAAA
+A3VybFRFWFQAAAABAAAAAAAAbnVsbFRFWFQAAAABAAAAAAAATXNnZVRFWFQAAAABAAAAAAAGYWx0
+VGFnVEVYVAAAAAEAAAAAAA5jZWxsVGV4dElzSFRNTGJvb2wBAAAACGNlbGxUZXh0VEVYVAAAAAEA
+AAAAAAlob3J6QWxpZ25lbnVtAAAAD0VTbGljZUhvcnpBbGlnbgAAAAdkZWZhdWx0AAAACXZlcnRB
+bGlnbmVudW0AAAAPRVNsaWNlVmVydEFsaWduAAAAB2RlZmF1bHQAAAALYmdDb2xvclR5cGVlbnVt
+AAAAEUVTbGljZUJHQ29sb3JUeXBlAAAAAE5vbmUAAAAJdG9wT3V0c2V0bG9uZwAAAAAAAAAKbGVm
+dE91dHNldGxvbmcAAAAAAAAADGJvdHRvbU91dHNldGxvbmcAAAAAAAAAC3JpZ2h0T3V0c2V0bG9u
+ZwAAAAAAOEJJTQQUAAAAAAAEAAAAAThCSU0EDAAAAAAM3AAAAAEAAACAAAAAYAAAAYAAAJAAAAAM
+wAAYAAH/2P/gABBKRklGAAECAQBIAEgAAP/tAAxBZG9iZV9DTQAB/+4ADkFkb2JlAGSAAAAAAf/b
+AIQADAgICAkIDAkJDBELCgsRFQ8MDA8VGBMTFRMTGBEMDAwMDAwRDAwMDAwMDAwMDAwMDAwMDAwM
+DAwMDAwMDAwMDAENCwsNDg0QDg4QFA4ODhQUDg4ODhQRDAwMDAwREQwMDAwMDBEMDAwMDAwMDAwM
+DAwMDAwMDAwMDAwMDAwMDAwM/8AAEQgAYACAAwEiAAIRAQMRAf/dAAQACP/EAT8AAAEFAQEBAQEB
+AAAAAAAAAAMAAQIEBQYHCAkKCwEAAQUBAQEBAQEAAAAAAAAAAQACAwQFBgcICQoLEAABBAEDAgQC
+BQcGCAUDDDMBAAIRAwQhEjEFQVFhEyJxgTIGFJGhsUIjJBVSwWIzNHKC0UMHJZJT8OHxY3M1FqKy
+gyZEk1RkRcKjdDYX0lXiZfKzhMPTdePzRieUpIW0lcTU5PSltcXV5fVWZnaGlqa2xtbm9jdHV2d3
+h5ent8fX5/cRAAICAQIEBAMEBQYHBwYFNQEAAhEDITESBEFRYXEiEwUygZEUobFCI8FS0fAzJGLh
+coKSQ1MVY3M08SUGFqKygwcmNcLSRJNUoxdkRVU2dGXi8rOEw9N14/NGlKSFtJXE1OT0pbXF1eX1
+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
+5eMqBc3xCI+hnYQhFpH+xG0P/9k4QklNBCEAAAAAAFsAAAABAQAAAA8AQQBkAG8AYgBlACAAUABo
+AG8AdABvAHMAaABvAHAAAAAWAEEAZABvAGIAZQAgAFAAaABvAHQAbwBzAGgAbwBwACAANwAuADAA
+IABNAEUAAAABADhCSU0EBgAAAAAABwAGAQEAAwEA/+EVZ2h0dHA6Ly9ucy5hZG9iZS5jb20veGFw
+LzEuMC8APD94cGFja2V0IGJlZ2luPSfvu78nIGlkPSdXNU0wTXBDZWhpSHpyZVN6TlRjemtjOWQn
+Pz4KPD9hZG9iZS14YXAtZmlsdGVycyBlc2M9IkNSIj8+Cjx4OnhhcG1ldGEgeG1sbnM6eD0nYWRv
+YmU6bnM6bWV0YS8nIHg6eGFwdGs9J1hNUCB0b29sa2l0IDIuOC4yLTMzLCBmcmFtZXdvcmsgMS41
+Jz4KPHJkZjpSREYgeG1sbnM6cmRmPSdodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1z
+eW50YXgtbnMjJyB4bWxuczppWD0naHR0cDovL25zLmFkb2JlLmNvbS9pWC8xLjAvJz4KCiA8cmRm
+OkRlc2NyaXB0aW9uIGFib3V0PSd1dWlkOmFmYjA3MThhLTlhMjEtMTFlMS1hN2QzLTlkMWYxMTM1
+NmYxZScKICB4bWxuczpwZGY9J2h0dHA6Ly9ucy5hZG9iZS5jb20vcGRmLzEuMy8nPgogIDwhLS0g
+cGRmOlN1YmplY3QgaXMgYWxpYXNlZCAtLT4KIDwvcmRmOkRlc2NyaXB0aW9uPgoKIDxyZGY6RGVz
+Y3JpcHRpb24gYWJvdXQ9J3V1aWQ6YWZiMDcxOGEtOWEyMS0xMWUxLWE3ZDMtOWQxZjExMzU2ZjFl
+JwogIHhtbG5zOnBob3Rvc2hvcD0naHR0cDovL25zLmFkb2JlLmNvbS9waG90b3Nob3AvMS4wLyc+
+CiAgPCEtLSBwaG90b3Nob3A6Q2FwdGlvbiBpcyBhbGlhc2VkIC0tPgogPC9yZGY6RGVzY3JpcHRp
+b24+CgogPHJkZjpEZXNjcmlwdGlvbiBhYm91dD0ndXVpZDphZmIwNzE4YS05YTIxLTExZTEtYTdk
+My05ZDFmMTEzNTZmMWUnCiAgeG1sbnM6eGFwPSdodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAv
+Jz4KICA8IS0tIHhhcDpEZXNjcmlwdGlvbiBpcyBhbGlhc2VkIC0tPgogPC9yZGY6RGVzY3JpcHRp
+b24+CgogPHJkZjpEZXNjcmlwdGlvbiBhYm91dD0ndXVpZDphZmIwNzE4YS05YTIxLTExZTEtYTdk
+My05ZDFmMTEzNTZmMWUnCiAgeG1sbnM6eGFwTU09J2h0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEu
+MC9tbS8nPgogIDx4YXBNTTpEb2N1bWVudElEPmFkb2JlOmRvY2lkOnBob3Rvc2hvcDphZmIwNzE4
+OC05YTIxLTExZTEtYTdkMy05ZDFmMTEzNTZmMWU8L3hhcE1NOkRvY3VtZW50SUQ+CiA8L3JkZjpE
+ZXNjcmlwdGlvbj4KCiA8cmRmOkRlc2NyaXB0aW9uIGFib3V0PSd1dWlkOmFmYjA3MThhLTlhMjEt
+MTFlMS1hN2QzLTlkMWYxMTM1NmYxZScKICB4bWxuczpkYz0naHR0cDovL3B1cmwub3JnL2RjL2Vs
+ZW1lbnRzLzEuMS8nPgogIDxkYzpkZXNjcmlwdGlvbj4KICAgPHJkZjpBbHQ+CiAgICA8cmRmOmxp
+IHhtbDpsYW5nPSd4LWRlZmF1bHQnPiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA8L3Jk
+ZjpsaT4KICAgPC9yZGY6QWx0PgogIDwvZGM6ZGVzY3JpcHRpb24+CiA8L3JkZjpEZXNjcmlwdGlv
+bj4KCjwvcmRmOlJERj4KPC94OnhhcG1ldGE+CiAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+IAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAog
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+CiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgIAo8P3hwYWNrZXQgZW5kPSd3Jz8+/+IMWElDQ19QUk9GSUxFAAEB
+AAAMSExpbm8CEAAAbW50clJHQiBYWVogB84AAgAJAAYAMQAAYWNzcE1TRlQAAAAASUVDIHNSR0IA
+AAAAAAAAAAAAAAAAAPbWAAEAAAAA0y1IUCAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAARY3BydAAAAVAAAAAzZGVzYwAAAYQAAABsd3RwdAAAAfAAAAAUYmtw
+dAAAAgQAAAAUclhZWgAAAhgAAAAUZ1hZWgAAAiwAAAAUYlhZWgAAAkAAAAAUZG1uZAAAAlQAAABw
+ZG1kZAAAAsQAAACIdnVlZAAAA0wAAACGdmlldwAAA9QAAAAkbHVtaQAAA/gAAAAUbWVhcwAABAwA
+AAAkdGVjaAAABDAAAAAMclRSQwAABDwAAAgMZ1RSQwAABDwAAAgMYlRSQwAABDwAAAgMdGV4dAAA
+AABDb3B5cmlnaHQgKGMpIDE5OTggSGV3bGV0dC1QYWNrYXJkIENvbXBhbnkAAGRlc2MAAAAAAAAA
+EnNSR0IgSUVDNjE5NjYtMi4xAAAAAAAAAAAAAAASc1JHQiBJRUM2MTk2Ni0yLjEAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFhZWiAAAAAAAADzUQABAAAA
+ARbMWFlaIAAAAAAAAAAAAAAAAAAAAABYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAA
+t4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9kZXNjAAAAAAAAABZJRUMgaHR0cDovL3d3dy5pZWMu
+Y2gAAAAAAAAAAAAAABZJRUMgaHR0cDovL3d3dy5pZWMuY2gAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZGVzYwAAAAAAAAAuSUVDIDYxOTY2LTIuMSBEZWZhdWx0
+IFJHQiBjb2xvdXIgc3BhY2UgLSBzUkdCAAAAAAAAAAAAAAAuSUVDIDYxOTY2LTIuMSBEZWZhdWx0
+IFJHQiBjb2xvdXIgc3BhY2UgLSBzUkdCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGRlc2MAAAAAAAAA
+LFJlZmVyZW5jZSBWaWV3aW5nIENvbmRpdGlvbiBpbiBJRUM2MTk2Ni0yLjEAAAAAAAAAAAAAACxS
+ZWZlcmVuY2UgVmlld2luZyBDb25kaXRpb24gaW4gSUVDNjE5NjYtMi4xAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAB2aWV3AAAAAAATpP4AFF8uABDPFAAD7cwABBMLAANcngAAAAFYWVogAAAAAABM
+CVYAUAAAAFcf521lYXMAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAKPAAAAAnNpZyAAAAAAQ1JU
+IGN1cnYAAAAAAAAEAAAAAAUACgAPABQAGQAeACMAKAAtADIANwA7AEAARQBKAE8AVABZAF4AYwBo
+AG0AcgB3AHwAgQCGAIsAkACVAJoAnwCkAKkArgCyALcAvADBAMYAywDQANUA2wDgAOUA6wDwAPYA
++wEBAQcBDQETARkBHwElASsBMgE4AT4BRQFMAVIBWQFgAWcBbgF1AXwBgwGLAZIBmgGhAakBsQG5
+AcEByQHRAdkB4QHpAfIB+gIDAgwCFAIdAiYCLwI4AkECSwJUAl0CZwJxAnoChAKOApgCogKsArYC
+wQLLAtUC4ALrAvUDAAMLAxYDIQMtAzgDQwNPA1oDZgNyA34DigOWA6IDrgO6A8cD0wPgA+wD+QQG
+BBMEIAQtBDsESARVBGMEcQR+BIwEmgSoBLYExATTBOEE8AT+BQ0FHAUrBToFSQVYBWcFdwWGBZYF
+pgW1BcUF1QXlBfYGBgYWBicGNwZIBlkGagZ7BowGnQavBsAG0QbjBvUHBwcZBysHPQdPB2EHdAeG
+B5kHrAe/B9IH5Qf4CAsIHwgyCEYIWghuCIIIlgiqCL4I0gjnCPsJEAklCToJTwlkCXkJjwmkCboJ
+zwnlCfsKEQonCj0KVApqCoEKmAquCsUK3ArzCwsLIgs5C1ELaQuAC5gLsAvIC+EL+QwSDCoMQwxc
+DHUMjgynDMAM2QzzDQ0NJg1ADVoNdA2ODakNww3eDfgOEw4uDkkOZA5/DpsOtg7SDu4PCQ8lD0EP
+Xg96D5YPsw/PD+wQCRAmEEMQYRB+EJsQuRDXEPURExExEU8RbRGMEaoRyRHoEgcSJhJFEmQShBKj
+EsMS4xMDEyMTQxNjE4MTpBPFE+UUBhQnFEkUahSLFK0UzhTwFRIVNBVWFXgVmxW9FeAWAxYmFkkW
+bBaPFrIW1hb6Fx0XQRdlF4kXrhfSF/cYGxhAGGUYihivGNUY+hkgGUUZaxmRGbcZ3RoEGioaURp3
+Gp4axRrsGxQbOxtjG4obshvaHAIcKhxSHHscoxzMHPUdHh1HHXAdmR3DHeweFh5AHmoelB6+Hukf
+Ex8+H2kflB+/H+ogFSBBIGwgmCDEIPAhHCFIIXUhoSHOIfsiJyJVIoIiryLdIwojOCNmI5QjwiPw
+JB8kTSR8JKsk2iUJJTglaCWXJccl9yYnJlcmhya3JugnGCdJJ3onqyfcKA0oPyhxKKIo1CkGKTgp
+aymdKdAqAio1KmgqmyrPKwIrNitpK50r0SwFLDksbiyiLNctDC1BLXYtqy3hLhYuTC6CLrcu7i8k
+L1ovkS/HL/4wNTBsMKQw2zESMUoxgjG6MfIyKjJjMpsy1DMNM0YzfzO4M/E0KzRlNJ402DUTNU01
+hzXCNf02NzZyNq426TckN2A3nDfXOBQ4UDiMOMg5BTlCOX85vDn5OjY6dDqyOu87LTtrO6o76Dwn
+PGU8pDzjPSI9YT2hPeA+ID5gPqA+4D8hP2E/oj/iQCNAZECmQOdBKUFqQaxB7kIwQnJCtUL3QzpD
+fUPARANER0SKRM5FEkVVRZpF3kYiRmdGq0bwRzVHe0fASAVIS0iRSNdJHUljSalJ8Eo3Sn1KxEsM
+S1NLmkviTCpMcky6TQJNSk2TTdxOJU5uTrdPAE9JT5NP3VAnUHFQu1EGUVBRm1HmUjFSfFLHUxNT
+X1OqU/ZUQlSPVNtVKFV1VcJWD1ZcVqlW91dEV5JX4FgvWH1Yy1kaWWlZuFoHWlZaplr1W0VblVvl
+XDVchlzWXSddeF3JXhpebF69Xw9fYV+zYAVgV2CqYPxhT2GiYfViSWKcYvBjQ2OXY+tkQGSUZOll
+PWWSZedmPWaSZuhnPWeTZ+loP2iWaOxpQ2maafFqSGqfavdrT2una/9sV2yvbQhtYG25bhJua27E
+bx5veG/RcCtwhnDgcTpxlXHwcktypnMBc11zuHQUdHB0zHUodYV14XY+dpt2+HdWd7N4EXhueMx5
+KnmJeed6RnqlewR7Y3vCfCF8gXzhfUF9oX4BfmJ+wn8jf4R/5YBHgKiBCoFrgc2CMIKSgvSDV4O6
+hB2EgITjhUeFq4YOhnKG14c7h5+IBIhpiM6JM4mZif6KZIrKizCLlov8jGOMyo0xjZiN/45mjs6P
+No+ekAaQbpDWkT+RqJIRknqS45NNk7aUIJSKlPSVX5XJljSWn5cKl3WX4JhMmLiZJJmQmfyaaJrV
+m0Kbr5wcnImc951kndKeQJ6unx2fi5/6oGmg2KFHobaiJqKWowajdqPmpFakx6U4pammGqaLpv2n
+bqfgqFKoxKk3qamqHKqPqwKrdavprFys0K1ErbiuLa6hrxavi7AAsHWw6rFgsdayS7LCszizrrQl
+tJy1E7WKtgG2ebbwt2i34LhZuNG5SrnCuju6tbsuu6e8IbybvRW9j74KvoS+/796v/XAcMDswWfB
+48JfwtvDWMPUxFHEzsVLxcjGRsbDx0HHv8g9yLzJOsm5yjjKt8s2y7bMNcy1zTXNtc42zrbPN8+4
+0DnQutE80b7SP9LB00TTxtRJ1MvVTtXR1lXW2Ndc1+DYZNjo2WzZ8dp22vvbgNwF3IrdEN2W3hze
+ot8p36/gNuC94UThzOJT4tvjY+Pr5HPk/OWE5g3mlucf56noMui86Ubp0Opb6uXrcOv77IbtEe2c
+7ijutO9A78zwWPDl8XLx//KM8xnzp/Q09ML1UPXe9m32+/eK+Bn4qPk4+cf6V/rn+3f8B/yY/Sn9
+uv5L/tz/bf///+4AJkFkb2JlAGRAAAAAAQMAFQQDBgoNAAAAAAAAAAAAAAAAAAAAAP/bAIQAAgIC
+AgICAgICAgMCAgIDBAMCAgMEBQQEBAQEBQYFBQUFBQUGBgcHCAcHBgkJCgoJCQwMDAwMDAwMDAwM
+DAwMDAEDAwMFBAUJBgYJDQoJCg0PDg4ODg8PDAwMDAwPDwwMDAwMDA8MDAwMDAwMDAwMDAwMDAwM
+DAwMDAwMDAwMDAwM/8IAEQgBaAHgAwERAAIRAQMRAf/EAP8AAAEFAQEBAQAAAAAAAAAAAAIBAwQF
+BgAHCAkBAQEBAQEBAQAAAAAAAAAAAAABAgMEBQYQAAEDAgQFBAEEAwACAwAAAAEAAgMRBBASEwUg
+QCExBjAiMhQjQTMkFlA0FUIlcIAHEQABAgQCBQgGBgYLAAEFAAABAAIRIRIDMQRBUSIyExBhcYGR
+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
+EQlFPqV28aPj0P5vu84+x8xzphmxqhQAQVQQQEsWVCoggods4cVM6vfPv6q+H7sx9Xy+QfpvhbC8
+/WPL7HM7e1nJdud/jpNxpMbt5bTG3ZcDiwdSf3+d9t+P6E66pemLaWHceS+n5iXyfLWfZ86+T7Me
+Xa+X3y85odcZJWWOSwNSp3z1vHrL+Z7/ADj6/wA1zrzZ1GgEEEQFUEBLFlQqKCQg6WVwSWby39Z/
+B99R9PyeTfqPg/Tnzfpee+3xQ9Y9a8fu819fmduTxu1W059Z2dpHj+M5BjZ68/3by9+4598Pz+lq
++nhfvD4e9n5/7O831Pj7t8z408332GrLn1fzKfWGqYHiBY1ZtfJ6LX5vv86+r80+3NmxmgBQVQQQ
+EQsGSCpZCtKCDHDpW8a+uvgfQg/Q83k/6z859LfN+lhPR5d1z7v894n1cKntxfmrOam89yM6KsVx
+x7k5+sTe85etvl7sNy+noNePW9vnZ7r4n3L5z68/gPy/WjTXoPLd1jUqWiuYVdGb3Kux3j11vzff
+5v8AS+effkzY1QAgAiCCAliyoQoQQYQ4FLWZv118D6I+zhgv2P5jfeP15X0ebceb0t1H7c85vnZ2
+ycdLbPQJTIvPH3T5+0nHp8il+Lcdb3V+4vg/U0v2Pks+35jHTyfL87/EXl+pHmvSOHXS890G8mR0
+KWHZj+mK3n033yvf5t9Pwr34s2N02CCAcICIWDKhBWEpIQanBy00v1j8L6D/AH5efftvyftXzPqe
+cfR+fofH6rCqnpyyno80ub0XLtLzsmous5bjv6g4Z92xPy0nuwHHuyfTv5v7/wBM/X+Ji/rfL82X
+5v5ejOZ7Rpdbz3peerSWBY/LR6kiKTWcdNb35fu8++h4w9HFuxugABBEEEBLBkhQqWCooMcHJaVf
+pn4fuutTz39x+R+k/j/b8H+v8bb+T2YX2+CIthuWXLpaZ2Ers1G0p+etz8D7vsf5b9B+fv7j8rlu
+WmTT53638z6XlX2PlRYYhqVs02N7rlpxa5HQYU897Ypsb3Pzfbhvb5G/RxCxsaoBARBBBCwZIUUK
+iCgww5aZfob43t1GL5t+5/JeweT3eWe353pfk9mC9ngG6k3NljrKlUbljUHLpY/L+rffE+189/c+
+Ri+W1xrR9+S46CkDWW5QAzbWXRZ0zEYpNSQlLUsHl01nzvZi/b5GPRxSxqmwAQRDgRCwZIIWxVIK
+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
+
+------MultipartBoundary--vEhxoPioWMGorMRbMXyC8nHxN26ozCtj0GBoauDUIP----
+Content-Type: image/png
+Content-Transfer-Encoding: base64
+Content-Location: http://utf8everywhere.org/data/glyph-ungwe.png
+
+iVBORw0KGgoAAAANSUhEUgAAABMAAAAUCAYAAABvVQZ0AAAACXBIWXMAAAsTAAALEwEAmpwYAAAA
+BGdBTUEAALGOfPtRkwAAACBjSFJNAAB6JQAAgIMAAPvUAACBCAAAeAwAAOtlAAA8XgAALb9IrLv6
+AAABvUlEQVR42mJgYGBwBuJpDJQDbYAAYgQST4FYEIgPAfFrIP4MxD+B+DcQ/wXif0D8H4hBapmh
+NAsQswMxNxDzA7EsEB8ECCCQRD0QuwOxBhALAPFXJM1MUFtBmtmgFn0B4h9A/B3KlgLiF0BsDhBA
+MCfKA/E5qA3ogBWIDwBxOA7vnQXirSAGQADB0EIg7sKhOATqUjEc8u+AeAOIARBAIG+IA3EkNOyw
+AS8o/ROHPCcQ/wExAAKICRpWIK8o4lBsBaW1sMgZADEHEP8CcQACCIQsoN4AOVcTLawqgfgtVH43
+NIJgQAGI90LlQMHEABBADNAovgsV/ADEs4B4NhDfhMa0B1QOhG8A8SQgXgfEF4HYDCo+F2QQQADB
+kDUQP4FKgKJ7JRCbIsmXQ5MDSP4xEDcBsTAQi0DFZoIUAQQQekAqQGlsAKRZBk1MCmrYFBAHIIBY
+kCRAifABnuzyFosYO5QGRwBAADFRmB/ZkA0DCCBKDYO57D2IAAggSg3jgtKgyGMACCBKDROF0rdB
+BEAAUWqYEhB/BOJrIA5AAFFqmB0QL4KmTQaAAKIEqQHxPeRiCyCAKEEzgFgPWQAgwADmJk4y/OKA
+BQAAAABJRU5ErkJggg==
+
+------MultipartBoundary--vEhxoPioWMGorMRbMXyC8nHxN26ozCtj0GBoauDUIP----
+Content-Type: image/png
+Content-Transfer-Encoding: base64
+Content-Location: http://utf8everywhere.org/data/utf8donate.png
+
+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
+
+------MultipartBoundary--vEhxoPioWMGorMRbMXyC8nHxN26ozCtj0GBoauDUIP------

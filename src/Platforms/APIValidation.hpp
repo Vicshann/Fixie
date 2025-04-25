@@ -51,7 +51,7 @@ API_VALIDATE(NAPI::mmap,                               PX::PVOID,             vp
 API_VALIDATE(NAPI::munmap,                                   int,             vptr, size_t)
 API_VALIDATE(NAPI::mremap,                             PX::PVOID,             vptr, size_t, size_t, int, vptr) 
 API_VALIDATE(NAPI::madvise,                                  int,             vptr, size_t, PX::EMadv)                                                          
-API_VALIDATE(NAPI::mprotect,                                 int,             vptr, size_t, int) 
+API_VALIDATE(NAPI::mprotect,                                 int,             vptr, size_t, uint32, uint32*) 
 API_VALIDATE(NAPI::munlock,                                  int,             vptr, size_t) 
 API_VALIDATE(NAPI::mlock,                                    int,             vptr, size_t)
 API_VALIDATE(NAPI::msync,                                    int,             vptr, size_t, int) 

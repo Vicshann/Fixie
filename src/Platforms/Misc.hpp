@@ -66,6 +66,7 @@ static int MakeDirPath(const achar* Path, uint mode=PX::S_IRWXO|PX::S_IRWXG|PX::
 }
 //------------------------------------------------------------------------------------------------------------
 // https://insanecoding.blogspot.com/2007/11/implementing-realpath-in-c.html
+// https://github.com/likle/cwalk
 // Turns '\\' into '/'; removes extra '/'; processes '../' and '../'
 // Remove last '/' ?
 // First './' or no '/' is converted to current directory
@@ -76,7 +77,7 @@ static int MakeDirPath(const achar* Path, uint mode=PX::S_IRWXO|PX::S_IRWXG|PX::
 static sint CanonicalizePath(achar* DstPath, const achar* SrcPath, size_t DstSize, bool ResolveLinks=false)
 {
  size_t DstOffs = 0;
- if(!IsFilePathSep(SrcPath[0]))              //    // Have current dir
+ if(!IsFilePathSep(SrcPath[0]))                // Have current dir
   {
    sint len = NAPI::getcwd(DstPath, DstSize);
    if(len < 0)return len; // (len - NSTR::StrLen(SrcPath));   // Return required size

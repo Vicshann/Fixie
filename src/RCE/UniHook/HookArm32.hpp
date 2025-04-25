@@ -15,12 +15,12 @@ struct SA32RW
 //------------------------------------------------------------------------------------------------------------
 //struct sh_a32_rewrite_info_t
 //{
-  uintptr_t overwrite_start_addr;
-  uintptr_t overwrite_end_addr;
-  uint32 *rewrite_buf;
+  size_t overwrite_start_addr;
+  size_t overwrite_end_addr;
   size_t rewrite_buf_offset;
   size_t rewrite_inst_lens[2];
   size_t rewrite_inst_lens_cnt;
+  uint32 *rewrite_buf;
 //};
 //------------------------------------------------------------------------------------------------------------
 enum sh_a32_type_t
@@ -115,16 +115,16 @@ static sh_a32_type_t sh_a32_get_type(uint32 inst)
   else return IGNORED;
 }
 //------------------------------------------------------------------------------------------------------------
-bool sh_a32_is_addr_need_fix(uintptr_t addr)
+bool sh_a32_is_addr_need_fix(size_t addr)
 {
  return (this->overwrite_start_addr <= addr && addr < this->overwrite_end_addr);
 }
 //------------------------------------------------------------------------------------------------------------
-uintptr_t sh_a32_fix_addr(uintptr_t addr)
+size_t sh_a32_fix_addr(size_t addr)
 {
  if (this->overwrite_start_addr <= addr && addr < this->overwrite_end_addr)
   {
-   uintptr_t cursor_addr = this->overwrite_start_addr;
+   size_t cursor_addr = this->overwrite_start_addr;
    size_t offset = 0;
    for (size_t i = 0; i < this->rewrite_inst_lens_cnt; i++)
     {
@@ -132,14 +132,14 @@ uintptr_t sh_a32_fix_addr(uintptr_t addr)
       cursor_addr += 4;
       offset += this->rewrite_inst_lens[i];
     }
-   uintptr_t fixed_addr = (uintptr_t)this->rewrite_buf + offset;
+   size_t fixed_addr = (size_t)this->rewrite_buf + offset;
 //   SH_LOG_INFO("a32 rewrite: fix addr %" PRIxPTR " -> %" PRIxPTR, addr, fixed_addr);
    return fixed_addr;
   }
  return addr;
 }
 //------------------------------------------------------------------------------------------------------------
-size_t sh_a32_rewrite_b(uint32 *buf, uint32 inst, uintptr_t pc, sh_a32_type_t type)
+size_t sh_a32_rewrite_b(uint32 *buf, uint32 inst, size_t pc, sh_a32_type_t type)
 {
  uint32 cond;
  if (type == B_A1 || type == BL_IMM_A1 || type == BX_A1)cond = SH_UTIL_GET_BITS_32(inst, 31, 28);
@@ -177,7 +177,7 @@ size_t sh_a32_rewrite_b(uint32 *buf, uint32 inst, uintptr_t pc, sh_a32_type_t ty
   return idx * 4;  // 12 or 16
 }
 //------------------------------------------------------------------------------------------------------------
-static size_t sh_a32_rewrite_add_or_sub(uint32 *buf, uint32 inst, uintptr_t pc)
+static size_t sh_a32_rewrite_add_or_sub(uint32 *buf, uint32 inst, size_t pc)
 {
  // ADD{S}<c> <Rd>, <Rn>, PC{, <shift>}  or  ADD{S}<c> <Rd>, PC, <Rm>{, <shift>}
  // SUB{S}<c> <Rd>, <Rn>, PC{, <shift>}  or  SUB{S}<c> <Rd>, PC, <Rm>{, <shift>}
@@ -222,7 +222,7 @@ static size_t sh_a32_rewrite_add_or_sub(uint32 *buf, uint32 inst, uintptr_t pc)
    }
 }
 //------------------------------------------------------------------------------------------------------------
-size_t sh_a32_rewrite_adr(uint32 *buf, uint32 inst, uintptr_t pc, sh_a32_type_t type)
+size_t sh_a32_rewrite_adr(uint32 *buf, uint32 inst, size_t pc, sh_a32_type_t type)
 {
   uint32 cond  = SH_UTIL_GET_BITS_32(inst, 31, 28);
   uint32 rd    = SH_UTIL_GET_BITS_32(inst, 15, 12);  // r0 - r15
@@ -237,7 +237,7 @@ size_t sh_a32_rewrite_adr(uint32 *buf, uint32 inst, uintptr_t pc, sh_a32_type_t 
   return 12;
 }
 //------------------------------------------------------------------------------------------------------------
-static size_t sh_a32_rewrite_mov(uint32 *buf, uint32 inst, uintptr_t pc)
+static size_t sh_a32_rewrite_mov(uint32 *buf, uint32 inst, size_t pc)
 {
  // MOV{S}<c> <Rd>, PC
  uint32 cond = SH_UTIL_GET_BITS_32(inst, 31, 28);
@@ -264,7 +264,7 @@ static size_t sh_a32_rewrite_mov(uint32 *buf, uint32 inst, uintptr_t pc)
    }
 }
 //------------------------------------------------------------------------------------------------------------
-size_t sh_a32_rewrite_ldr_lit(uint32 *buf, uint32 inst, uintptr_t pc, sh_a32_type_t type)
+size_t sh_a32_rewrite_ldr_lit(uint32 *buf, uint32 inst, size_t pc, sh_a32_type_t type)
 {
  uint32 cond = SH_UTIL_GET_BITS_32(inst, 31, 28);
  uint32 u    = SH_UTIL_GET_BIT_32(inst, 23);
@@ -324,7 +324,7 @@ size_t sh_a32_rewrite_ldr_lit(uint32 *buf, uint32 inst, uintptr_t pc, sh_a32_typ
    }
 }
 //------------------------------------------------------------------------------------------------------------
-static size_t sh_a32_rewrite_ldr_reg(uint32 *buf, uint32 inst, uintptr_t pc, sh_a32_type_t type)
+static size_t sh_a32_rewrite_ldr_reg(uint32 *buf, uint32 inst, size_t pc, sh_a32_type_t type)
 {
  // LDR<c> <Rt>, [PC,+/-<Rm>{, <shift>}]{!}
  // ......
@@ -367,7 +367,7 @@ static size_t sh_a32_rewrite_ldr_reg(uint32 *buf, uint32 inst, uintptr_t pc, sh_
    }
 }
 //------------------------------------------------------------------------------------------------------------
-size_t sh_a32_rewrite(uint32 *buf, uint32 inst, uintptr_t pc)
+size_t sh_a32_rewrite(uint32 *buf, uint32 inst, size_t pc)
 {
  sh_a32_type_t type = sh_a32_get_type(inst);
 // SH_LOG_INFO("a32 rewrite: type %d, inst %" PRIx32, type, inst);
@@ -386,14 +386,14 @@ size_t sh_a32_rewrite(uint32 *buf, uint32 inst, uintptr_t pc)
  return 4;
 }
 //------------------------------------------------------------------------------------------------------------
-size_t sh_a32_absolute_jump(uint32 *buf, uintptr_t addr)
+static size_t sh_a32_absolute_jump(uint32 *buf, size_t addr)
 {
  buf[0] = 0xE51FF004;  // LDR PC, [PC, #-4]
  buf[1] = addr;
  return 8;
 }
 //------------------------------------------------------------------------------------------------------------
-size_t sh_a32_relative_jump(uint32 *buf, uintptr_t addr, uintptr_t pc)
+static size_t sh_a32_relative_jump(uint32 *buf, size_t addr, size_t pc)
 {
  buf[0] = 0xEA000000 | (((addr - pc) & 0x03FFFFFFu) >> 2u);  // B <label>
  return 4;
@@ -409,8 +409,8 @@ struct STXX
 {
 //struct sh_txx_rewrite_info_t
 //{
-  uintptr_t start_addr;
-  uintptr_t end_addr;
+  size_t start_addr;
+  size_t end_addr;
   uint16 *buf;
   size_t buf_offset;
   size_t inst_lens[13];  // 26 / 2 = 13
@@ -418,18 +418,18 @@ struct STXX
 //};
 
 //------------------------------------------------------------------------------------------------------------
-bool sh_txx_is_addr_need_fix(uintptr_t addr)
+bool sh_txx_is_addr_need_fix(size_t addr)
 {
  return (this->start_addr <= addr && addr < this->end_addr);
 }
 //------------------------------------------------------------------------------------------------------------
-uintptr_t sh_txx_fix_addr(uintptr_t addr)
+size_t sh_txx_fix_addr(size_t addr)
 {
  bool is_thumb = SH_UTIL_IS_THUMB(addr);
  if (is_thumb) addr = SH_UTIL_CLEAR_BIT0(addr);
  if (this->start_addr <= addr && addr < this->end_addr)
   {
-   uintptr_t cursor_addr = this->start_addr;
+   size_t cursor_addr = this->start_addr;
    size_t offset = 0;
    for (size_t i = 0; i < this->inst_lens_cnt; i++)
     {
@@ -437,7 +437,7 @@ uintptr_t sh_txx_fix_addr(uintptr_t addr)
       cursor_addr += 2;
       offset += this->inst_lens[i];
     }
-   uintptr_t fixed_addr = (uintptr_t)this->buf + offset;
+   size_t fixed_addr = (size_t)this->buf + offset;
    if (is_thumb) fixed_addr = SH_UTIL_SET_BIT0(fixed_addr);
 
 //   SH_LOG_INFO("txx rewrite: fix addr %" PRIxPTR " -> %" PRIxPTR, addr, fixed_addr);
@@ -458,7 +458,7 @@ struct sh_t16_it_t
   size_t insts_len;       // 2 - 16 (bytes)
   size_t insts_cnt;       // 1 - 4
   size_t insts_else_cnt;  // 0 - 3
-  uintptr_t pcs[4];
+  size_t pcs[4];
   uint8 firstcond;
   uint8 padding[3];
 };
@@ -512,7 +512,7 @@ static sh_t16_type_t sh_t16_get_type(uint16 inst)
   else return IGNORED;
 }
 //------------------------------------------------------------------------------------------------------------
-size_t sh_t16_rewrite_b(uint16 *buf, uint16 inst, uintptr_t pc, sh_t16_type_t type)
+size_t sh_t16_rewrite_b(uint16 *buf, uint16 inst, size_t pc, sh_t16_type_t type)
 {
  uint32 addr;
  if (type == B_T1)
@@ -550,7 +550,7 @@ size_t sh_t16_rewrite_b(uint16 *buf, uint16 inst, uintptr_t pc, sh_t16_type_t ty
  return idx * 2;       // 8 or 12
 }
 //------------------------------------------------------------------------------------------------------------
-static size_t sh_t16_rewrite_add(uint16 *buf, uint16 inst, uintptr_t pc)
+static size_t sh_t16_rewrite_add(uint16 *buf, uint16 inst, size_t pc)
 {
  // ADD<c> <Rdn>, PC
  uint16 dn  = SH_UTIL_GET_BIT_16(inst, 7);
@@ -569,7 +569,7 @@ static size_t sh_t16_rewrite_add(uint16 *buf, uint16 inst, uintptr_t pc)
  return 16;
 }
 //------------------------------------------------------------------------------------------------------------
-static size_t sh_t16_rewrite_mov(uint16 *buf, uint16 inst, uintptr_t pc)
+static size_t sh_t16_rewrite_mov(uint16 *buf, uint16 inst, size_t pc)
 {
  // MOV<c> <Rd>, PC
  uint16 D  = SH_UTIL_GET_BIT_16(inst, 7);
@@ -585,7 +585,7 @@ static size_t sh_t16_rewrite_mov(uint16 *buf, uint16 inst, uintptr_t pc)
  return 12;
 }
 //------------------------------------------------------------------------------------------------------------
-size_t sh_t16_rewrite_adr(uint16 *buf, uint16 inst, uintptr_t pc)
+size_t sh_t16_rewrite_adr(uint16 *buf, uint16 inst, size_t pc)
 {
  // ADR<c> <Rd>, <label>
  uint16 rd   = SH_UTIL_GET_BITS_16(inst, 10, 8);  // r0 - r7
@@ -600,7 +600,7 @@ size_t sh_t16_rewrite_adr(uint16 *buf, uint16 inst, uintptr_t pc)
  return 8;
 }
 //------------------------------------------------------------------------------------------------------------
-size_t sh_t16_rewrite_ldr(uint16 *buf, uint16 inst, uintptr_t pc)
+size_t sh_t16_rewrite_ldr(uint16 *buf, uint16 inst, size_t pc)
 {
  // LDR<c> <Rt>, <label>
  uint16 rt   = SH_UTIL_GET_BITS_16(inst, 10, 8);  // r0 - r7
@@ -617,7 +617,7 @@ size_t sh_t16_rewrite_ldr(uint16 *buf, uint16 inst, uintptr_t pc)
  return 12;
 }
 //------------------------------------------------------------------------------------------------------------
-size_t sh_t16_rewrite_cb(uint16 *buf, uint16 inst, uintptr_t pc)
+size_t sh_t16_rewrite_cb(uint16 *buf, uint16 inst, size_t pc)
 {
  // CB{N}Z <Rn>, <label>
  uint16 i     = SH_UTIL_GET_BIT_16(inst, 9);
@@ -635,7 +635,7 @@ size_t sh_t16_rewrite_cb(uint16 *buf, uint16 inst, uintptr_t pc)
  return 12;
 }
 //------------------------------------------------------------------------------------------------------------
-size_t sh_t16_rewrite(uint16 *buf, uint16 inst, uintptr_t pc)
+size_t sh_t16_rewrite(uint16 *buf, uint16 inst, size_t pc)
 {
  sh_t16_type_t type = sh_t16_get_type(inst);
 // SH_LOG_INFO("t16 rewrite: type %d, inst %" PRIx16, type, inst);
@@ -660,13 +660,13 @@ static size_t sh_t16_get_it_insts_count(uint16 inst)
  return 1;
 }
 //------------------------------------------------------------------------------------------------------------
-static bool sh_t16_parse_it(sh_t16_it_t *it, uint16 inst, uintptr_t pc)
+static bool sh_t16_parse_it(sh_t16_it_t *it, uint16 inst, size_t pc)
 {
  if (IT_T1 != sh_t16_get_type(inst)) return false;
 // SH_LOG_INFO("t16 rewrite: type IT, inst %" PRIx16, inst);
 
  // address of the first inst in the IT block, skip the IT inst itself (2 bytes)
- uintptr_t target_addr = pc - 4 + 2;
+ size_t target_addr = pc - 4 + 2;
 
  it->firstcond = (uint8)(inst >> 4u);
  uint8 firstcond_0 = it->firstcond & 1u;
@@ -677,7 +677,7 @@ static bool sh_t16_parse_it(sh_t16_it_t *it, uint16 inst, uintptr_t pc)
  size_t insts_idx = 0, pcs_idx = 0;
  for (int parse_else = 1; parse_else >= 0; parse_else--)  // round 0: parse ELSE, round 1: THEN
   {
-   uintptr_t target_offset = 0;
+   size_t target_offset = 0;
    for (size_t i = 0; i < it->insts_cnt; i++)
     {
       bool is_thumb32 = sh_util_is_thumb32(target_addr + target_offset);
@@ -710,18 +710,17 @@ static void sh_t16_rewrite_it_then(uint16 *buf, uint16 imm12)
  buf[0] = 0xE000u | (uint16)(imm12 >> 1u);  // B <label>
  buf[1] = 0xBF00;                             // NOP
 }
-
 //------------------------------------------------------------------------------------------------------------
-void sh_inst_get_thumb_rewrite_info(uintptr_t target_addr)
+void sh_inst_get_thumb_rewrite_info(size_t target_addr, size_t enter_addr, uint32 backup_len)
 {
  memset(this, 0, sizeof(*this));
 
  size_t idx = 0;
- uintptr_t target_addr_offset = 0;
- uintptr_t pc = target_addr + 4;
+ size_t target_addr_offset = 0;
+ size_t pc = target_addr + 4;
  size_t rewrite_len = 0;
 
- while (rewrite_len < this->backup_len)
+ while (rewrite_len < backup_len)      //!!!!!!!!!!!!!!!!!!!!!
   {
    // IT block
    sh_t16_it_t it;
@@ -733,7 +732,7 @@ void sh_inst_get_thumb_rewrite_info(uintptr_t target_addr)
       size_t it_block_len = 4 + 4;  // IT-else + IT-then
       for (size_t i = 0, j = 0; i < it.insts_cnt; i++)
        {
-        bool is_thumb32 = sh_util_is_thumb32((uintptr_t)(&(it.insts[j])));
+        bool is_thumb32 = sh_util_is_thumb32((size_t)(&(it.insts[j])));
         if (is_thumb32)
          {
           it_block_len += sh_t32_get_rewrite_inst_len(it.insts[j], it.insts[j + 1]);
@@ -771,7 +770,7 @@ void sh_inst_get_thumb_rewrite_info(uintptr_t target_addr)
 
  this->start_addr    = target_addr;
  this->end_addr      = target_addr + rewrite_len;
- this->buf           = (uint16 *)this->enter_addr;
+ this->buf           = (uint16 *)enter_addr;    // !!!!!!!!!!!!!!!!!!
  this->buf_offset    = 0;
  this->inst_lens_cnt = idx;
 }
@@ -854,7 +853,7 @@ static sh_t32_type_t sh_t32_get_type(uint32 inst)
   else return IGNORED;
 }
 //------------------------------------------------------------------------------------------------------------
-size_t sh_t32_rewrite_b(uint16 *buf, uint16 high_inst, uint16 low_inst, uintptr_t pc, sh_t32_type_t type)
+size_t sh_t32_rewrite_b(uint16 *buf, uint16 high_inst, uint16 low_inst, size_t pc, sh_t32_type_t type)
 {
  uint32 j1 = SH_UTIL_GET_BIT_16(low_inst, 13);
  uint32 j2 = SH_UTIL_GET_BIT_16(low_inst, 11);
@@ -910,7 +909,7 @@ size_t sh_t32_rewrite_b(uint16 *buf, uint16 high_inst, uint16 low_inst, uintptr_
  return idx * 2;  // 8 or 12
 }
 //------------------------------------------------------------------------------------------------------------
-size_t sh_t32_rewrite_adr(uint16 *buf, uint16 high_inst, uint16 low_inst, uintptr_t pc, sh_t32_type_t type)
+size_t sh_t32_rewrite_adr(uint16 *buf, uint16 high_inst, uint16 low_inst, size_t pc, sh_t32_type_t type)
 {
  uint32 rt    = SH_UTIL_GET_BITS_16(low_inst, 11, 8);  // r0 - r14
  uint32 i     = SH_UTIL_GET_BIT_16(high_inst, 10);
@@ -929,7 +928,7 @@ size_t sh_t32_rewrite_adr(uint16 *buf, uint16 high_inst, uint16 low_inst, uintpt
  return 12;
 }
 //------------------------------------------------------------------------------------------------------------
-size_t sh_t32_rewrite_ldr(uint16 *buf, uint16 high_inst, uint16 low_inst, uintptr_t pc, sh_t32_type_t type)
+size_t sh_t32_rewrite_ldr(uint16 *buf, uint16 high_inst, uint16 low_inst, size_t pc, sh_t32_type_t type)
 {
  uint32 u   = SH_UTIL_GET_BIT_16(high_inst, 7);
  uint32 rt  = SH_UTIL_GET_BITS_16(low_inst, 15, 12);  // r0 - r15
@@ -1007,7 +1006,7 @@ size_t sh_t32_rewrite_ldr(uint16 *buf, uint16 high_inst, uint16 low_inst, uintpt
   }
 }
 //------------------------------------------------------------------------------------------------------------
-size_t sh_t32_rewrite_pl(uint16 *buf, uint16 high_inst, uint16 low_inst, uintptr_t pc, sh_t32_type_t type)
+size_t sh_t32_rewrite_pl(uint16 *buf, uint16 high_inst, uint16 low_inst, size_t pc, sh_t32_type_t type)
 {
  uint32 u     = SH_UTIL_GET_BIT_16(high_inst, 7);
  uint32 imm12 = SH_UTIL_GET_BITS_16(low_inst, 11, 0);
@@ -1035,11 +1034,11 @@ size_t sh_t32_rewrite_pl(uint16 *buf, uint16 high_inst, uint16 low_inst, uintptr
  return 20;
 }
 //------------------------------------------------------------------------------------------------------------
-size_t sh_t32_rewrite_tb(uint16 *buf, uint16 high_inst, uint16 low_inst, uintptr_t pc, sh_t32_type_t type)
+size_t sh_t32_rewrite_tb(uint16 *buf, uint16 high_inst, uint16 low_inst, size_t pc, sh_t32_type_t type)
 {
  // If TBB/TBH is not the last instruction that needs to be rewritten,
  // the rewriting can NOT be completed.
- uintptr_t target_addr = SH_UTIL_CLEAR_BIT0(pc - 4);
+ size_t target_addr = SH_UTIL_CLEAR_BIT0(pc - 4);
  if (target_addr + 4 != this->end_addr) return 0;  // rewrite failed
 
  uint32 rn = SH_UTIL_GET_BITS_16(high_inst, 3, 0);
@@ -1079,7 +1078,7 @@ size_t sh_t32_rewrite_tb(uint16 *buf, uint16 high_inst, uint16 low_inst, uintptr
  return 32;
 }
 //------------------------------------------------------------------------------------------------------------
-size_t sh_t32_rewrite_vldr(uint16 *buf, uint16 high_inst, uint16 low_inst, uintptr_t pc)
+size_t sh_t32_rewrite_vldr(uint16 *buf, uint16 high_inst, uint16 low_inst, size_t pc)
 {
  uint32 u     = SH_UTIL_GET_BIT_16(high_inst, 7);
  uint32 D     = SH_UTIL_GET_BIT_16(high_inst, 6);
@@ -1106,7 +1105,7 @@ size_t sh_t32_rewrite_vldr(uint16 *buf, uint16 high_inst, uint16 low_inst, uintp
  return 24;
 }
 //------------------------------------------------------------------------------------------------------------
-size_t sh_t32_rewrite(uint16 *buf, uint16 high_inst, uint16 low_inst, uintptr_t pc)
+size_t sh_t32_rewrite(uint16 *buf, uint16 high_inst, uint16 low_inst, size_t pc)
 {
  uint32 inst = (uint32)(high_inst << 16u) | low_inst;
  sh_t32_type_t type = sh_t32_get_type(inst);
@@ -1124,7 +1123,7 @@ size_t sh_t32_rewrite(uint16 *buf, uint16 high_inst, uint16 low_inst, uintptr_t 
  return 4;  // IGNORED
 }
 //------------------------------------------------------------------------------------------------------------
-size_t sh_t32_absolute_jump(uint16 *buf, bool is_align4, uintptr_t addr)
+size_t sh_t32_absolute_jump(uint16 *buf, bool is_align4, size_t addr)
 {
  size_t i = 0;
  if (!is_align4) buf[i++] = 0xBF00;  // NOP
@@ -1135,7 +1134,7 @@ size_t sh_t32_absolute_jump(uint16 *buf, bool is_align4, uintptr_t addr)
  return i * 2;
 }
 //------------------------------------------------------------------------------------------------------------
-size_t sh_t32_relative_jump(uint16 *buf, uintptr_t addr, uintptr_t pc)
+size_t sh_t32_relative_jump(uint16 *buf, size_t addr, size_t pc)
 {
  uint32 imm32 = addr - pc;
  uint32 s     = SH_UTIL_GET_BIT_32(imm32, 24);
@@ -1155,18 +1154,18 @@ size_t sh_t32_relative_jump(uint16 *buf, uintptr_t addr, uintptr_t pc)
 //============================================================================================================
 // Impl:
 //------------------------------------------------------------------------------------------------------------
-int sh_inst_hook_thumb_rewrite(uintptr_t target_addr, uintptr_t *orig_addr, size_t *rewrite_len)
+int sh_inst_hook_thumb_rewrite(size_t target_addr, size_t *orig_addr, size_t *rewrite_len)
 {
  // backup original instructions (length: 4 or 8 or 10)
  memcpy((void *)(this->backup), (void *)target_addr, this->backup_len);
 
  // package the information passed to rewrite
  STXX rinfo;
- rinfo.sh_inst_get_thumb_rewrite_info(target_addr);
+ rinfo.sh_inst_get_thumb_rewrite_info(target_addr, (size_t)this->enter_addr, this->backup_len);
 
  // backup and rewrite original instructions
- uintptr_t target_addr_offset = 0;
- uintptr_t pc = target_addr + 4;
+ size_t target_addr_offset = 0;
+ size_t pc = target_addr + 4;
  *rewrite_len = 0;
  while (*rewrite_len < this->backup_len)
   {
@@ -1177,14 +1176,14 @@ int sh_inst_hook_thumb_rewrite(uintptr_t target_addr, uintptr_t *orig_addr, size
      *rewrite_len += (2 + it.insts_len);
 
      // save space holder point of IT-else B instruction
-     uintptr_t enter_inst_else_p = this->enter_addr + rinfo.buf_offset;
+     size_t enter_inst_else_p = this->enter_addr + rinfo.buf_offset;
      rinfo.buf_offset += 2;  // B<c> <label>
      rinfo.buf_offset += 2;  // NOP
 
      // rewrite IT block
      size_t enter_inst_else_len = 4;  // B<c> + NOP + B + NOP
      size_t enter_inst_then_len = 0;  // B + NOP
-     uintptr_t enter_inst_then_p = 0;
+     size_t enter_inst_then_p = 0;
      for (size_t i = 0, j = 0; i < it.insts_cnt; i++)
       {
        if (i == it.insts_else_cnt)
@@ -1198,7 +1197,7 @@ int sh_inst_hook_thumb_rewrite(uintptr_t target_addr, uintptr_t *orig_addr, size
           sh_t16_rewrite_it_else((uint16 *)enter_inst_else_p, (uint16)enter_inst_else_len, &it);
         }
         // rewrite instructions in IT block
-        bool is_thumb32 = sh_util_is_thumb32((uintptr_t)(&(it.insts[j])));
+        bool is_thumb32 = sh_util_is_thumb32((size_t)(&(it.insts[j])));
         size_t len;
         if (is_thumb32)len = rinfo.sh_t32_rewrite((uint16 *)(this->enter_addr + rinfo.buf_offset), it.insts[j], it.insts[j + 1], it.pcs[i]);
           else len = rinfo.sh_t16_rewrite((uint16 *)(this->enter_addr + rinfo.buf_offset), it.insts[j], it.pcs[i]);
@@ -1243,14 +1242,14 @@ int sh_inst_hook_thumb_rewrite(uintptr_t target_addr, uintptr_t *orig_addr, size
 }
 //------------------------------------------------------------------------------------------------------------
 #ifdef SH_CONFIG_DETECT_THUMB_TAIL_ALIGNED
-static bool sh_inst_thumb_is_long_enough(uintptr_t target_addr, size_t overwrite_len)
+static bool sh_inst_thumb_is_long_enough(size_t target_addr, size_t overwrite_len)
 {
   uint dli_ssize = 999; // ???
   if (overwrite_len <= dli_ssize) return true;
 
   // check align-4 in the end of symbol
   if ((overwrite_len == dli_ssize + 2) && ((target_addr + dli_ssize) % 4 == 2)) {
-    uintptr_t sym_end = target_addr + dli_ssize;
+    size_t sym_end = target_addr + dli_ssize;
     if (0 != sh_util_mprotect(sym_end, 2, PROT_READ | PROT_WRITE | PROT_EXEC)) return false;
 
     // should be zero-ed
@@ -1288,11 +1287,11 @@ static bool sh_inst_thumb_is_long_enough(uintptr_t target_addr, size_t overwrite
 #define SH_INST_T32_B_RANGE_LOW  (16777216)
 #define SH_INST_T32_B_RANGE_HIGH (16777214)
 
-static int sh_inst_hook_thumb_with_exit(uintptr_t target_addr, uintptr_t new_addr, uintptr_t *orig_addr, uintptr_t *orig_addr2)
+static int sh_inst_hook_thumb_with_exit(size_t target_addr, size_t new_addr, size_t *orig_addr, size_t *orig_addr2)
 {
   int r;
   target_addr = SH_UTIL_CLEAR_BIT0(target_addr);
-  uintptr_t pc = target_addr + 4;
+  size_t pc = target_addr + 4;
   this->backup_len = 4;
   uint dli_ssize = 999; // ???
 #ifdef SH_CONFIG_DETECT_THUMB_TAIL_ALIGNED
@@ -1332,13 +1331,13 @@ static int sh_inst_hook_thumb_with_exit(uintptr_t target_addr, uintptr_t new_add
   return 0;
 
 err:
-  sh_exit_free(this->exit_addr, this->exit_type, (uint8_t *)(this->exit), sizeof(this->exit));
+//  sh_exit_free(this->exit_addr, this->exit_type, (uint8_t *)(this->exit), sizeof(this->exit));    // TODO!
   this->exit_addr = 0;  // this is a flag for with-exit or without-exit
   return r;
 }
 #endif
 //------------------------------------------------------------------------------------------------------------
-int sh_inst_hook_thumb_without_exit(uintptr_t target_addr, uintptr_t new_addr, uintptr_t *orig_addr, uintptr_t *orig_addr2)
+int sh_inst_hook_thumb_without_exit(size_t target_addr, size_t new_addr, size_t *orig_addr, size_t *orig_addr2)
 {
   int r;
   target_addr = SH_UTIL_CLEAR_BIT0(target_addr);
@@ -1369,7 +1368,7 @@ int sh_inst_hook_thumb_without_exit(uintptr_t target_addr, uintptr_t new_addr, u
   return 0;
 }
 //------------------------------------------------------------------------------------------------------------
-int sh_inst_hook_arm_rewrite(uintptr_t target_addr)
+int sh_inst_hook_arm_rewrite(size_t target_addr)
 {
  // backup original instructions (length: 4 or 8)
  memcpy((void *)(this->backup), (void *)target_addr, this->backup_len);
@@ -1381,11 +1380,11 @@ int sh_inst_hook_arm_rewrite(uintptr_t target_addr)
  rinfo.rewrite_buf           = (uint32 *)this->enter_addr;
  rinfo.rewrite_buf_offset    = 0;
  rinfo.rewrite_inst_lens_cnt = this->backup_len / 4;
- for (uintptr_t i = 0; i < this->backup_len; i += 4)rinfo.rewrite_inst_lens[i / 4] = STXX::sh_a32_get_rewrite_inst_len(*((uint32 *)(target_addr + i)));
+ for (size_t i = 0; i < this->backup_len; i += 4)rinfo.rewrite_inst_lens[i / 4] = STXX::sh_a32_get_rewrite_inst_len(*((uint32 *)(target_addr + i)));
 
  // rewrite original instructions (fill in enter)
- uintptr_t pc = target_addr + 8;
- for (uintptr_t i = 0; i < this->backup_len; i += 4, pc += 4)
+ size_t pc = target_addr + 8;
+ for (size_t i = 0; i < this->backup_len; i += 4, pc += 4)
   {
     size_t offset = rinfo.sh_a32_rewrite((uint32 *)(this->enter_addr + rinfo.rewrite_buf_offset), *((uint32 *)(target_addr + i)), pc);
     if (0 == offset) return -1;
@@ -1393,7 +1392,7 @@ int sh_inst_hook_arm_rewrite(uintptr_t target_addr)
   }
 
  // absolute jump back to remaining original instructions (fill in enter)
- rinfo.rewrite_buf_offset += sh_a32_absolute_jump((uint32 *)(this->enter_addr + rinfo.rewrite_buf_offset), target_addr + this->backup_len);
+ rinfo.rewrite_buf_offset += SA32RW::sh_a32_absolute_jump((uint32 *)(this->enter_addr + rinfo.rewrite_buf_offset), target_addr + this->backup_len);
  sh_util_clear_cache(this->enter_addr, rinfo.rewrite_buf_offset);
  return 0;
 }
@@ -1404,10 +1403,10 @@ int sh_inst_hook_arm_rewrite(uintptr_t target_addr)
 #define SH_INST_A32_B_RANGE_LOW  (33554432)
 #define SH_INST_A32_B_RANGE_HIGH (33554428)
 
-static int sh_inst_hook_arm_with_exit(sh_inst_t *self, uintptr_t target_addr, uintptr_t new_addr, uintptr_t *orig_addr, uintptr_t *orig_addr2)
+static int sh_inst_hook_arm_with_exit(sh_inst_t *self, size_t target_addr, size_t new_addr, size_t *orig_addr, size_t *orig_addr2)
 {
   int r;
-  uintptr_t pc = target_addr + 8;
+  size_t pc = target_addr + 8;
   this->backup_len = 4;
    uint dli_ssize = 999; // ???
   if (dli_ssize < this->backup_len) return SHADOWHOOK_ERRNO_HOOK_SYMSZ;
@@ -1440,28 +1439,28 @@ static int sh_inst_hook_arm_with_exit(sh_inst_t *self, uintptr_t target_addr, ui
   return 0;
 
 err:
-  sh_exit_free(this->exit_addr, this->exit_type, (uint8_t *)(this->exit), sizeof(this->exit));
+ // sh_exit_free(this->exit_addr, this->exit_type, (uint8_t *)(this->exit), sizeof(this->exit));  // TODO
   this->exit_addr = 0;  // this is a flag for with-exit or without-exit
   return r;
 }
 
 #endif
 //------------------------------------------------------------------------------------------------------------
-int sh_inst_hook_arm_without_exit(uintptr_t target_addr, uintptr_t new_addr, uintptr_t *orig_addr, uintptr_t *orig_addr2)
+int sh_inst_hook_arm_without_exit(size_t target_addr, size_t new_addr, size_t *orig_addr, size_t *orig_addr2)
 {
   int r;
   this->backup_len = 8;
   uint dli_ssize = 999; // ???
   if (dli_ssize < this->backup_len) return -1;
 
-  // rewrite
-  if (0 != sh_util_mprotect(target_addr, this->backup_len, PX::PROT_READ | PX::PROT_WRITE | PX::PROT_EXEC))return -2;
+  // rewrite           
+  if (0 != NPTM::MemProtect((vptr)target_addr, this->backup_len, PX::PROT_READ | PX::PROT_WRITE | PX::PROT_EXEC))return -2;
   r = this->sh_inst_hook_arm_rewrite(target_addr, orig_addr, orig_addr2);
 
   if (0 != r) return r;
 
   // absolute jump to new function address by overwriting the head of original function
-  sh_a32_absolute_jump(this->trampo, new_addr);
+  SA32RW::sh_a32_absolute_jump(this->trampo, new_addr);
   __atomic_thread_fence(__ATOMIC_SEQ_CST);
   if (0 != (r = sh_util_write_inst(target_addr, this->trampo, this->backup_len))) return r;
 
@@ -1471,7 +1470,7 @@ int sh_inst_hook_arm_without_exit(uintptr_t target_addr, uintptr_t new_addr, uin
 //------------------------------------------------------------------------------------------------------------
 public:
 
-int sh_inst_hook(uintptr_t target_addr, uintptr_t new_addr, uintptr_t *orig_addr, uintptr_t *orig_addr2)
+int sh_inst_hook(size_t target_addr, size_t new_addr, size_t *orig_addr, size_t *orig_addr2)
 {
 //  this->enter_addr = sh_enter_alloc();
   if (0 == this->enter_addr) return -1;
@@ -1495,33 +1494,40 @@ int sh_inst_hook(uintptr_t target_addr, uintptr_t new_addr, uintptr_t *orig_addr
   }
 
   // hook failed
-  sh_enter_free(this->enter_addr);
+//  sh_enter_free(this->enter_addr);    // TODO!!!!!
   return r;
 }
 //------------------------------------------------------------------------------------------------------------
-int sh_inst_unhook(uintptr_t target_addr)
+int sh_inst_unhook(vptr target_addr)
 {
   int r;
-  bool is_thumb = SH_UTIL_IS_THUMB(target_addr);
+  bool is_thumb = SH_UTIL_IS_THUMB((size_t)target_addr);
 
-  if (is_thumb) target_addr = SH_UTIL_CLEAR_BIT0(target_addr);
+  if (is_thumb) target_addr = (vptr)SH_UTIL_CLEAR_BIT0((size_t)target_addr);
 
   // restore the instructions at the target address
-    r = memcmp((void *)target_addr, this->trampo, this->backup_len);
+    r = memcmp(target_addr, this->trampo, this->backup_len);
   if (0 != r) return -1;
-  if (0 != (r = sh_util_write_inst(target_addr, this->backup, this->backup_len))) return r;
+  if (0 != (r = sh_util_write_inst((size_t)target_addr, this->backup, this->backup_len))) return r;
   __atomic_thread_fence(__ATOMIC_SEQ_CST);
 
   // free memory space for exit
-  if (0 != this->exit_addr)
-    if (0 != (r = sh_exit_free(this->exit_addr, this->exit_type, (uint8 *)(this->exit), sizeof(this->exit))))
-      return r;
+ // if (0 != this->exit_addr)
+ //   if (0 != (r = sh_exit_free(this->exit_addr, this->exit_type, (uint8 *)(this->exit), sizeof(this->exit))))      // TODO!!!!
+ //     return r;
 
   // free memory space for enter
- // sh_enter_free(this->enter_addr);
+ // sh_enter_free(this->enter_addr);    // TODO!!!!!
 
 //  SH_LOG_INFO("%s: unhook OK. target %" PRIxPTR, is_thumb ? "thumb" : "a32", target_addr);
   return 0;
+}
+//------------------------------------------------------------------------------------------------------------
+bool IsActiveAt(vptr target_addr)
+{
+ if(SH_UTIL_IS_THUMB((size_t)target_addr))target_addr = (vptr)SH_UTIL_CLEAR_BIT0((size_t)target_addr);
+ int r = memcmp(target_addr, this->trampo, this->backup_len);
+ return 0 == r;
 }
 //------------------------------------------------------------------------------------------------------------
 //struct sh_inst_t
@@ -1530,9 +1536,9 @@ int sh_inst_unhook(uintptr_t target_addr)
   uint8_t   backup[16];   // align 16
   uint16  backup_len;   // == 4 or 8 or 10
   uint16  exit_type;
-  uintptr_t exit_addr;
+  size_t exit_addr;
   uint32  exit[2];
-  uintptr_t enter_addr; */
+  size_t enter_addr; */
 
   uint32  exit[4];     // Far stub, actually  // Stored here to check if it is hooked?
   uint32  trampo[4];   // align 16 // length == backup_len    // Used on unhook to check that we still own this hook

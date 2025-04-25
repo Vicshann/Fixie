@@ -154,9 +154,8 @@ namespace NCRYPT     // https://github.com/abbbaf/Compile-time-hash-functions
 //---
 #ifdef FWK_CFG_USE_RCE
 #include "RCE/HDE.hpp"
+#include "RCE/UniHook/UniHook.hpp"     // TODO: X86!!!
 //#include "RCE/DeCore/DeCore.hpp"
-
-//#include "RCE/UniHook/UniHook.hpp"     // TODO: X86!!!
 #endif
 
 #ifdef FWK_CFG_USE_MISC

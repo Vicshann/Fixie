@@ -47,7 +47,7 @@ static sint GetCLArg(sint& AOffs, achar* DstBuf=nullptr, uint DstCCnt=uint(-1)) 
  if(!*CmdLine){AOffs=-1; return 0;}   // No more args
  if(*CmdLine == SFchB)CmdLine++;  // Skip opening quote
    else SFchE = 0x20;             // No quotes, scan until a first separator
- if(!DstBuf)return (sint)SizeOfWStrAsUtf8(CmdLine, uint(-1), SFchE) + 4;       // Calculate buffer size for current argument    // +Space for a terminating 0
+ if(!DstBuf)return (sint)WStrSizeAsUtf8(CmdLine, uint(-1), SFchE) + 4;       // Calculate buffer size for current argument    // +Space for a terminating 0
 
  uint SrcLen = uint(-1);          // TODO: Replace with MaxUint or MAX_UINT
  WStrToUtf8(DstBuf, CmdLine, DstCCnt, SrcLen, SFchE);

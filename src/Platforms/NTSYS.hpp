@@ -127,6 +127,7 @@ enum EFileFlg     // winnt.h
  FILE_SHARE_READ                       =  0x00000001,
  FILE_SHARE_WRITE                      =  0x00000002,
  FILE_SHARE_DELETE                     =  0x00000004,
+ FILE_SHARE_VALID_FLAGS                =  0x00000007,
 
 // File attribute values
  FILE_ATTRIBUTE_READONLY               =  0x00000001,
@@ -262,7 +263,7 @@ enum EFileFlg     // winnt.h
  FILE_WRITE_EA                         =  0x00000010,    // file & directory
 
  FILE_EXECUTE                          =  0x00000020,    // file       // Data can be read into memory from the file using system paging I/O.   // For NtCreateSection of executables
- FILE_TRAVERSE                         =  0x00000020,    // directory  // The directory can be traversed: that is, it can be part of the pathname of a file.
+ FILE_TRAVERSE                         =  0x00000020,    // directory  // The directory can be traversed: that is, it can be part of the pathname of a file.   // For a directory, the right to traverse the directory.
 
  FILE_DELETE_CHILD                     =  0x00000040,    // directory
 
@@ -352,7 +353,11 @@ enum EOFlags
  OBJ_FORCE_ACCESS_CHECK            = 0x00000400,   // The routine opening the handle should enforce all access checks for the object, even if the handle is being opened in kernel mode.
  OBJ_IGNORE_IMPERSONATED_DEVICEMAP = 0x00000800,   // Separate device maps exists for each user in the system, and users can manage their own device maps. Typically during impersonation, the impersonated user's device map would be used.
  OBJ_DONT_REPARSE                  = 0x00001000,   // If this flag is set, no reparse points will be followed when parsing the name of the associated object. If any reparses are encountered the attempt will fail and return an STATUS_REPARSE_POINT_ENCOUNTERED result.
- OBJ_VALID_ATTRIBUTES              = 0x00001FF2    // Reserved
+ OBJ_VALID_ATTRIBUTES              = 0x00001FF2,   // Reserved
+
+ OBJ_PATH_GLOBAL_NS                = 0x01000000,   // FRAMEWORK: Prefix the object path with '\\GLOBAL??\\'
+ OBJ_PATH_PARSE_DOTS               = 0x02000000,   // FRAMEWORK: Process '.' and '..' as POSIX defines
+ OBJ_EXTRA_MASK                    = 0xFFF00000    // FFF only, Reserving for some extra too
 };
 
 //Source: http://processhacker.sourceforge.net
@@ -403,7 +408,7 @@ enum FILE_INFORMATION_CLASS
  FileIoPriorityHintInformation,           // FILE_IO_PRIORITY_HINT_INFORMATION
  FileSfioReserveInformation,              // FILE_SFIO_RESERVE_INFORMATION
  FileSfioVolumeInformation,               // FILE_SFIO_VOLUME_INFORMATION
- FileHardLinkInformation,                 // FILE_LINKS_INFORMATION
+ FileHardLinkInformation,                 // FILE_LINKS_INFORMATION            // since VISTA
  FileProcessIdsUsingFileInformation,      // FILE_PROCESS_IDS_USING_FILE_INFORMATION
  FileNormalizedNameInformation,           // FILE_NAME_INFORMATION
  FileNetworkPhysicalNameInformation,      // FILE_NETWORK_PHYSICAL_NAME_INFORMATION
@@ -422,10 +427,18 @@ enum FILE_INFORMATION_CLASS
  FileHardLinkFullIdInformation,           // FILE_LINK_ENTRY_FULL_ID_INFORMATION
  FileIdExtdBothDirectoryInformation,      // FILE_ID_EXTD_BOTH_DIR_INFORMATION // since THRESHOLD
  FileDispositionInformationEx,            // FILE_DISPOSITION_INFO_EX // since REDSTONE
- FileRenameInformationEx,
+ FileRenameInformationEx,                 // FILE_RENAME_INFORMATION_EX
  FileRenameInformationExBypassAccessCheck,
  FileDesiredStorageClassInformation,      // FILE_DESIRED_STORAGE_CLASS_INFORMATION // since REDSTONE2
  FileStatInformation,                     // FILE_STAT_INFORMATION
+
+ FileMemoryPartitionInformation,          // 69
+ FileStatLxInformation,                   // 70
+ FileCaseSensitiveInformation,            // 71
+ FileLinkInformationEx,                   // 72
+ FileLinkInformationExBypassAccessCheck,  // 73
+ FileStorageReserveIdInformation,         // 74
+
  FileMaximumInformation
 };
 using PFILE_INFORMATION_CLASS = MPTR<FILE_INFORMATION_CLASS, PHT>;
@@ -651,7 +664,7 @@ enum MEMORY_INFORMATION_CLASS
  MemoryWorkingSetExInformation,    // MEMORY_WORKING_SET_EX_INFORMATION
  MemorySharedCommitInformation,    // MEMORY_SHARED_COMMIT_INFORMATION
  MemoryImageInformation,           // MEMORY_IMAGE_INFORMATION
- MemoryRegionInformationEx,
+ MemoryRegionInformationEx,        
  MemoryPrivilegedBasicInformation,
  MemoryEnclaveImageInformation,    // MEMORY_ENCLAVE_IMAGE_INFORMATION // since REDSTONE3
  MemoryBasicInformationCapped,     // 10
@@ -1082,9 +1095,78 @@ struct FILE_ATTRIBUTE_TAG_INFORMATION
  ULONG ReparseTag;
 };
 
-struct FILE_DISPOSITION_INFORMATION
+struct FILE_DISPOSITION_INFORMATION    
 {
- BOOLEAN DeleteFile;
+ union {
+ ULONG   Flags;        // ULONG Flags;        // For FileDispositionInformationEx     // Since WIN10_RS1 ( Windows 10 release 1709 )
+ BOOLEAN DeleteFile;   // BOOLEAN DeleteFile; // For FileDispositionInformation
+ };
+};
+
+struct FILE_RENAME_INFORMATION 
+{
+ union {
+ ULONG   Flags;             // ULONG Flags;        // For FileRenameInformationEx     // Since WIN10_RS1 ( Windows 10 release 1709 )
+ BOOLEAN ReplaceIfExists;   // BOOLEAN DeleteFile; // For FileRenameInformation
+ };
+ HANDLE  RootDirectory;
+ ULONG   FileNameLength;
+ WCHAR   FileName[1];
+};
+
+// https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/ntifs/ns-ntifs-_file_link_information
+struct FILE_LINK_INFORMATION    // The FILE_LINK_INFORMATION structure is used to create an NTFS hard link to an existing file.
+{
+ union {
+ ULONG   Flags;             // ULONG Flags;        // For FileLinkInformationEx     // Available starting with Windows 10, version 1809.
+ BOOLEAN ReplaceIfExists;   // BOOLEAN DeleteFile; // For FileLinkInformation
+ };
+ HANDLE  RootDirectory;
+ ULONG   FileNameLength;    // in bytes 
+ WCHAR   FileName[1];
+};
+
+struct FILE_STANDARD_LINK_INFORMATION 
+{
+ ULONG   NumberOfAccessibleLinks;
+ ULONG   TotalNumberOfLinks;
+ BOOLEAN DeletePending;
+ BOOLEAN Directory;
+};
+
+struct FILE_LINK_ENTRY_INFORMATION    // Windows Vista
+{
+ ULONG    NextEntryOffset;
+ LONGLONG ParentFileId;
+ ULONG    FileNameLength;          // in characters
+ WCHAR    FileName[1];
+};
+
+struct FILE_LINKS_INFORMATION        // Windows Vista
+{
+ ULONG BytesNeeded;
+ ULONG EntriesReturned;
+ FILE_LINK_ENTRY_INFORMATION Entry;
+};
+
+struct FILE_ID_128 
+{
+ BYTE Identifier[16];
+};
+
+struct FILE_LINK_ENTRY_FULL_ID_INFORMATION 
+{
+ ULONG NextEntryOffset;
+ FILE_ID_128 ParentFileId;
+ ULONG FileNameLength;
+ WCHAR FileName[1];
+};
+
+struct FILE_LINKS_FULL_ID_INFORMATION 
+{
+ ULONG BytesNeeded;
+ ULONG EntriesReturned;
+ FILE_LINK_ENTRY_FULL_ID_INFORMATION Entry;
 };
 
 struct FILE_END_OF_FILE_INFORMATION
@@ -1096,6 +1178,71 @@ struct FILE_VALID_DATA_LENGTH_INFORMATION
 {
  LARGE_INTEGER ValidDataLength;
 };
+
+enum FILE_ID_TYPE 
+{
+ FileIdType,
+ ObjectIdType,
+ ExtendedFileIdType,
+ MaximumFileIdType
+};
+
+struct FILE_ID_DESCRIPTOR 
+{
+ DWORD        dwSize;
+ FILE_ID_TYPE Type;
+ union {
+   LARGE_INTEGER FileId;
+   GUID          ObjectId;
+   FILE_ID_128   ExtendedFileId;
+ };
+};
+
+struct FILE_ID_INFORMATION 
+{
+ ULONGLONG   VolumeSerialNumber;
+ FILE_ID_128 FileId;
+};
+
+enum EFileInfFlgDisp
+{
+ FILE_DISPOSITION_DO_NOT_DELETE             = 0x00000000,  // Specifies the system should not delete a file.
+ FILE_DISPOSITION_DELETE                    = 0x00000001,  // Specifies the system should delete a file.
+ FILE_DISPOSITION_POSIX_SEMANTICS           = 0x00000002,  // Specifies the system should perform a POSIX - style delete.
+ FILE_DISPOSITION_FORCE_IMAGE_SECTION_CHECK = 0x00000004,  // Specifies the system should force an image section check.
+ FILE_DISPOSITION_ON_CLOSE                  = 0x00000008,  // Specifies if the system sets or clears the on - close state.
+ FILE_DISPOSITION_IGNORE_READONLY_ATTRIBUTE = 0x00000010,  // Allows read-only files to be deleted. For more information, see the Remarks section below.
+};
+
+enum EFileInfFlgRename
+{
+ FILE_RENAME_REPLACE_IF_EXISTS                    = 0x00000001,  // If a file with the given name already exists, it should be replaced with the given file. Equivalent to the ReplaceIfExists field used with the FileRenameInformation information class.
+ FILE_RENAME_POSIX_SEMANTICS                      = 0x00000002,  // If FILE_RENAME_REPLACE_IF_EXISTS is also specified, allow replacing a file even if there are existing handles to it. Existing handles to the replaced file continue to be valid for operations such as read and write. Any subsequent opens of the target name will open the renamed file, not the replaced file.
+ FILE_RENAME_SUPPRESS_PIN_STATE_INHERITANCE       = 0x00000004,  // When renaming a file to a new directory, suppress any inheritance rules related to the FILE_ATTRIBUTE_PINNED and FILE_ATTRIBUTE_UNPINNED attributes of the file.
+ FILE_RENAME_SUPPRESS_STORAGE_RESERVE_INHERITANCE = 0x00000008,  // When renaming a file to a new directory, suppress any inheritance rules related to the storage reserve ID property of the file.
+ FILE_RENAME_NO_INCREASE_AVAILABLE_SPACE          = 0x00000010,  // If FILE_RENAME_SUPPRESS_STORAGE_RESERVE_INHERITANCE is not also specified, when renaming a file to a new directory, automatically resize affected storage reserve areas as needed to prevent the user visible free space on the volume from increasing. Requires manage volume access.
+ FILE_RENAME_NO_DECREASE_AVAILABLE_SPACE          = 0x00000020,  // If FILE_RENAME_SUPPRESS_STORAGE_RESERVE_INHERITANCE is not also specified, when renaming a file to a new directory, automatically resize affected storage reserve areas as needed to prevent the user visible free space on the volume from decreasing. Requires manage volume access.
+ FILE_RENAME_PRESERVE_AVAILABLE_SPACE             = 0x00000030,  // Equivalent to specifying both FILE_RENAME_NO_INCREASE_AVAILABLE_SPACE and FILE_RENAME_NO_DECREASE_AVAILABLE_SPACE.
+ FILE_RENAME_IGNORE_READONLY_ATTRIBUTE            = 0x00000040,  // If FILE_RENAME_REPLACE_IF_EXISTS is also specified, allow replacing a file even if it is read-only. Requires WRITE_ATTRIBUTES access to the replaced file.
+ FILE_RENAME_FORCE_RESIZE_TARGET_SR               = 0x00000080,  // If FILE_RENAME_SUPPRESS_STORAGE_RESERVE_INHERITANCE is not also specified, when renaming a file to a new directory that is part of a different storage reserve area, always grow the target directory's storage reserve area by the full size of the file being renamed. Requires manage volume access.
+ FILE_RENAME_FORCE_RESIZE_SOURCE_SR               = 0x00000100,  // If FILE_RENAME_SUPPRESS_STORAGE_RESERVE_INHERITANCE is not also specified, when renaming a file to a new directory that is part of a different storage reserve area, always shrink the source directory's storage reserve area by the full size of the file being renamed. Requires manage volume access.
+ FILE_RENAME_FORCE_RESIZE_SR                      = 0x00000180,  // Equivalent to specifying both FILE_RENAME_FORCE_RESIZE_TARGET_SR and FILE_RENAME_FORCE_RESIZE_SOURCE_SR.
+};
+
+enum EFileInfFlgLink
+{
+ FILE_LINK_REPLACE_IF_EXISTS                    = 0x00000001,  // If a file with the given name already exists, it should be replaced with the new link. Equivalent to the ReplaceIfExists field used with the FileLinkInformation information class.
+ FILE_LINK_POSIX_SEMANTICS                      = 0x00000002,  // If FILE_LINK_REPLACE_IF_EXISTS is also specified, allow replacing a file even if there are existing handles to it. Existing handles to the replaced file continue to be valid for operations such as read and write. Any subsequent opens of the target name will open the new link, not the replaced file.
+ FILE_LINK_SUPPRESS_STORAGE_RESERVE_INHERITANCE = 0x00000008,  // When creating a link in a new directory, suppress any inheritance rules related to the storage reserve ID property of the file.
+ FILE_LINK_NO_INCREASE_AVAILABLE_SPACE          = 0x00000010,  // If FILE_LINK_SUPPRESS_STORAGE_RESERVE_INHERITANCE is not also specified, when creating a link in a new directory, automatically resize affected storage reserve areas as needed to prevent the user visible free space on the volume from increasing. Requires manage volume access.
+ FILE_LINK_NO_DECREASE_AVAILABLE_SPACE          = 0x00000020,  // If FILE_LINK_SUPPRESS_STORAGE_RESERVE_INHERITANCE is not also specified, when creating a link in a new directory, automatically resize affected storage reserve areas as needed to prevent the user visible free space on the volume from decreasing. Requires manage volume access.
+ FILE_LINK_PRESERVE_AVAILABLE_SPACE             = 0x00000030,  // Equivalent to specifying both FILE_LINK_NO_INCREASE_AVAILABLE_SPACE and FILE_LINK_NO_DECREASE_AVAILABLE_SPACE.
+ FILE_LINK_IGNORE_READONLY_ATTRIBUTE            = 0x00000040,  // If FILE_LINK_REPLACE_IF_EXISTS is also specified, allow replacing a file even if it is read-only. Requires WRITE_ATTRIBUTES access to the replaced file.
+ FILE_LINK_FORCE_RESIZE_TARGET_SR               = 0x00000080,  // If FILE_LINK_SUPPRESS_STORAGE_RESERVE_INHERITANCE is not also specified, when creating a link in a new directory that is part of a different storage reserve area, always grow the target directory's storage reserve area by the full size of the file being linked. Requires manage volume access.
+ FILE_LINK_FORCE_RESIZE_SOURCE_SR               = 0x00000100,  // If FILE_LINK_SUPPRESS_STORAGE_RESERVE_INHERITANCE is not also specified, when creating a link in a new directory that is part of a different storage reserve area, always shrink the source directory's storage reserve area by the full size of the file being linked. Requires manage volume access.
+ FILE_LINK_FORCE_RESIZE_SR                      = 0x00000180,  // Equivalent to specifying both FILE_LINK_FORCE_RESIZE_TARGET_SR and FILE_LINK_FORCE_RESIZE_SOURCE_SR.
+};
+
 
 /*
 #define FILE_BYTE_ALIGNMENT 0x00000000
@@ -1128,6 +1275,12 @@ union FILE_SEGMENT_ELEMENT              // Define segment buffer structure for s
 };
 using PFILE_SEGMENT_ELEMENT = MPTR<FILE_SEGMENT_ELEMENT, PHT>;
 
+enum EObjSymLnkAccess
+{
+ SYMBOLIC_LINK_QUERY      = 0x0001,
+ SYMBOLIC_LINK_ALL_ACCESS = (STANDARD_RIGHTS_REQUIRED | SYMBOLIC_LINK_QUERY)
+};
+
 
 static NTSTATUS _scall NtCreateFile(PHANDLE FileHandle, ACCESS_MASK DesiredAccess, POBJECT_ATTRIBUTES ObjectAttributes, PIO_STATUS_BLOCK IoStatusBlock, PLARGE_INTEGER AllocationSize, ULONG FileAttributes, ULONG ShareAccess, ULONG CreateDisposition, ULONG CreateOptions, PVOID EaBuffer, ULONG EaLength);
 
@@ -1144,6 +1297,8 @@ static NTSTATUS _scall NtWriteFileGather(HANDLE FileHandle, HANDLE Event, PIO_AP
 static NTSTATUS _scall NtFlushBuffersFile(HANDLE FileHandle, PIO_STATUS_BLOCK IoStatusBlock);
 
 static NTSTATUS _scall NtClose(HANDLE Handle);
+
+static NTSTATUS _scall NtQueryObject(HANDLE Handle, OBJECT_INFORMATION_CLASS ObjectInformationClass, PVOID ObjectInformation, ULONG ObjectInformationLength, PULONG ReturnLength);
 
 static NTSTATUS _scall NtQueryAttributesFile(POBJECT_ATTRIBUTES ObjectAttributes, PFILE_BASIC_INFORMATION FileInformation);
 
@@ -1187,6 +1342,92 @@ static NTSTATUS _scall NtDeviceIoControlFile(HANDLE FileHandle, HANDLE Event, PI
 static NTSTATUS _scall NtMakeTemporaryObject(HANDLE Handle);
 static NTSTATUS _scall NtMakePermanentObject(HANDLE Handle);
 
+
+//------------------------------------------------------------------------------------------------------------
+enum FS_INFORMATION_CLASS 
+{
+  FileFsVolumeInformation = 1,     // FILE_FS_VOLUME_INFORMATION 
+  FileFsLabelInformation,          // FILE_FS_LABEL_INFORMATION
+  FileFsSizeInformation,           // FILE_FS_SIZE_INFORMATION
+  FileFsDeviceInformation,         // FILE_FS_DEVICE_INFORMATION
+  FileFsAttributeInformation,      // FILE_FS_ATTRIBUTE_INFORMATION
+  FileFsControlInformation,        // FILE_FS_CONTROL_INFORMATION
+  FileFsFullSizeInformation,       // FILE_FS_FULL_SIZE_INFORMATION 
+  FileFsObjectIdInformation,       // FILE_FS_OBJECTID_INFORMATION
+  FileFsDriverPathInformation,     // FILE_FS_DRIVER_PATH_INFORMATION 
+  FileFsVolumeFlagsInformation,    // FILE_FS_VOLUME_FLAGS_INFORMATION
+  FileFsSectorSizeInformation,     // FILE_FS_SECTOR_SIZE_INFORMATION
+  FileFsDataCopyInformation,       // FILE_FS_DATA_COPY_INFORMATION
+  FileFsMetadataSizeInformation,   // FILE_FS_METADATA_SIZE_INFORMATION
+  FileFsFullSizeInformationEx,     // FILE_FS_FULL_SIZE_INFORMATION_EX
+  FileFsGuidInformation,           // FILE_FS_GUID_INFORMATION
+  FileFsMaximumInformation         // End of this enumeration
+};
+
+struct FILE_FS_LABEL_INFORMATION 
+{
+ ULONG VolumeLabelLength;
+ WCHAR VolumeLabel[1];
+};
+using PFILE_FS_LABEL_INFORMATION = MPTR<FILE_FS_LABEL_INFORMATION, PHT>;
+
+struct FILE_FS_VOLUME_INFORMATION 
+{
+ LARGE_INTEGER VolumeCreationTime;
+ ULONG VolumeSerialNumber;
+ ULONG VolumeLabelLength;
+ BOOLEAN SupportsObjects;
+ WCHAR VolumeLabel[1];
+};
+using PFILE_FS_VOLUME_INFORMATION = MPTR<FILE_FS_VOLUME_INFORMATION, PHT>;
+
+struct FILE_FS_SIZE_INFORMATION 
+{
+ LARGE_INTEGER TotalAllocationUnits;
+ LARGE_INTEGER AvailableAllocationUnits;
+ ULONG SectorsPerAllocationUnit;
+ ULONG BytesPerSector;
+};
+using PFILE_FS_SIZE_INFORMATION = MPTR<FILE_FS_SIZE_INFORMATION, PHT>;
+
+struct FILE_FS_FULL_SIZE_INFORMATION 
+{
+ LARGE_INTEGER TotalAllocationUnits;
+ LARGE_INTEGER CallerAvailableAllocationUnits;
+ LARGE_INTEGER ActualAvailableAllocationUnits;
+ ULONG SectorsPerAllocationUnit;
+ ULONG BytesPerSector;
+};
+using PFILE_FS_FULL_SIZE_INFORMATION = MPTR<FILE_FS_FULL_SIZE_INFORMATION, PHT>;
+
+struct FILE_FS_OBJECTID_INFORMATION 
+{
+ UCHAR ObjectId[16];
+ UCHAR ExtendedInfo[48];
+};
+using PFILE_FS_OBJECTID_INFORMATION = MPTR<FILE_FS_OBJECTID_INFORMATION, PHT>;
+
+static NTSTATUS _scall NtQueryVolumeInformationFile(HANDLE FileHandle, PIO_STATUS_BLOCK IoStatusBlock, PVOID FsInformation, ULONG Length, FS_INFORMATION_CLASS FsInformationClass);
+//------------------------------------------------------------------------------------------------------------
+enum EODirAccess
+{
+ DIRECTORY_QUERY               = 0x0001,  // Query access to the directory object.
+ DIRECTORY_TRAVERSE            = 0x0002,  // Name-lookup access to the directory object.
+ DIRECTORY_CREATE_OBJECT       = 0x0004,  // Name-creation access to the directory object.
+ DIRECTORY_CREATE_SUBDIRECTORY = 0x0008,  // Subdirectory-creation access to the directory object.
+ DIRECTORY_ALL_ACCESS          = STANDARD_RIGHTS_REQUIRED | 0xF,
+};
+
+// Buffer returned by ZwQueryDirectoryObject is full of these structures.
+struct OBJECT_DIRECTORY_INFORMATION 
+{
+ UNICODE_STRING Name;        // Name of the object
+ UNICODE_STRING TypeName;    // Type of the object (string form)
+};
+using POBJECT_DIRECTORY_INFORMATION = MPTR<OBJECT_DIRECTORY_INFORMATION, PHT>;
+
+static NTSTATUS _scall NtOpenDirectoryObject(PHANDLE DirectoryHandle, ACCESS_MASK DesiredAccess, POBJECT_ATTRIBUTES ObjectAttributes);
+static NTSTATUS _scall NtQueryDirectoryObject(HANDLE DirectoryHandle, PVOID Buffer, ULONG BufferLength, BOOLEAN ReturnSingleEntry, BOOLEAN RestartScan, PULONG Context, PULONG ReturnLength);
 //------------------------------------------------------------------------------------------------------------
 enum ELpcMsgType
 {
@@ -1812,10 +2053,53 @@ using PCONTEXT   = void*;           // Linux will not compile without this
 
 static NTSTATUS _scall NtGetContextThread(HANDLE ThreadHandle, PCONTEXT ThreadContext);
 static NTSTATUS _scall NtSetContextThread(HANDLE ThreadHandle, PCONTEXT ThreadContext);
+
+struct CLIENT_ID
+{
+ HANDLE UniqueProcess;    // Actually, both are IDs
+ HANDLE UniqueThread;
+};
+using PCLIENT_ID = MPTR<CLIENT_ID, PHT>;
+
+static NTSTATUS _scall NtOpenThread(PHANDLE ThreadHandle, ACCESS_MASK DesiredAccess, POBJECT_ATTRIBUTES ObjectAttributes, PCLIENT_ID ClientId);
+static NTSTATUS _scall NtOpenProcess(PHANDLE ProcessHandle, ACCESS_MASK DesiredAccess, POBJECT_ATTRIBUTES ObjectAttributes, PCLIENT_ID ClientId);
 //------------------------------------------------------------------------------------------------------------
 SCVR uint FLS_MAXIMUM_AVAILABLE = 128;
 SCVR uint TLS_MINIMUM_AVAILABLE = 64;
 SCVR uint TLS_EXPANSION_SLOTS   = 1024;
+
+SCVR uint32 LDRP_STATIC_LINK               = 0x00000002;
+SCVR uint32 LDRP_IMAGE_DLL                 = 0x00000004;
+SCVR uint32 LDRP_LOAD_IN_PROGRESS          = 0x00001000;
+SCVR uint32 LDRP_UNLOAD_IN_PROGRESS        = 0x00002000;
+SCVR uint32 LDRP_ENTRY_PROCESSED           = 0x00004000;
+SCVR uint32 LDRP_ENTRY_INSERTED            = 0x00008000;
+SCVR uint32 LDRP_CURRENT_LOAD              = 0x00010000;
+SCVR uint32 LDRP_FAILED_BUILTIN_LOAD       = 0x00020000;
+SCVR uint32 LDRP_DONT_CALL_FOR_THREADS     = 0x00040000;
+SCVR uint32 LDRP_PROCESS_ATTACH_CALLED     = 0x00080000;
+SCVR uint32 LDRP_DEBUG_SYMBOLS_LOADED      = 0x00100000;
+SCVR uint32 LDRP_IMAGE_NOT_AT_BASE         = 0x00200000;
+SCVR uint32 LDRP_COR_IMAGE                 = 0x00400000;
+SCVR uint32 LDR_COR_OWNS_UNMAP             = 0x00800000;
+SCVR uint32 LDRP_SYSTEM_MAPPED             = 0x01000000;
+SCVR uint32 LDRP_IMAGE_VERIFYING           = 0x02000000;
+SCVR uint32 LDRP_DRIVER_DEPENDENT_DLL      = 0x04000000;
+SCVR uint32 LDRP_ENTRY_NATIVE              = 0x08000000;
+SCVR uint32 LDRP_REDIRECTED                = 0x10000000;
+SCVR uint32 LDRP_NON_PAGED_DEBUG_INFO      = 0x20000000;
+SCVR uint32 LDRP_MM_LOADED                 = 0x40000000;
+SCVR uint32 LDRP_COMPAT_DATABASE_PROCESSED = 0x80000000;
+
+enum LDR_HOT_PATCH_STATE
+{
+	LdrHotPatchBaseImage,
+	LdrHotPatchNotApplied,
+	LdrHotPatchAppliedReverse,
+	LdrHotPatchAppliedForward,
+	LdrHotPatchFailedToPatch,
+	LdrHotPatchStateMax,
+};
 
 enum LDR_DLL_LOAD_REASON
 {
@@ -2044,13 +2328,6 @@ struct PEB_LDR_DATA
     HANDLE ShutdownThreadId alignas(sizeof(PHT));
 };
 using PPEB_LDR_DATA = MPTR<PEB_LDR_DATA, PHT>;
-
-struct CLIENT_ID
-{
-    HANDLE UniqueProcess;
-    HANDLE UniqueThread;
-};
-using PCLIENT_ID = MPTR<CLIENT_ID, PHT>;
 
 struct TIB
 {
@@ -2565,6 +2842,35 @@ struct PROCESS_EXTENDED_BASIC_INFORMATION
     } u;
 };
 using PPROCESS_EXTENDED_BASIC_INFORMATION = MPTR<PROCESS_EXTENDED_BASIC_INFORMATION, PHT>;
+
+struct PROCESS_DEVICEMAP_INFORMATION      // Invalid since Vista?
+{    
+    union {
+        struct {
+            HANDLE DirectoryHandle;
+        } Set;
+        struct {
+            ULONG DriveMap;
+            UCHAR DriveType[ 32 ];
+        } Query;
+    };
+};
+using PPROCESS_DEVICEMAP_INFORMATION = MPTR<PROCESS_DEVICEMAP_INFORMATION, PHT>;
+ 
+struct PROCESS_DEVICEMAP_INFORMATION_EX 
+{
+    union {
+        struct {
+            HANDLE DirectoryHandle;
+        } Set;
+        struct {
+            ULONG DriveMap;
+            UCHAR DriveType[ 32 ];
+        } Query;
+    };
+    ULONG Flags;    // specifies that the query type
+};
+using PPROCESS_DEVICEMAP_INFORMATION_EX = MPTR<PROCESS_DEVICEMAP_INFORMATION_EX, PHT>;
 
 enum EUsrProcParams
 {

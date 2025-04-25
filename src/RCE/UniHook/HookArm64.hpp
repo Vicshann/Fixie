@@ -12,12 +12,12 @@ class SHookImpl
 struct SA64RW
 {
 //------------------------------------------------------------------------------------------------------------
- uintptr_t start_addr;
- uintptr_t end_addr;
- uint32 *buf;
+ size_t start_addr;
+ size_t end_addr;
  size_t buf_offset;
  size_t inst_lens[4];
  size_t inst_lens_cnt;
+ uint32 *buf;
 
 //------------------------------------------------------------------------------------------------------------
 enum sh_a64_type_t
@@ -87,16 +87,16 @@ static sh_a64_type_t sh_a64_get_type(uint32 inst)
   else return IGNORED;
 }
 //------------------------------------------------------------------------------------------------------------
-bool sh_a64_is_addr_need_fix(uintptr_t addr)
+bool sh_a64_is_addr_need_fix(size_t addr)
 {
  return (this->start_addr <= addr && addr < this->end_addr);
 }
 //------------------------------------------------------------------------------------------------------------
-uintptr_t sh_a64_fix_addr(uintptr_t addr)
+size_t sh_a64_fix_addr(size_t addr)
 {
  if(this->start_addr <= addr && addr < this->end_addr)
   {
-   uintptr_t cursor_addr = this->start_addr;
+   size_t cursor_addr = this->start_addr;
    size_t offset = 0;
    for(size_t i = 0; i < this->inst_lens_cnt; i++)
     {
@@ -104,7 +104,7 @@ uintptr_t sh_a64_fix_addr(uintptr_t addr)
      cursor_addr += 4;
      offset += this->inst_lens[i];
     }
-   uintptr_t fixed_addr = (uintptr_t)this->buf + offset;
+   size_t fixed_addr = (size_t)this->buf + offset;
  //  LOGINF("a64 rewrite: fix addr %" PRIxPTR " -> %" PRIxPTR, addr, fixed_addr);
    return fixed_addr;
   }
@@ -112,7 +112,7 @@ uintptr_t sh_a64_fix_addr(uintptr_t addr)
   return addr;
 }
 //------------------------------------------------------------------------------------------------------------
- size_t sh_a64_rewrite_b(uint32 *buf, uint32 inst, uintptr_t pc, sh_a64_type_t type)
+ size_t sh_a64_rewrite_b(uint32 *buf, uint32 inst, size_t pc, sh_a64_type_t type)
 {
  uint64 imm64;
  if(type == B_COND)
@@ -143,7 +143,7 @@ uintptr_t sh_a64_fix_addr(uintptr_t addr)
   return idx * 4;             // 20 or 28
 }
 //------------------------------------------------------------------------------------------------------------
-size_t sh_a64_rewrite_adr(uint32 *buf, uint32 inst, uintptr_t pc, sh_a64_type_t type)
+size_t sh_a64_rewrite_adr(uint32 *buf, uint32 inst, size_t pc, sh_a64_type_t type)
 {
   uint32 xd    = SH_UTIL_GET_BITS_32(inst, 4,   0);
   uint64 immlo = SH_UTIL_GET_BITS_32(inst, 30, 29);
@@ -160,7 +160,7 @@ size_t sh_a64_rewrite_adr(uint32 *buf, uint32 inst, uintptr_t pc, sh_a64_type_t 
   return 16;
 }
 //------------------------------------------------------------------------------------------------------------
-size_t sh_a64_rewrite_ldr(uint32 *buf, uint32 inst, uintptr_t pc, sh_a64_type_t type)
+size_t sh_a64_rewrite_ldr(uint32 *buf, uint32 inst, size_t pc, sh_a64_type_t type)
 {
  uint32 rt     = SH_UTIL_GET_BITS_32(inst, 4, 0);
  uint64 imm19  = SH_UTIL_GET_BITS_32(inst, 23, 5);
@@ -200,7 +200,7 @@ size_t sh_a64_rewrite_ldr(uint32 *buf, uint32 inst, uintptr_t pc, sh_a64_type_t 
     }
 }
 //------------------------------------------------------------------------------------------------------------
-size_t sh_a64_rewrite_cb(uint32 *buf, uint32 inst, uintptr_t pc)
+size_t sh_a64_rewrite_cb(uint32 *buf, uint32 inst, size_t pc)
 {
  uint64 imm19  = SH_UTIL_GET_BITS_32(inst, 23, 5);
  uint64 offset = SH_UTIL_SIGN_EXTEND_64((imm19 << 2u), 21u);
@@ -216,7 +216,7 @@ size_t sh_a64_rewrite_cb(uint32 *buf, uint32 inst, uintptr_t pc)
  return 24;
 }
 //------------------------------------------------------------------------------------------------------------
-size_t sh_a64_rewrite_tb(uint32 *buf, uint32 inst, uintptr_t pc)
+size_t sh_a64_rewrite_tb(uint32 *buf, uint32 inst, size_t pc)
 {
  uint64 imm14  = SH_UTIL_GET_BITS_32(inst, 18, 5);
  uint64 offset = SH_UTIL_SIGN_EXTEND_64((imm14 << 2u), 16u);
@@ -232,7 +232,7 @@ size_t sh_a64_rewrite_tb(uint32 *buf, uint32 inst, uintptr_t pc)
  return 24;
 }
 //------------------------------------------------------------------------------------------------------------
-size_t sh_a64_rewrite(uint32 *buf, uint32 inst, uintptr_t pc)
+size_t sh_a64_rewrite(uint32 *buf, uint32 inst, size_t pc)
 {
  sh_a64_type_t type = sh_a64_get_type(inst);
 //  LOGINF("a64 rewrite: type %d, inst %08X", type, inst);
@@ -246,7 +246,7 @@ size_t sh_a64_rewrite(uint32 *buf, uint32 inst, uintptr_t pc)
  return 4;
 }
 //------------------------------------------------------------------------------------------------------------
-static size_t sh_a64_absolute_jump_with_br(uint32 *buf, uintptr_t addr)
+static size_t sh_a64_absolute_jump_with_br(uint32 *buf, size_t addr)
 {
   buf[0] = 0x58000051;  // LDR X17, #8
   buf[1] = 0xd61f0220;  // BR X17
@@ -265,7 +265,7 @@ static size_t sh_a64_absolute_jump_with_br(uint32 *buf, uintptr_t addr)
 // https://developer.android.com/ndk/guides/abis#armv9_enabling_pac_and_bti_for_cc
 // https://developer.arm.com/documentation/100067/0612/armclang-Command-line-Options/-mbranch-protection
 //
-static size_t sh_a64_absolute_jump_with_ret(uint32 *buf, uintptr_t addr)
+static size_t sh_a64_absolute_jump_with_ret(uint32 *buf, size_t addr)
 {
   buf[0] = 0x58000051;  // LDR X17, #8
   buf[1] = 0xd65f0220;  // RET X17
@@ -274,7 +274,7 @@ static size_t sh_a64_absolute_jump_with_ret(uint32 *buf, uintptr_t addr)
   return 16;
 }
 //------------------------------------------------------------------------------------------------------------
-static size_t sh_a64_relative_jump(uint32 *buf, uintptr_t addr, uintptr_t pc)
+static size_t sh_a64_relative_jump(uint32 *buf, size_t addr, size_t pc)
 {
   buf[0] = 0x14000000u | (((addr - pc) & 0x0FFFFFFFu) >> 2u);  // B <label>
   return 4;
@@ -288,7 +288,7 @@ static size_t sh_a64_relative_jump(uint32 *buf, uintptr_t addr, uintptr_t pc)
 //   OrigInstructions  // Those that has been overwritten by jump to a HookProc  // Possibly recompiled to fix relative addressing
 //   JumpToRestOfTheProcInstr  // If any instructions left after hooking
 //
-int BuildEntryStub(uintptr_t target_addr)  // Builds the entry stub from original instructions and preserves them as a backup
+int BuildEntryStub(size_t target_addr)  // Builds the entry stub from original instructions and preserves them as a backup
 {
   // Backup original instructions (length: 4 or 16) to be able to restore them later
   memcpy((void *)(this->backup), (void *)target_addr, this->backup_len);   // TODO: Do one by one. Error if end of function is detected
@@ -303,16 +303,16 @@ int BuildEntryStub(uintptr_t target_addr)  // Builds the entry stub from origina
   for (uint32 i = 0; i < this->backup_len; i += 4)rinfo.inst_lens[i / 4] = SA64RW::sh_a64_get_rewrite_inst_len(*((uint32 *)(target_addr + i)));
 
   // Rewrite original instructions(if necessary) for the entry stub. Recompiles branches and relative addressing
-  uintptr_t pc = target_addr;
+  size_t pc = target_addr;
   for (uint32 i = 0; i < this->backup_len; i += 4, pc += 4)
    {
-    size_t offset = rinfo.sh_a64_rewrite((uint32 *)((uintptr_t)this->enter_addr + rinfo.buf_offset), *((uint32 *)(target_addr + i)), pc);
+    size_t offset = rinfo.sh_a64_rewrite((uint32 *)((size_t)this->enter_addr + rinfo.buf_offset), *((uint32 *)(target_addr + i)), pc);
     if (0 == offset) return -1;
     rinfo.buf_offset += offset;
    }
 
   // absolute jump back to remaining original instructions (fill in enter)
-  rinfo.buf_offset += SA64RW::sh_a64_absolute_jump_with_ret((uint32 *)((uintptr_t)this->enter_addr + rinfo.buf_offset), target_addr + this->backup_len);
+  rinfo.buf_offset += SA64RW::sh_a64_absolute_jump_with_ret((uint32 *)((size_t)this->enter_addr + rinfo.buf_offset), target_addr + this->backup_len);
   sh_util_clear_cache(this->enter_addr, rinfo.buf_offset);
   return 0;
 }
@@ -324,9 +324,9 @@ int BuildEntryStub(uintptr_t target_addr)  // Builds the entry stub from origina
 // Short hook using relative jump (only 4 bytes to overwrite). Needs an absolute jump stub nearby if a hook proc is too far
 // NOTE: We should have a gap map for an dll or a page allocated nearby if the hook proc is outside of reljmp range
 //
-/*int sh_inst_hook_rel(uintptr_t target_addr, uintptr_t new_addr)
+/*int sh_inst_hook_rel(size_t target_addr, size_t new_addr)
 {
-  uintptr_t pc = target_addr;
+  size_t pc = target_addr;
   this->backup_len = 4;   // Short distance relative jump size
 
  // if (dlinfo->dli_ssize < this->backup_len) return SHADOWHOOK_ERRNO_HOOK_SYMSZ;
@@ -358,7 +358,7 @@ err:
   return r;
 } */
 //------------------------------------------------------------------------------------------------------------
-int sh_inst_hook_abs(uintptr_t target_addr, uintptr_t new_addr)
+int sh_inst_hook_abs(size_t target_addr, size_t new_addr)
 {
   this->backup_len = 16;
 
@@ -388,7 +388,7 @@ int sh_inst_hook(vptr target_addr, vptr new_addr)
 #ifdef SH_CONFIG_TRY_WITH_EXIT
   if (0 == (r = sh_inst_hook_rel(target_addr, new_addr))) return r;
 #endif
-  if (0 == (r = sh_inst_hook_abs((uintptr_t)target_addr, (uintptr_t)new_addr))) return r;
+  if (0 == (r = sh_inst_hook_abs((size_t)target_addr, (size_t)new_addr))) return r;
 
   // hook failed
  // sh_enter_free(this->enter_addr);  // TODO: !!!
@@ -397,9 +397,8 @@ int sh_inst_hook(vptr target_addr, vptr new_addr)
 //------------------------------------------------------------------------------------------------------------
 int sh_inst_unhook(vptr target_addr)
 {
-  int r = memcmp((void *)target_addr, this->trampo, this->backup_len);    // TODO: Try-catch or validate the addr somehow
-  if (0 != r) return -1;
-  if (0 != (r = sh_util_write_inst((uintptr_t)target_addr, this->backup, this->backup_len))) return r;     // restore the instructions at the target address
+ if(!this->IsActiveAt(target_addr)) return -1;
+ if(int r = sh_util_write_inst((size_t)target_addr, this->backup, this->backup_len); 0 != r) return r;     // restore the instructions at the target address
   __atomic_thread_fence(__ATOMIC_SEQ_CST);
 
   // free memory space for exit     // TODO: !!!
@@ -414,7 +413,12 @@ int sh_inst_unhook(vptr target_addr)
   return 0;
 }
 //------------------------------------------------------------------------------------------------------------
-
+bool IsActiveAt(vptr target_addr)
+{
+ int r = memcmp((void *)target_addr, this->trampo, this->backup_len);    // TODO: Try-catch or validate the addr somehow
+ return 0 == r;
+}
+//------------------------------------------------------------------------------------------------------------
   uint32  exit[4];     // Far stub, actually  // Stored here to check if it is hooked?
   uint32  trampo[4];   // align 16 // length == backup_len    // Used on unhook to check that we still own this hook
   uint32  backup[4];   // align 16     // uint8_t   backup[16];

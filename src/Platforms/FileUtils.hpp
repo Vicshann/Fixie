@@ -1,7 +1,7 @@
 
 //------------------------------------------------------------------------------------------------------------
 //------------------------------------------------------------------------------------------------------------
-// NOTE: Initially set offs to 0
+// NOTE: Initially set the offs to 0
 static sint ReadFileLine(PX::fdsc_t fd, achar* buf, size_t len, ssize_t* offs, achar** Line)   // Buffered
 {
  sint pos = *offs;   // Points to current line to return
@@ -48,5 +48,49 @@ static sint ReadFileLine(PX::fdsc_t fd, achar* buf, size_t len, ssize_t* offs, a
  return pos;  
 }
 //------------------------------------------------------------------------------------------------------------
+// Compare string with pattern supporting '*' and '?' (both UTF-8-aware)
+static bool IsPathsMatch(const achar* path, const achar* pattern, bool cins=false) 
+{
+ for(;;) 
+  {
+   achar sv = *path;
+   if(!sv)break;
+   achar pv = *pattern;
+   if(!pv)break;
 
+   if(IsFilePathSep(sv) && IsFilePathSep(pv))   //0x2F    //  '/'   0x5C;    //  '\'
+    {
+     path++;
+     pattern++;
+    }
+   else if(pv == '?')    // Skip one char in 'path'
+    {
+     pattern++;     
+     path += NUTF::UnitSizeUtf8(path);
+    } 
+   else if(pv == '*')     // Skip N chars in 'path' until X char
+    {
+     do {++pattern;} while(*pattern == '*');  // Multi '*' is meaningless   // Optimizers may throw away the 'while(*(++pattern) == '*');' loop
+     if(!*pattern)return true;      // Last char in the pattern is '*' (Consider rest of the 'path' as match)
+     int lena=0, lenb=0;
+     for(;;)   // Loop until resync
+      {      
+       bool cm = NUTF::IsUnitsEqualUtf8(pattern, path, cins, &lena, &lenb);   // TODO: Cache the normalized pattern unit
+       path += lenb;
+       if(cm)break;   // Match         
+       if(!*path)return false;   // The path has ended before the expected char is encountered
+      }
+     pattern += lena;
+    }
+   else
+    {
+     int lena=0, lenb=0;
+     if(!NUTF::IsUnitsEqualUtf8(pattern, path, cins, &lena, &lenb))return false;  // Mismatch
+     pattern += lena;
+     path    += lenb;
+    }  
+  }
+ while(*pattern == '*')pattern++;
+ return !*pattern;  // Expected to be a term 0
+}
 //------------------------------------------------------------------------------------------------------------

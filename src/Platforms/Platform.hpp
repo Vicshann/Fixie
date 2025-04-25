@@ -20,6 +20,7 @@ struct NPTM    // Can`t be 'struct' if we want that stubs go in the real executa
 #include "Threads.hpp"     // Thread definitions for "StartInfo.hpp"
 #include "MemUtils.hpp" 
 #include "FileUtils.hpp"
+#include "Debugging.hpp"
 
 // Anything that may have a different set of system API is put here
 #if    defined(PLT_EFI)     // SYS_WINDOWS

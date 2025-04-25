@@ -1,6 +1,7 @@
 
 #pragma once
 
+// https://github.com/TsudaKageyu/minhook/tree/master/src/hde
 // NOTE: No vectored AVX instructions support (VEX, prefix (0xC4, 0xC5))   // SIMD ?
 // UPD: https://github.com/DispatchCode/x64-Instruction-Decoder/
 //---------------------------------------------------------------------------

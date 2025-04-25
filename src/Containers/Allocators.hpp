@@ -33,20 +33,20 @@ enum EAllocFlags {
  afGrowLin     = 0x0001,   // NextSize = PrevSize + BaseSize    // Linear allocation growth
  afGrowExp     = 0x0002,   // NextSize = PrevSize + PrevSize    // Exponential allocation growth (Size = Size * 2)
 };
-SCVR size_t DefMaxAlign = 64;
+SCVR usize DefMaxAlign = 64;
 //============================================================================================================
-struct alignas(size_t) SMemPrvBase      // Base memory provider  // Min size is 4096 and min alignment is 4096  // TODO: The interface verification
+struct alignas(usize) SMemPrvBase      // Base memory provider  // Min size is 4096 and min alignment is 4096  // TODO: The interface verification
 {
- vptr Alloc(size_t len)  // For block allocations,   // May return a handle instead of actual memory
+ vptr Alloc(usize len)  // For block allocations,   // May return a handle instead of actual memory
  {
   vptr BPtr = (vptr)NPTM::NAPI::mmap(nullptr, len, PX::PROT_READ|PX::PROT_WRITE, PX::MAP_PRIVATE|PX::MAP_ANONYMOUS, -1, 0);   // Executable?  // Some platforms may refuse allocating of RWX memory
   if(NPTM::GetMMapErrFromPtr(BPtr))return nullptr;
   return BPtr;
  }
- bool Free(vptr ptr, size_t len){return NPTM::NAPI::munmap(ptr, len) >= 0;}    // Size is optional
- vptr Lock(vptr ptr, size_t len, size_t offs=0){return ptr;}            // Size is optional  // Returns actual memory pointer   // NOTE: Do not expect to store any contexts or headers in memory that requires this
- bool UnLock(vptr ptr, size_t len, size_t offs=0){return true;}         // Size is optional
- vptr ReAlloc(vptr optr, size_t olen, size_t nlen, bool maymove=true)   // May return a handle   // TODO: Implement mremap syscall  // NOTE: may fail if MayMove is false and ptr is not a handle
+ bool Free(vptr ptr, usize len){return NPTM::NAPI::munmap(ptr, len) >= 0;}    // Size is optional
+ vptr Lock(vptr ptr, usize len, usize offs=0){return ptr;}            // Size is optional  // Returns actual memory pointer   // NOTE: Do not expect to store any contexts or headers in memory that requires this
+ bool UnLock(vptr ptr, usize len, usize offs=0){return true;}         // Size is optional
+ vptr ReAlloc(vptr optr, usize olen, usize nlen, bool maymove=true)   // May return a handle   // TODO: Implement mremap syscall  // NOTE: may fail if MayMove is false and ptr is not a handle
  {
   if(!optr)return this->Alloc(nlen);   // Should just allocate if ptr is NULL
   vptr BPtr = (vptr)NPTM::NAPI::mremap(optr, olen, nlen, !maymove?PX::MREMAP_FIXED:0, nullptr);
@@ -66,7 +66,7 @@ struct alignas(size_t) SMemPrvBase      // Base memory provider  // Min size is 
 // TCIfo: Per context (allocator) user defined info
 // TBIfo: Per block user defined info
 //
-template<size_t MinLen, uint32 Flg, typename Ty=uint8, typename TCIfo=SEmptyType, typename TBIfo=SEmptyType, typename MP=SMemPrvBase> class CGenAlloc: protected TSW<(Flg & afSequential), SSeqAlloc<MinLen,Flg,Ty,TCIfo,TBIfo,MP>, SBlkAlloc<MinLen,Flg,Ty,TCIfo,TBIfo,MP> >::T
+template<usize MinLen, uint32 Flg, typename Ty=uint8, typename TCIfo=SEmptyType, typename TBIfo=SEmptyType, typename MP=SMemPrvBase> class CGenAlloc: protected TSW<(Flg & afSequential), SSeqAlloc<MinLen,Flg,Ty,TCIfo,TBIfo,MP>, SBlkAlloc<MinLen,Flg,Ty,TCIfo,TBIfo,MP> >::T
 {
  using Base = TSW<(Flg & afSequential), SSeqAlloc<MinLen,Flg,Ty,TCIfo,TBIfo,MP>, SBlkAlloc<MinLen,Flg,Ty,TCIfo,TBIfo,MP> >::T;
 
@@ -99,7 +99,22 @@ using Base::GetElmMax;
 // Load
 //-------------------------------------------------------------------
 };
+//============================================================================================================
+// 'free' is working - have to know allocation sizes for iterators to work
+// if MinUnits != MaxUnits - one unit is reserved for the count and all requests return a next unit which contains  actual data (WASTE!!!)
+// We may have PrevNode and NextNode and some way to determine number of units used
+// Index ranges are extendable somehow and processed in a loop?
+//
+template<usize MinLen, usize MinUnits, usize MaxUnits, uint32 Flg, typename Ty=uint32, typename TCIfo=SEmptyType, typename TBIfo=SEmptyType, typename MP=SMemPrvBase> class CUnitAlloc
+{
+static_assert(MaxUnits >= MinUnits);
+using UDefType = uint32;
+using UType  = TSW<sizeof(Ty) < sizeof(UDefType), UDefType, Ty>::T;
+SCVR usize UnitLen = sizeof(UType);
+SCVR usize UnitRange = MaxUnits - MinUnits;
+SCVR bool SingleFChain = MaxUnits == MinUnits;
 
+}; 
 //============================================================================================================
 //                                           TESTS
 //------------------------------------------------------------------------------------------------------------
@@ -109,9 +124,9 @@ template<typename S> static bool TestStrategyBlk(uint32 From=0)
  constexpr S str;   //  constexpr NALC::SBASGeom<128, 4096, 64, 0> str;  
  for(uint idx=From;idx < 0xFFFFFFFF;idx++)
   {
-   size_t ClcIdx, BrtIdx;
-   size_t ClcBlk = str.CalcForIndex(idx, ClcIdx);
-   size_t BrtBlk = str.BruteForIndex(idx, BrtIdx);
+   usize ClcIdx, BrtIdx;
+   usize ClcBlk = str.CalcForIndex(idx, ClcIdx);
+   usize BrtBlk = str.BruteForIndex(idx, BrtIdx);
    if((ClcBlk != BrtBlk)||(ClcIdx != BrtIdx))
     {
      return false;

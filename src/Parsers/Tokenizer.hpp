@@ -9,6 +9,7 @@
 
  NOTE: A state machine + utility flags are used
  TODO: Test streams with 4K local and allocated buffer, and a callback for byte reading. Use a callback if not slower for big sources
+ TODO: OnChar and OnLine callbacks to measure chars and lines. Also measure token width and height somewhere
 */
 //============================================================================================================
 struct NLEX        // It is shorter than CTokenizer (flags are namespaced)
@@ -506,7 +507,7 @@ sint32 NextByte(void)   // Returns 0 on EndOfStream (EOF) // NOTE: Reset it by r
    this->LinePos = 0;    
    this->ChBLeft = this->ChrLen = 1;     
   }
-   else if(!this->ChBLeft)this->ChBLeft = this->ChrLen = NUTF::GetCharSize(val);    // High bits of a first determine size of UTF-8 char in bytes? ??? Check to replace table access with shift 
+   else if(!this->ChBLeft)this->ChBLeft = this->ChrLen = NUTF::CpSizeUtf8(val);    // High bits of a first determine size of UTF-8 char in bytes? ??? Check to replace table access with shift 
  this->ChBLeft--;
  this->FullChar = !this->ChBLeft;    // If this bytes is last it makes the char full
  return val;  // NOTE: Offset is not updated here to report errors correctly

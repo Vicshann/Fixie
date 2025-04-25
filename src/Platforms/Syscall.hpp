@@ -191,6 +191,10 @@ enum class ESysCNum: int { //                       x86_32  x86_64  arm_32  arm_
                            mknod =            DSC<  14,     133,    14,     -1,     -2        >::V,   //  i.e. mknod("foobar", S_IFIFO|0666)  - create a named pipe
                            mknodat =          DSC<  297,    259,    324,    33,     -2        >::V,   // P2008, for Arm64 only
                            rmdir =            DSC<  40,     84,     40,     -1,     137       >::V,   // No rmdir on arm64, use unlinkat with AT_REMOVEDIR flag  // /proc/self/fd
+                           link =             DSC<  9,      86,     9,      -1,     -3        >::V,
+                           linkat =           DSC<  303,    265,    330,    37,     -3        >::V,
+                           symlink =          DSC<  83,     88,     83,     -1,     -3        >::V,
+                           symlinkat =        DSC<  304,    266,    331,    36,     -3        >::V,
                            unlink =           DSC<  10,     87,     10,     -1,     10        >::V,   // Remove file
                            unlinkat =         DSC<  301,    263,    328,    35,     -1        >::V,   // P2008, for Arm64 only: replaces unlink and rmdir
                            rename =           DSC<  38,     82,     38,     -1,     128       >::V,
@@ -633,15 +637,17 @@ template<uint64 val, auto ext, int num> struct SStubBase
       this->Stub[1] = syscall_tmpl[1];
       this->Stub[2] = syscall_tmpl[2];
       this->Stub[3] = syscall_tmpl[3];
-      for(int ctr=0,idx=4,stkoffs=DOffs+8;ctr < AExNum;ctr++,stkoffs+=4)  // Args are at SP + NumOfPushed bytes (Which is (AExNum+2)*4)  // R7 and LR is always pushed
+      int idx = 4;
+      for(int ctr=0,stkoffs=DOffs+8;ctr < AExNum;ctr++,stkoffs+=4)  // Args are at SP + NumOfPushed bytes (Which is (AExNum+2)*4)  // R7 and LR is always pushed
        {
         this->Stub[idx++] = stkoffs;      // ldr rX, [sp, #Y]  // YY X0 9D E5
         this->Stub[idx++] = (4+ctr) << 4; // Start loading to R4 and so on
         this->Stub[idx++] = 0x9D;
         this->Stub[idx++] = 0xE5;
        }
-      if(this->Stub[MinStubSize-1] == 0xE8)this->Stub[MinStubSize-4] |= ArgMsk;  // Add extra registers to POP
-        else this->Stub[MinStubSize-8] |= ArgMsk;  // Old ARM32
+      this->Stub[idx+8] |= ArgMsk;  // Add extra registers to POP       // NOTE: Hardcoded offset of POP {}
+      //if(this->Stub[MinStubSize-1] == 0xE8)this->Stub[MinStubSize-4] |= ArgMsk;  // Add extra registers to POP
+      //  else this->Stub[MinStubSize-8] |= ArgMsk;  // Old ARM32 (SysCallNum after the stub)
      }
 #endif
     uint32 IVal = uint32(this->Stub[SCOffs]) | uint32(this->Stub[SCOffs+1] << 8) | uint32(this->Stub[SCOffs+2] << 16) | uint32(this->Stub[SCOffs+3] << 24);        // NOTE: LE

@@ -7,13 +7,13 @@ private:
 enum ESFlags {sfInitialized=0x01, sfDynamicLib=0x02, sfLoadedByLdr=0x04};
 struct SSINF
 {
- vptr             STInfo;  // Pointer to stack frame info, received from kernel  // PEB on windows?
- syschar**        CLArgs;  // Points to ARGV array  // Not split on windows!
- syschar**        EVVars;  // Points to EVAR array (cannot cache this pointer?)
- ELF::SAuxVecRec* AuxInf;  // Auxilary vector // LINUX/BSD: ELF::SAuxVecRec*
- vptr             NullPtr; // For any pointer that should point to NULL
- PX::fdsc_t       DevNull;
- PX::fdsc_t       DevRand;
+ vptr              STInfo;  // Pointer to stack frame info, received from kernel  // PEB on windows?
+ syschar**         CLArgs;  // Points to ARGV array  // Not split on windows!
+ syschar**         EVVars;  // Points to EVAR array (cannot cache this pointer?)
+ UNIX::SAuxVecRec* AuxInf;  // Auxilary vector // LINUX/BSD: ELF::SAuxVecRec*
+ vptr              NullPtr; // For any pointer that should point to NULL
+ PX::fdsc_t        DevNull;
+ PX::fdsc_t        DevRand;
 
  vptr   TheModBase;
  size_t TheModSize;
@@ -36,11 +36,11 @@ static _finline NTHD::STDesc* GetThDesc(void){return &fwsinf.thd;}
 //------------------------------------------------------------------------------------------------------------
 static vptr FindMainBase(size_t* Size)   // Use something else  // TODO: Probably /proc/self/maps search for /proc/self/exe content match
 {
- sint ExePtr = GetAuxInfo(ELF::AT_PHDR);
- if(ExePtr < 0)ExePtr = GetAuxInfo(ELF::AT_ENTRY);
+ sint ExePtr = GetAuxInfo(UNIX::AT_PHDR);
+ if(ExePtr < 0)ExePtr = GetAuxInfo(UNIX::AT_ENTRY);
  if(ExePtr > 0)
   {
-   vptr ptr = UELF::FindElfByAddr((vptr)ExePtr, Size);
+   vptr ptr = UELF::FindModuleByAddr((vptr)ExePtr, Size);
    DBGDBG("Found by ELF for %p: %p",(vptr)ExePtr, ptr);
    if(ptr)return ptr;
   }
@@ -49,7 +49,7 @@ static vptr FindMainBase(size_t* Size)   // Use something else  // TODO: Probabl
  alignas(sizeof(vptr)) achar pbuf[2048];
  alignas(sizeof(vptr)) uint8 tbuf[2048];
  *pbuf = 0;
- ExePtr = GetAuxInfo(ELF::AT_EXECFN);
+ ExePtr = GetAuxInfo(UNIX::AT_EXECFN);
  DBGDBG("Exe path auxv: %p",(vptr)ExePtr);
  if(ExePtr <= 0)
   {
@@ -61,14 +61,14 @@ static vptr FindMainBase(size_t* Size)   // Use something else  // TODO: Probabl
 
  if(Size)*Size = 0;
  if(!PPtr || !*PPtr)return nullptr;
- PLen = AlignP2Frwd(PLen, sizeof(vptr));
+ PLen = AlignFrwdP2(PLen, sizeof(vptr));
  SMemMap* MappedRanges = (SMemMap*)&pbuf;
  MappedRanges->TmpBufLen = sizeof(tbuf);
  MappedRanges->TmpBufPtr = tbuf;     // For reading from the system
  if(NPFS::FindMappedRangesByPath(-1, 0, PPtr, MappedRanges, sizeof(pbuf)) <= 0)return nullptr;
  if(!MappedRanges->RangesCnt)return nullptr;
  vptr   addr = (vptr)MappedRanges->Ranges[0].RangeBeg;
- size_t mlen = ELF::GetModuleSizeInMem(addr);   // Validate and get full size, including BSS
+ size_t mlen = UELF::GetModuleSizeInMem(addr);   // Validate and get full size, including BSS
  if(!mlen)return nullptr;
  if(Size)*Size = mlen;
  DBGDBG("Found by mappings: %p",addr);
@@ -77,7 +77,7 @@ static vptr FindMainBase(size_t* Size)   // Use something else  // TODO: Probabl
 //------------------------------------------------------------------------------------------------------------
 static _ninline vptr FindModuleBase(size_t* Size)   // Use a pointer inside
 {
- return UELF::FindElfByAddr(&fwsinf, Size);
+ return UELF::FindModuleByAddr(&fwsinf, Size);
 }
 //------------------------------------------------------------------------------------------------------------
 public:      // Do not hide platform dependant stuff!
@@ -110,7 +110,7 @@ static sint GetMainPath(achar* DstBuf, size_t BufSize=uint(-1))  // NOTE: If ret
 {
  sint len    = 0;
  sint aoffs  = 0;
- sint ExePtr = GetAuxInfo(ELF::AT_EXECFN);
+ sint ExePtr = GetAuxInfo(UNIX::AT_EXECFN);
  if(ExePtr > 0)len = NSTR::StrCopy(DstBuf, (achar*)ExePtr, BufSize);
  if(len <= 0)len = NAPI::readlink("/proc/self/exe", DstBuf, BufSize-1);   // TODO: Embed the string in the code
  if(len <= 0)len = GetCLArg(aoffs, DstBuf, BufSize);   // First ard is USUALLY the exe path (But does not have to - the shell passes it)
@@ -139,6 +139,11 @@ static sint _finline GetModulePath(achar* DstBuf, size_t BufSize=uint(-1))   // 
  return len;
 }
 //------------------------------------------------------------------------------------------------------------
+static vptr LoadModule(const achar* Path)
+{
+ return nullptr;
+}
+//------------------------------------------------------------------------------------------------------------
 static sint InitStartupInfo(vptr StkFrame=nullptr, vptr ArgA=nullptr, vptr ArgB=nullptr, vptr ArgC=nullptr)  // Probably should be private but...
 {
  DBGDBG("StkFrame=%p, ArgA=%p, ArgB=%p, ArgC=%p",StkFrame,ArgA,ArgB,ArgC);
@@ -154,10 +159,10 @@ static sint InitStartupInfo(vptr StkFrame=nullptr, vptr ArgA=nullptr, vptr ArgB=
  else if(StkFrame)
   {
   // vptr optr = StkFrame;
-   size_t* Frame = (size_t*)UELF::FindStartupInfo(StkFrame);
+   size_t* Frame = (size_t*)UNIX::FindStartupInfo(StkFrame);
    if(Frame && !Frame[0] && !Frame[1] && !Frame[2] && !Frame[3])
     {
-     Frame = (size_t*)UELF::FindStartupInfoByAuxV(Frame);  // ArgC,ArgV,EnvP,AuxV are null - probbly incorrectly detected because of 4 null entries on stack
+     Frame = (size_t*)UNIX::FindStartupInfoByAuxV(Frame);  // ArgC,ArgV,EnvP,AuxV are null - probbly incorrectly detected because of 4 null entries on stack
      if(Frame)
       {
        fwsinf.Flags |= sfLoadedByLdr;    // Too far and NULLs on stakd are put by a loader most likely
@@ -180,7 +185,7 @@ static sint InitStartupInfo(vptr StkFrame=nullptr, vptr ArgA=nullptr, vptr ArgB=
    char** Args   = fwsinf.EVVars;
    uint ParIdx   = 0;
    do{APtr=Args[ParIdx++];}while(APtr);  // Skip until AUX vector
-   fwsinf.AuxInf = (ELF::SAuxVecRec*)&Args[ParIdx];
+   fwsinf.AuxInf = (UNIX::SAuxVecRec*)&Args[ParIdx];
   }
 
  DBGDBG("Getting UTC offset...");
@@ -189,18 +194,18 @@ static sint InitStartupInfo(vptr StkFrame=nullptr, vptr ArgA=nullptr, vptr ArgB=
  PX::timeval tv = {};
  if(int r = NAPI::gettimeofday(&tv, nullptr); r >= 0)
   {
-   if(int t = UpdateTZOffsUTC(tv.sec);t < 0){DBGDBG("UpdateTZOffsUTC failed with %i", t);}    // Log any errors?
+   if(int t = UNIX::UpdateTZOffsUTC(tv.sec);t < 0){DBGDBG("UpdateTZOffsUTC failed with %i", t);}    // Log any errors?
   }
    else {DBGDBG("gettimeofday failed with %i", r);}
  DBGDBG("UTC offset is %i seconds", fwsinf.UTCOffs); //LOGMSG("TZFILE offs: %i",tz.minuteswest);
  DBGDBG("STInfo=%p, CLArgs=%p, EVVars=%p, AuxInf=%p",fwsinf.STInfo,fwsinf.CLArgs,fwsinf.EVVars,fwsinf.AuxInf);
- sint PageSize = GetAuxInfo(ELF::AT_PAGESZ);
+ sint PageSize = GetAuxInfo(UNIX::AT_PAGESZ);
  if(PageSize > 0)fwsinf.MemPageSize = fwsinf.MemGranSize = PageSize;
    else fwsinf.MemPageSize = fwsinf.MemGranSize = MEMPAGESIZE;
  fwsinf.Flags  |= sfInitialized;
 
- fwsinf.DevNull = OpenDevNull();   // Needed for a module base search!
- fwsinf.DevRand = OpenDevRand();
+ fwsinf.DevNull = UNIX::OpenDevNull();   // Needed for a module base search!
+ fwsinf.DevRand = UNIX::OpenDevRand();
 
  fwsinf.MainModBase = FindMainBase(&fwsinf.MainModSize);
  fwsinf.TheModBase  = FindModuleBase(&fwsinf.TheModSize);
@@ -209,11 +214,11 @@ static sint InitStartupInfo(vptr StkFrame=nullptr, vptr ArgA=nullptr, vptr ArgB=
  if(KnownBases && (fwsinf.MainModBase != fwsinf.TheModBase))
   {
    fwsinf.Flags |= sfDynamicLib;
-   DBGDBG("This is a dynamic lib");
+   DBGDBG("Loaded as Dynamic Lib");
   }
  if(!(fwsinf.Flags & sfLoadedByLdr))   // TODO: Compare module pointers
   {
-   sint LdrBase = GetAuxInfo(ELF::AT_BASE);    // Our executables do not request the loader from the system
+   sint LdrBase = GetAuxInfo(UNIX::AT_BASE);    // Our executables do not request the loader from the system
    if(LdrBase > 0)
     {
      fwsinf.Flags |= sfLoadedByLdr;
@@ -257,7 +262,7 @@ static void DbgLogStartupInfo(void)
  if(fwsinf.AuxInf)
   {
    LOGDBG("AVariables: ");
-   for(ELF::SAuxVecRec* Rec=(ELF::SAuxVecRec*)fwsinf.AuxInf;Rec->type != ELF::AT_NULL;Rec++)
+   for(UNIX::SAuxVecRec* Rec=(UNIX::SAuxVecRec*)fwsinf.AuxInf;Rec->type != UNIX::AT_NULL;Rec++)
     {
      LOGDBG("  Aux: Type=%.3u, Value=%p",Rec->type, (void*)Rec->val);
     }

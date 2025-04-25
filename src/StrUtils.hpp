@@ -109,6 +109,7 @@ template<typename D, typename S> _finline static size_t StrCopy(D Dst, const S S
  return len;
 }
 //---------------------------------------------------------------------------
+// MaxLen is including term 0
 template<typename D, typename S> _finline static size_t StrCopy(D Dst, const S Src, size_t MaxLen)
 {
  size_t len = 0;

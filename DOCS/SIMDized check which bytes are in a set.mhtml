@@ -1,0 +1,2414 @@
+From: <Saved by Blink>
+Snapshot-Content-Location: http://0x80.pl/notesen/2018-10-18-simd-byte-lookup.html
+Subject: SIMDized check which bytes are in a set
+Date: Wed, 2 Apr 2025 10:02:13 -0000
+MIME-Version: 1.0
+Content-Type: multipart/related;
+	type="text/html";
+	boundary="----MultipartBoundary--v39GFEw20LTUZrJSNGuP5RHPGZi7Wnmkq9daz6N2z3----"
+
+
+------MultipartBoundary--v39GFEw20LTUZrJSNGuP5RHPGZi7Wnmkq9daz6N2z3----
+Content-Type: text/html
+Content-ID: <frame-C016688663FA3D17674C757060221191@mhtml.blink>
+Content-Transfer-Encoding: quoted-printable
+Content-Location: http://0x80.pl/notesen/2018-10-18-simd-byte-lookup.html
+
+<!--?xml version=3D"1.0" encoding=3D"utf-8"?--><!DOCTYPE html PUBLIC "-//W3=
+C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-=
+transitional.dtd"><html xmlns=3D"http://www.w3.org/1999/xhtml" xml:lang=3D"=
+en" lang=3D"en"><head><meta http-equiv=3D"Content-Type" content=3D"text/htm=
+l; charset=3DUTF-8">
+
+<meta name=3D"generator" content=3D"Docutils 0.21.2: https://docutils.sourc=
+eforge.io/">
+<meta name=3D"author" content=3D"Wojciech Mu=C5=82a">
+<title>SIMDized check which bytes are in a set</title>
+<link rel=3D"stylesheet" href=3D"http://0x80.pl/notesen/style.css" type=3D"=
+text/css">
+</head>
+<body><button>=F0=9F=8C=93=EF=B8=8E</button>
+<div class=3D"document" id=3D"simdized-check-which-bytes-are-in-a-set">
+<h1 class=3D"title">SIMDized check which bytes are in a set</h1>
+<table class=3D"docinfo" frame=3D"void" rules=3D"none">
+<colgroup><col class=3D"docinfo-name">
+<col class=3D"docinfo-content">
+</colgroup><tbody valign=3D"top">
+<tr><th class=3D"docinfo-name">Author:</th>
+<td>Wojciech Mu=C5=82a</td></tr>
+<tr class=3D"added-on field"><th class=3D"docinfo-name">Added on:</th><td c=
+lass=3D"field-body">2018-10-18</td>
+</tr>
+<tr class=3D"updated field"><th class=3D"docinfo-name">Updated:</th><td cla=
+ss=3D"field-body">2019-03-27 (mistake pointed by <a class=3D"reference exte=
+rnal" href=3D"https://github.com/marcusklaas">Marcus Klaas</a>) 2018-10-28 =
+(add Geoff's algorithm, fixes/updates pointed by Michael)</td>
+</tr>
+</tbody>
+</table>
+<div class=3D"contents topic" id=3D"contents">
+<p class=3D"topic-title">Contents</p>
+<ul class=3D"simple">
+<li><a class=3D"reference internal" href=3D"http://0x80.pl/notesen/2018-10-=
+18-simd-byte-lookup.html#introduction" id=3D"toc-entry-1">Introduction</a><=
+/li>
+<li><a class=3D"reference internal" href=3D"http://0x80.pl/notesen/2018-10-=
+18-simd-byte-lookup.html#simd-algorithms" id=3D"toc-entry-2">SIMD algorithm=
+s</a></li>
+<li><a class=3D"reference internal" href=3D"http://0x80.pl/notesen/2018-10-=
+18-simd-byte-lookup.html#universal-algorithm" id=3D"toc-entry-3">Universal =
+algorithm</a><ul>
+<li><a class=3D"reference internal" href=3D"http://0x80.pl/notesen/2018-10-=
+18-simd-byte-lookup.html#example" id=3D"toc-entry-4">Example</a></li>
+<li><a class=3D"reference internal" href=3D"http://0x80.pl/notesen/2018-10-=
+18-simd-byte-lookup.html#implementation" id=3D"toc-entry-5">Implementation<=
+/a></li>
+<li><a class=3D"reference internal" href=3D"http://0x80.pl/notesen/2018-10-=
+18-simd-byte-lookup.html#alternative-implementation" id=3D"toc-entry-6">Alt=
+ernative implementation</a></li>
+</ul>
+</li>
+<li><a class=3D"reference internal" href=3D"http://0x80.pl/notesen/2018-10-=
+18-simd-byte-lookup.html#special-case-1-small-sets" id=3D"toc-entry-7">Spec=
+ial case 1 =E2=80=94 small sets</a></li>
+<li><a class=3D"reference internal" href=3D"http://0x80.pl/notesen/2018-10-=
+18-simd-byte-lookup.html#special-case-2-constant-nibble" id=3D"toc-entry-8"=
+>Special case 2 =E2=80=94 constant nibble</a></li>
+<li><a class=3D"reference internal" href=3D"http://0x80.pl/notesen/2018-10-=
+18-simd-byte-lookup.html#special-case-3-unique-lower-and-higher-nibbles" id=
+=3D"toc-entry-9">Special case 3 =E2=80=94 unique lower and higher nibbles</=
+a></li>
+<li><a class=3D"reference internal" href=3D"http://0x80.pl/notesen/2018-10-=
+18-simd-byte-lookup.html#basic-simd-methods" id=3D"toc-entry-10">Basic SIMD=
+ methods</a></li>
+<li><a class=3D"reference internal" href=3D"http://0x80.pl/notesen/2018-10-=
+18-simd-byte-lookup.html#acknowledgements" id=3D"toc-entry-11">Acknowledgem=
+ents</a></li>
+<li><a class=3D"reference internal" href=3D"http://0x80.pl/notesen/2018-10-=
+18-simd-byte-lookup.html#see-also" id=3D"toc-entry-12">See also</a></li>
+<li><a class=3D"reference internal" href=3D"http://0x80.pl/notesen/2018-10-=
+18-simd-byte-lookup.html#source-code" id=3D"toc-entry-13">Source code</a></=
+li>
+</ul>
+</div>
+<div class=3D"section" id=3D"introduction">
+<h1>Introduction</h1>
+<p>The problem is defined as follows: there's <strong>a stream of bytes</st=
+rong> and we want to
+get a byte-mask (or a bit-mask) that indicates which bytes are in <strong>t=
+he
+predefined set</strong>.</p>
+<p>Thanks to SIMD instructions this task can be performed faster than scala=
+r code.
+Jobs like input validation or parsing (for instance CSV files), might benef=
+it
+from a vectorized approach.</p>
+<p>In this text I show several SIMD methods:</p>
+<ul class=3D"simple">
+<li><strong>The universal algorithm</strong> that can handle arbitrary sets=
+ (from 1 to 255
+elements) with a few instructions.</li>
+<li>Several specialized algorithms, that handle small sets of peculiar
+properties. They require fewer instructions than the universal algorithm.
+However, the algorithms are rather meant for compilers/code generators, whe=
+re
+we can statically determine the best code sequence for a predefined set.</l=
+i>
+<li>For sake of completeness I describe <a class=3D"reference internal" hre=
+f=3D"http://0x80.pl/notesen/2018-10-18-simd-byte-lookup.html#basicmethods">=
+basic SIMD methods</a>. If the set has
+a few elements then no fancy algorithm is needed. Likewise, if the set
+can be represented as a union of ranges the code is also not complicated.</=
+li>
+</ul>
+</div>
+<div class=3D"section" id=3D"simd-algorithms">
+<h1>SIMD algorithms</h1>
+<p>The main ingredient of the techniques shown below is instruction <tt cla=
+ss=3D"docutils literal">pshufb</tt>
+(<tt class=3D"docutils literal">_mm_shuffle_epi8</tt>), which is present in=
+ SSE, AVX2 and also AVX512BW.  The
+instruction does parallel byte lookup in a 16-byte register (or <em>lane</e=
+m>, in AVX2
+and AVX512 variants) using <strong>4-bit</strong> indices from another vect=
+or.</p>
+<p>A C-like code shows the <tt class=3D"docutils literal">pshufb</tt> algor=
+ithm:</p>
+<pre class=3D"code cpp literal-block"><span class=3D"k">for</span><span cla=
+ss=3D"w"> </span><span class=3D"p">(</span><span class=3D"kt">int</span><sp=
+an class=3D"w"> </span><span class=3D"n">i</span><span class=3D"o">=3D</spa=
+n><span class=3D"mi">0</span><span class=3D"p">;</span><span class=3D"w"> <=
+/span><span class=3D"n">i</span><span class=3D"w"> </span><span class=3D"o"=
+>&lt;</span><span class=3D"w"> </span><span class=3D"n">VECTOR_SIZE</span><=
+span class=3D"p">;</span><span class=3D"w"> </span><span class=3D"n">i</spa=
+n><span class=3D"o">++</span><span class=3D"p">)</span><span class=3D"w"> <=
+/span><span class=3D"p">{</span><span class=3D"w">
+    </span><span class=3D"kt">uint8_t</span><span class=3D"w"> </span><span=
+ class=3D"n">index</span><span class=3D"w"> </span><span class=3D"o">=3D</s=
+pan><span class=3D"w"> </span><span class=3D"n">indices_vector</span><span =
+class=3D"p">[</span><span class=3D"n">i</span><span class=3D"p">];</span><s=
+pan class=3D"w">
+    </span><span class=3D"k">if</span><span class=3D"w"> </span><span class=
+=3D"p">(</span><span class=3D"n">index</span><span class=3D"w"> </span><spa=
+n class=3D"o">&amp;</span><span class=3D"w"> </span><span class=3D"mh">0x80=
+</span><span class=3D"p">)</span><span class=3D"w">
+        </span><span class=3D"n">result</span><span class=3D"p">[</span><sp=
+an class=3D"n">i</span><span class=3D"p">]</span><span class=3D"w"> </span>=
+<span class=3D"o">=3D</span><span class=3D"w"> </span><span class=3D"mh">0x=
+00</span><span class=3D"p">;</span><span class=3D"w">
+    </span><span class=3D"k">else</span><span class=3D"w">
+        </span><span class=3D"n">result</span><span class=3D"p">[</span><sp=
+an class=3D"n">i</span><span class=3D"p">]</span><span class=3D"w"> </span>=
+<span class=3D"o">=3D</span><span class=3D"w"> </span><span class=3D"n">loo=
+kup_vector</span><span class=3D"p">[</span><span class=3D"n">index</span><s=
+pan class=3D"w"> </span><span class=3D"o">&amp;</span><span class=3D"w"> </=
+span><span class=3D"mh">0x0f</span><span class=3D"p">];</span><span class=
+=3D"w">
+</span><span class=3D"p">}</span>
+</pre>
+</div>
+<div class=3D"section" id=3D"universal-algorithm">
+<span id=3D"universal"></span><h1>Universal algorithm</h1>
+<p>In this algorithm the set is represented as a bitmap of size 16 x 16 bit=
+s,
+where a bit of value 1 indicates that given element is in the set. The bitm=
+ap
+is addressed with <strong>nibbles</strong>, i.e. 4-bit halves of a byte.</p=
+>
+<p>The lower nibble of each input byte selects the bitmap's row, i.e. a 16-=
+bit
+value. The higher nibble selects the column on the bitmap =E2=80=94 once we=
+ fetched
+a row row, the higher nibble points at specific bit.</p>
+<p>Scalar code which deals with such representation is quite simple:</p>
+<pre class=3D"code cpp literal-block"><span class=3D"kt">bool</span><span c=
+lass=3D"w"> </span><span class=3D"nf">in_set</span><span class=3D"p">(</spa=
+n><span class=3D"kt">uint16_t</span><span class=3D"w"> </span><span class=
+=3D"n">bitmap</span><span class=3D"p">[</span><span class=3D"mi">16</span><=
+span class=3D"p">],</span><span class=3D"w"> </span><span class=3D"kt">uint=
+8_t</span><span class=3D"w"> </span><span class=3D"n">byte</span><span clas=
+s=3D"p">)</span><span class=3D"w"> </span><span class=3D"p">{</span><span c=
+lass=3D"w">
+
+    </span><span class=3D"k">const</span><span class=3D"w"> </span><span cl=
+ass=3D"kt">uint8_t</span><span class=3D"w"> </span><span class=3D"n">lo_nib=
+ble</span><span class=3D"w"> </span><span class=3D"o">=3D</span><span class=
+=3D"w"> </span><span class=3D"n">byte</span><span class=3D"w"> </span><span=
+ class=3D"o">&amp;</span><span class=3D"w"> </span><span class=3D"mh">0xf</=
+span><span class=3D"p">;</span><span class=3D"w">
+    </span><span class=3D"k">const</span><span class=3D"w"> </span><span cl=
+ass=3D"kt">uint8_t</span><span class=3D"w"> </span><span class=3D"n">hi_nib=
+ble</span><span class=3D"w"> </span><span class=3D"o">=3D</span><span class=
+=3D"w"> </span><span class=3D"n">byte</span><span class=3D"w"> </span><span=
+ class=3D"o">&gt;&gt;</span><span class=3D"w"> </span><span class=3D"mi">4<=
+/span><span class=3D"p">;</span><span class=3D"w">
+
+    </span><span class=3D"k">const</span><span class=3D"w"> </span><span cl=
+ass=3D"kt">uint16_t</span><span class=3D"w"> </span><span class=3D"n">bitse=
+t</span><span class=3D"w">  </span><span class=3D"o">=3D</span><span class=
+=3D"w"> </span><span class=3D"n">bitmap</span><span class=3D"p">[</span><sp=
+an class=3D"n">lo_nibble</span><span class=3D"p">];</span><span class=3D"w"=
+>
+    </span><span class=3D"k">const</span><span class=3D"w"> </span><span cl=
+ass=3D"kt">uint16_t</span><span class=3D"w"> </span><span class=3D"n">bitma=
+sk</span><span class=3D"w"> </span><span class=3D"o">=3D</span><span class=
+=3D"w"> </span><span class=3D"kt">uint16_t</span><span class=3D"p">(</span>=
+<span class=3D"mi">1</span><span class=3D"p">)</span><span class=3D"w"> </s=
+pan><span class=3D"o">&lt;&lt;</span><span class=3D"w"> </span><span class=
+=3D"n">hi_nibble</span><span class=3D"p">;</span><span class=3D"w">
+
+    </span><span class=3D"k">return</span><span class=3D"w"> </span><span c=
+lass=3D"p">(</span><span class=3D"n">bitset</span><span class=3D"w"> </span=
+><span class=3D"o">&amp;</span><span class=3D"w"> </span><span class=3D"n">=
+bitmask</span><span class=3D"p">)</span><span class=3D"w"> </span><span cla=
+ss=3D"o">!=3D</span><span class=3D"w"> </span><span class=3D"mi">0</span><s=
+pan class=3D"p">;</span><span class=3D"w">
+</span><span class=3D"p">}</span>
+</pre>
+<div class=3D"section" id=3D"example">
+<h2>Example</h2>
+<p>Let's consider following set; for better visibility zeroes are shown wit=
+h dots,
+and ones with the 'x':</p>
+<div class=3D"asciidiag"><pre class=3D"asciidiag">lo / hi nibble
+  =E2=94=8C=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=
+=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=
+=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=
+=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=95=B4
+  =E2=94=82 0 1 2 3 4 5 6 7 8 9 <span style=3D"font-weight: bold">a</span> =
+b c d e f
+=E2=95=B6=E2=94=80=E2=94=BC=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=
+=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=
+=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=
+=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=
+=94=80=E2=95=B4
+0 =E2=94=82 x x . . . . x . . . x . . x . .
+1 =E2=94=82 x x x x . x x . . . . . x x . x
+2 =E2=94=82 . x . . x . x . . . x . . x . .
+3 =E2=94=82 . x x . . . . x . . x . x . x .
+4 =E2=94=82 . . . . . . . . . . . . x x x x
+5 =E2=94=82 <span style=3D"color: blue">x</span> <span style=3D"color: blue=
+">x</span> . . <span style=3D"color: blue">x</span> . <span style=3D"color:=
+ blue">x</span> <span style=3D"color: blue">x</span> <span style=3D"color: =
+blue">x</span> . <span style=3D"color: blue">x</span> . . . <span style=3D"=
+color: blue">x</span> <span style=3D"color: blue">x</span>
+6 =E2=94=82 x . . . . x . x . . x . x . . .
+7 =E2=94=82 . . x . . . . . . . . x . . x .
+8 =E2=94=82 . . x x . . . . . . . . . . . x
+9 =E2=94=82 . . x x x . . x . . x . . . . .
+a =E2=94=82 . . . . . . x . . . x . . . . x
+b =E2=94=82 . . . x . . x . . . . . . . . .
+c =E2=94=82 x . . . x . . . . . . . . . x x
+d =E2=94=82 . . . x x x . x . . x x . . . .
+e =E2=94=82 x . x . . . . x . x . x . . . .
+f =E2=95=B5 x x . . . . x . . . . . x x x .</pre></div><p>We want to check =
+if byte <tt class=3D"docutils literal">0xa5</tt> is in the set. Its lower n=
+ibble is 5, so
+we select the highlighted row, getting 16-bit value <tt class=3D"docutils l=
+iteral">1100_0101_1101_0011</tt>.
+The higher nibble is 10 (<tt class=3D"docutils literal">0xa</tt>), thus we'=
+re testing this bit:</p>
+<pre class=3D"literal-block">1100_0101_1101_0011
+      ^
+</pre>
+<p>It's set and that means <tt class=3D"docutils literal">0xa5</tt> belongs=
+ to the set.</p>
+</div>
+<div class=3D"section" id=3D"implementation">
+<h2>Implementation</h2>
+<p>Since the instruction <tt class=3D"docutils literal">pshufb</tt> maps by=
+tes into bytes, it necessary to store
+two halves of a bitmap, i.e. 16 x 8 bit arrays. These sub-bitmaps are
+highlighted with blue and magenta below.</p>
+<div class=3D"asciidiag"><pre class=3D"asciidiag">lo / hi nibble
+  =E2=94=8C=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=
+=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=
+=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=
+=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=95=B4
+  =E2=94=82 0 1 2 3 4 5 6 7 8 9 a b c d e f
+=E2=95=B6=E2=94=80=E2=94=BC=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=
+=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=
+=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=
+=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=
+=94=80=E2=95=B4
+0 =E2=94=82 <span style=3D"color: blue">x x . . . . x .</span> <span style=
+=3D"color: magenta">. . x . . x . .</span>
+1 =E2=94=82 <span style=3D"color: blue">x x x x . x x .</span> <span style=
+=3D"color: magenta">. . . . x x . x</span>
+2 =E2=94=82 <span style=3D"color: blue">. x . . x . x .</span> <span style=
+=3D"color: magenta">. . x . . x . .</span>
+3 =E2=94=82 <span style=3D"color: blue">. x x . . . . x</span> <span style=
+=3D"color: magenta">. . x . x . x .</span>
+4 =E2=94=82 <span style=3D"color: blue">. . . . . . . .</span> <span style=
+=3D"color: magenta">. . . . x x x x</span>
+5 =E2=94=82 <span style=3D"color: blue">x x . . x . x x</span> <span style=
+=3D"color: magenta">x . x . . . x x</span>
+6 =E2=94=82 <span style=3D"color: blue">x . . . . x . x</span> <span style=
+=3D"color: magenta">. . x . x . . .</span>
+7 =E2=94=82 <span style=3D"color: blue">. . x . . . . .</span> <span style=
+=3D"color: magenta">. . . x . . x .</span>
+8 =E2=94=82 <span style=3D"color: blue">. . x x . . . .</span> <span style=
+=3D"color: magenta">. . . . . . . x</span>
+9 =E2=94=82 <span style=3D"color: blue">. . x x x . . x</span> <span style=
+=3D"color: magenta">. . x . . . . .</span>
+a =E2=94=82 <span style=3D"color: blue">. . . . . . x .</span> <span style=
+=3D"color: magenta">. . x . . . . x</span>
+b =E2=94=82 <span style=3D"color: blue">. . . x . . x .</span> <span style=
+=3D"color: magenta">. . . . . . . .</span>
+c =E2=94=82 <span style=3D"color: blue">x . . . x . . .</span> <span style=
+=3D"color: magenta">. . . . . . x x</span>
+d =E2=94=82 <span style=3D"color: blue">. . . x x x . x</span> <span style=
+=3D"color: magenta">. . x x . . . .</span>
+e =E2=94=82 <span style=3D"color: blue">x . x . . . . x</span> <span style=
+=3D"color: magenta">. x . x . . . .</span>
+f =E2=95=B5 <span style=3D"color: blue">x x . . . . x .</span> <span style=
+=3D"color: magenta">. . . . x x x .</span></pre></div><p>Fetching a row fro=
+m the bitmap requires two lookups: to get "blue" and "magenta"
+parts of the row.  Then, depending on higher nibble, we test a bit in "blue=
+" (for
+higher nibble in range 0..7) or "magenta" part (for higher nibble in range
+8..15).</p>
+<p>A note on calculating <tt class=3D"docutils literal">bitmask</tt>. In th=
+e scalar code it's just <tt class=3D"docutils literal">1 &lt;&lt; hi_nibble=
+</tt>,
+here we must evaluate <tt class=3D"docutils literal">(1 &lt;&lt; higher_nib=
+ble) % 8</tt>. Fortunately, this is possible
+with single <tt class=3D"docutils literal">pshufb</tt> invocation.</p>
+<p>Below is a scalar code that show the algorithm:</p>
+<pre class=3D"code cpp literal-block"><span class=3D"cm">/*   */</span><spa=
+n class=3D"w"> </span><span class=3D"k">const</span><span class=3D"w"> </sp=
+an><span class=3D"kt">uint8_t</span><span class=3D"w"> </span><span class=
+=3D"n">lo_nibble</span><span class=3D"w">  </span><span class=3D"o">=3D</sp=
+an><span class=3D"w"> </span><span class=3D"n">input</span><span class=3D"w=
+"> </span><span class=3D"o">&amp;</span><span class=3D"w"> </span><span cla=
+ss=3D"mh">0x0f</span><span class=3D"p">;</span><span class=3D"w">
+</span><span class=3D"cm">/*   */</span><span class=3D"w"> </span><span cla=
+ss=3D"k">const</span><span class=3D"w"> </span><span class=3D"kt">uint8_t</=
+span><span class=3D"w"> </span><span class=3D"n">hi_nibble</span><span clas=
+s=3D"w"> </span><span class=3D"o">=3D</span><span class=3D"w"> </span><span=
+ class=3D"n">input</span><span class=3D"w"> </span><span class=3D"o">&gt;&g=
+t;</span><span class=3D"w"> </span><span class=3D"mi">4</span><span class=
+=3D"p">;</span><span class=3D"w">
+
+</span><span class=3D"cm">/* 1 */</span><span class=3D"w"> </span><span cla=
+ss=3D"k">const</span><span class=3D"w"> </span><span class=3D"kt">uint8_t</=
+span><span class=3D"w"> </span><span class=3D"n">bitset_0_7</span><span cla=
+ss=3D"w">  </span><span class=3D"o">=3D</span><span class=3D"w"> </span><sp=
+an class=3D"n">bitmap_0_7</span><span class=3D"p">[</span><span class=3D"n"=
+>lo_nibble</span><span class=3D"p">];</span><span class=3D"w">
+</span><span class=3D"cm">/* 2 */</span><span class=3D"w"> </span><span cla=
+ss=3D"k">const</span><span class=3D"w"> </span><span class=3D"kt">uint8_t</=
+span><span class=3D"w"> </span><span class=3D"n">bitset_8_15</span><span cl=
+ass=3D"w"> </span><span class=3D"o">=3D</span><span class=3D"w"> </span><sp=
+an class=3D"n">bitmap_8_15</span><span class=3D"p">[</span><span class=3D"n=
+">lo_nibble</span><span class=3D"p">];</span><span class=3D"w">
+
+</span><span class=3D"cm">/* 3 */</span><span class=3D"w"> </span><span cla=
+ss=3D"k">const</span><span class=3D"w"> </span><span class=3D"kt">uint8_t</=
+span><span class=3D"w"> </span><span class=3D"n">bitmask</span><span class=
+=3D"w"> </span><span class=3D"o">=3D</span><span class=3D"w"> </span><span =
+class=3D"p">(</span><span class=3D"mi">1</span><span class=3D"w"> </span><s=
+pan class=3D"o">&lt;&lt;</span><span class=3D"w"> </span><span class=3D"p">=
+(</span><span class=3D"n">hi_nibble</span><span class=3D"w"> </span><span c=
+lass=3D"o">&amp;</span><span class=3D"w"> </span><span class=3D"mh">0x7</sp=
+an><span class=3D"p">))</span><span class=3D"w">
+
+        </span><span class=3D"kt">uint8_t</span><span class=3D"w"> </span><=
+span class=3D"n">bitset</span><span class=3D"p">;</span><span class=3D"w">
+</span><span class=3D"cm">/* 4 */</span><span class=3D"w"> </span><span cla=
+ss=3D"k">if</span><span class=3D"w"> </span><span class=3D"p">(</span><span=
+ class=3D"n">hi_nibble</span><span class=3D"w"> </span><span class=3D"o">&l=
+t;</span><span class=3D"w"> </span><span class=3D"mi">8</span><span class=
+=3D"p">)</span><span class=3D"w">
+            </span><span class=3D"n">bitset</span><span class=3D"w"> </span=
+><span class=3D"o">=3D</span><span class=3D"w"> </span><span class=3D"n">ro=
+w_0_7</span><span class=3D"p">;</span><span class=3D"w">
+        </span><span class=3D"k">else</span><span class=3D"w">
+            </span><span class=3D"n">bitset</span><span class=3D"w"> </span=
+><span class=3D"o">=3D</span><span class=3D"w"> </span><span class=3D"n">ro=
+w_8_15</span><span class=3D"p">;</span><span class=3D"w">
+
+</span><span class=3D"cm">/* 5 */</span><span class=3D"w"> </span><span cla=
+ss=3D"k">return</span><span class=3D"w"> </span><span class=3D"p">(</span><=
+span class=3D"n">bitset</span><span class=3D"w"> </span><span class=3D"o">&=
+amp;</span><span class=3D"w"> </span><span class=3D"n">bitmask</span><span =
+class=3D"p">)</span><span class=3D"w"> </span><span class=3D"o">!=3D</span>=
+<span class=3D"w"> </span><span class=3D"mi">0</span><span class=3D"p">;</s=
+pan>
+</pre>
+<p>Instructions 1, 2 and 3 are <tt class=3D"docutils literal">pshufb</tt>. =
+The fourth expression might be
+expressed by vector blend instruction (<tt class=3D"docutils literal">x[i] =
+? t[i] : f[i]</tt>). The last, 5th
+instruction, is simple bit-and followed by conversion into a bytemask.
+Following code shows a detailed SSE implementation of the above steps.</p>
+<ol class=3D"arabic">
+<li><p class=3D"first">Load 16 input bytes; hex digits are shown.</p>
+<pre class=3D"code cpp literal-block"><span class=3D"c1">// example values =
+in set: {0x10, 0x21, 0xbd}
+//            not in set: {0x36, 0x91, 0xed}
+</span><span class=3D"w">
+</span><span class=3D"c1">// input          =3D [36|10|91|21|10|ed|ed|21|36=
+|bd|36|21|91|91|ed|10]
+//                      ^^    ^^ ^^       ^^    ^^    ^^          ^^
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kr">__m128i</span><span class=3D"w"> </span><span class=3D"n">input</sp=
+an><span class=3D"w"> </span><span class=3D"o">=3D</span><span class=3D"w">=
+ </span><span class=3D"n">_mm_loadu_si128</span><span class=3D"p">(</span><=
+span class=3D"n">ptr</span><span class=3D"p">);</span>
+</pre>
+</li>
+<li><p class=3D"first">Extract lower nibbles. Simple bit-and is needed.</p>
+<pre class=3D"code cpp literal-block"><span class=3D"c1">// lower_nibbles  =
+=3D [06|00|01|01|00|0d|0d|01|06|0d|06|01|01|01|0d|00]
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kr">__m128i</span><span class=3D"w"> </span><span class=3D"n">lower_nib=
+bles</span><span class=3D"w"> </span><span class=3D"o">=3D</span><span clas=
+s=3D"w"> </span><span class=3D"n">_mm_and_si128</span><span class=3D"p">(</=
+span><span class=3D"n">input</span><span class=3D"p">,</span><span class=3D=
+"w"> </span><span class=3D"n">_mm_set1_epi8</span><span class=3D"p">(</span=
+><span class=3D"mh">0x0f</span><span class=3D"p">));</span>
+</pre>
+</li>
+<li><p class=3D"first">Extract higher nibbles, this requires also a bit shi=
+ft.</p>
+<pre class=3D"code cpp literal-block"><span class=3D"c1">// higher_nibbles =
+=3D [03|01|09|02|01|0e|0e|02|03|0b|03|02|09|09|0e|01]
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kr">__m128i</span><span class=3D"w"> </span><span class=3D"n">higher_ni=
+bbles</span><span class=3D"w"> </span><span class=3D"o">=3D</span><span cla=
+ss=3D"w"> </span><span class=3D"n">_mm_and_si128</span><span class=3D"p">(<=
+/span><span class=3D"n">_mm_srli_epi16</span><span class=3D"p">(</span><spa=
+n class=3D"n">input</span><span class=3D"p">,</span><span class=3D"w"> </sp=
+an><span class=3D"mi">4</span><span class=3D"p">),</span><span class=3D"w">=
+ </span><span class=3D"n">_mm_set1_epi8</span><span class=3D"p">(</span><sp=
+an class=3D"mh">0x0f</span><span class=3D"p">));</span>
+</pre>
+</li>
+<li><p class=3D"first">Pick rows for lower nibble (0..7).</p>
+<pre class=3D"code cpp literal-block"><span class=3D"k">static</span><span =
+class=3D"w"> </span><span class=3D"k">const</span><span class=3D"w"> </span=
+><span class=3D"kr">__m128i</span><span class=3D"w"> </span><span class=3D"=
+n">bitmap_0_7</span><span class=3D"w"> </span><span class=3D"o">=3D</span><=
+span class=3D"w"> </span><span class=3D"n">_mm_setr_epi8</span><span class=
+=3D"p">(</span><span class=3D"w">
+    </span><span class=3D"cm">/* 0 */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0x43</span><span class=3D"p">,</span><span class=3D"w"> </spa=
+n><span class=3D"cm">/* 01000011 */</span><span class=3D"w">
+    </span><span class=3D"cm">/* 1 */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0x6f</span><span class=3D"p">,</span><span class=3D"w"> </spa=
+n><span class=3D"cm">/* 01101111 */</span><span class=3D"w">
+    </span><span class=3D"cm">/* 2 */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0x52</span><span class=3D"p">,</span><span class=3D"w"> </spa=
+n><span class=3D"cm">/* 01010010 */</span><span class=3D"w">
+    </span><span class=3D"cm">/* 3 */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0x86</span><span class=3D"p">,</span><span class=3D"w"> </spa=
+n><span class=3D"cm">/* 10000110 */</span><span class=3D"w">
+    </span><span class=3D"cm">/* 4 */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0x00</span><span class=3D"p">,</span><span class=3D"w"> </spa=
+n><span class=3D"cm">/* 00000000 */</span><span class=3D"w">
+    </span><span class=3D"cm">/* 5 */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0xd3</span><span class=3D"p">,</span><span class=3D"w"> </spa=
+n><span class=3D"cm">/* 11010011 */</span><span class=3D"w">
+    </span><span class=3D"cm">/* 6 */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0xa1</span><span class=3D"p">,</span><span class=3D"w"> </spa=
+n><span class=3D"cm">/* 10100001 */</span><span class=3D"w">
+    </span><span class=3D"cm">/* 7 */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0x04</span><span class=3D"p">,</span><span class=3D"w"> </spa=
+n><span class=3D"cm">/* 00000100 */</span><span class=3D"w">
+    </span><span class=3D"cm">/* 8 */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0x0c</span><span class=3D"p">,</span><span class=3D"w"> </spa=
+n><span class=3D"cm">/* 00001100 */</span><span class=3D"w">
+    </span><span class=3D"cm">/* 9 */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0x9c</span><span class=3D"p">,</span><span class=3D"w"> </spa=
+n><span class=3D"cm">/* 10011100 */</span><span class=3D"w">
+    </span><span class=3D"cm">/* a */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0x40</span><span class=3D"p">,</span><span class=3D"w"> </spa=
+n><span class=3D"cm">/* 01000000 */</span><span class=3D"w">
+    </span><span class=3D"cm">/* b */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0x48</span><span class=3D"p">,</span><span class=3D"w"> </spa=
+n><span class=3D"cm">/* 01001000 */</span><span class=3D"w">
+    </span><span class=3D"cm">/* c */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0x11</span><span class=3D"p">,</span><span class=3D"w"> </spa=
+n><span class=3D"cm">/* 00010001 */</span><span class=3D"w">
+    </span><span class=3D"cm">/* d */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0xb8</span><span class=3D"p">,</span><span class=3D"w"> </spa=
+n><span class=3D"cm">/* 10111000 */</span><span class=3D"w">
+    </span><span class=3D"cm">/* e */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0x85</span><span class=3D"p">,</span><span class=3D"w"> </spa=
+n><span class=3D"cm">/* 10000101 */</span><span class=3D"w">
+    </span><span class=3D"cm">/* f */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0x43</span><span class=3D"w">  </span><span class=3D"cm">/* 0=
+1000011 */</span><span class=3D"w">
+</span><span class=3D"p">);</span><span class=3D"w">
+
+</span><span class=3D"c1">// row_0_7        =3D [a1|43|6f|6f|43|b8|b8|6f|a1=
+|b8|a1|6f|6f|6f|b8|43]
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kr">__m128i</span><span class=3D"w"> </span><span class=3D"n">row_0_7</=
+span><span class=3D"w"> </span><span class=3D"o">=3D</span><span class=3D"w=
+"> </span><span class=3D"n">_mm_shuffle_epi8</span><span class=3D"p">(</spa=
+n><span class=3D"n">bitmap_0_7</span><span class=3D"p">,</span><span class=
+=3D"w"> </span><span class=3D"n">lower_nibbles</span><span class=3D"p">);</=
+span>
+</pre>
+</li>
+<li><p class=3D"first">Likewise pick rows for higher nibble (8..15).</p>
+<pre class=3D"code cpp literal-block"><span class=3D"k">static</span><span =
+class=3D"w"> </span><span class=3D"k">const</span><span class=3D"w"> </span=
+><span class=3D"kr">__m128i</span><span class=3D"w"> </span><span class=3D"=
+n">bitmap_8_15</span><span class=3D"w"> </span><span class=3D"o">=3D</span>=
+<span class=3D"w"> </span><span class=3D"n">_mm_setr_epi8</span><span class=
+=3D"p">(</span><span class=3D"w">
+    </span><span class=3D"cm">/* 0 */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0x24</span><span class=3D"p">,</span><span class=3D"w"> </spa=
+n><span class=3D"cm">/* 00100100 */</span><span class=3D"w">
+    </span><span class=3D"cm">/* 1 */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0xb0</span><span class=3D"p">,</span><span class=3D"w"> </spa=
+n><span class=3D"cm">/* 10110000 */</span><span class=3D"w">
+    </span><span class=3D"cm">/* 2 */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0x24</span><span class=3D"p">,</span><span class=3D"w"> </spa=
+n><span class=3D"cm">/* 00100100 */</span><span class=3D"w">
+    </span><span class=3D"cm">/* 3 */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0x54</span><span class=3D"p">,</span><span class=3D"w"> </spa=
+n><span class=3D"cm">/* 01010100 */</span><span class=3D"w">
+    </span><span class=3D"cm">/* 4 */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0xf0</span><span class=3D"p">,</span><span class=3D"w"> </spa=
+n><span class=3D"cm">/* 11110000 */</span><span class=3D"w">
+    </span><span class=3D"cm">/* 5 */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0xc5</span><span class=3D"p">,</span><span class=3D"w"> </spa=
+n><span class=3D"cm">/* 11000101 */</span><span class=3D"w">
+    </span><span class=3D"cm">/* 6 */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0x14</span><span class=3D"p">,</span><span class=3D"w"> </spa=
+n><span class=3D"cm">/* 00010100 */</span><span class=3D"w">
+    </span><span class=3D"cm">/* 7 */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0x48</span><span class=3D"p">,</span><span class=3D"w"> </spa=
+n><span class=3D"cm">/* 01001000 */</span><span class=3D"w">
+    </span><span class=3D"cm">/* 8 */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0x80</span><span class=3D"p">,</span><span class=3D"w"> </spa=
+n><span class=3D"cm">/* 10000000 */</span><span class=3D"w">
+    </span><span class=3D"cm">/* 9 */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0x04</span><span class=3D"p">,</span><span class=3D"w"> </spa=
+n><span class=3D"cm">/* 00000100 */</span><span class=3D"w">
+    </span><span class=3D"cm">/* a */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0x84</span><span class=3D"p">,</span><span class=3D"w"> </spa=
+n><span class=3D"cm">/* 10000100 */</span><span class=3D"w">
+    </span><span class=3D"cm">/* b */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0x00</span><span class=3D"p">,</span><span class=3D"w"> </spa=
+n><span class=3D"cm">/* 00000000 */</span><span class=3D"w">
+    </span><span class=3D"cm">/* c */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0xc0</span><span class=3D"p">,</span><span class=3D"w"> </spa=
+n><span class=3D"cm">/* 11000000 */</span><span class=3D"w">
+    </span><span class=3D"cm">/* d */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0x0c</span><span class=3D"p">,</span><span class=3D"w"> </spa=
+n><span class=3D"cm">/* 00001100 */</span><span class=3D"w">
+    </span><span class=3D"cm">/* e */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0x0a</span><span class=3D"p">,</span><span class=3D"w"> </spa=
+n><span class=3D"cm">/* 00001010 */</span><span class=3D"w">
+    </span><span class=3D"cm">/* f */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0x70</span><span class=3D"w">  </span><span class=3D"cm">/* 0=
+1110000 */</span><span class=3D"w">
+</span><span class=3D"p">);</span><span class=3D"w">
+
+</span><span class=3D"c1">// row_8_15       =3D [14|24|b0|b0|24|0c|0c|b0|14=
+|0c|14|b0|b0|b0|0c|24]
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kr">__m128i</span><span class=3D"w"> </span><span class=3D"n">row_8_15<=
+/span><span class=3D"w"> </span><span class=3D"o">=3D</span><span class=3D"=
+w"> </span><span class=3D"n">_mm_shuffle_epi8</span><span class=3D"p">(</sp=
+an><span class=3D"n">bitmap_8_15</span><span class=3D"p">,</span><span clas=
+s=3D"w"> </span><span class=3D"n">lower_nibbles</span><span class=3D"p">);<=
+/span>
+</pre>
+</li>
+<li><p class=3D"first">Calculate a bitmask, i.e. <tt class=3D"docutils lite=
+ral">(1 &lt;&lt; hi_nibble % 8)</tt>.</p>
+<pre class=3D"code cpp literal-block"><span class=3D"k">static</span><span =
+class=3D"w"> </span><span class=3D"k">const</span><span class=3D"w"> </span=
+><span class=3D"kr">__m128i</span><span class=3D"w"> </span><span class=3D"=
+n">bitmask_lookup</span><span class=3D"w"> </span><span class=3D"o">=3D</sp=
+an><span class=3D"w"> </span><span class=3D"n">_mm_setr_epi8</span><span cl=
+ass=3D"p">(</span><span class=3D"w">
+        </span><span class=3D"mi">1</span><span class=3D"p">,</span><span c=
+lass=3D"w"> </span><span class=3D"mi">2</span><span class=3D"p">,</span><sp=
+an class=3D"w"> </span><span class=3D"mi">4</span><span class=3D"p">,</span=
+><span class=3D"w"> </span><span class=3D"mi">8</span><span class=3D"p">,</=
+span><span class=3D"w"> </span><span class=3D"mi">16</span><span class=3D"p=
+">,</span><span class=3D"w"> </span><span class=3D"mi">32</span><span class=
+=3D"p">,</span><span class=3D"w"> </span><span class=3D"mi">64</span><span =
+class=3D"p">,</span><span class=3D"w"> </span><span class=3D"mi">-128</span=
+><span class=3D"p">,</span><span class=3D"w">
+        </span><span class=3D"mi">1</span><span class=3D"p">,</span><span c=
+lass=3D"w"> </span><span class=3D"mi">2</span><span class=3D"p">,</span><sp=
+an class=3D"w"> </span><span class=3D"mi">4</span><span class=3D"p">,</span=
+><span class=3D"w"> </span><span class=3D"mi">8</span><span class=3D"p">,</=
+span><span class=3D"w"> </span><span class=3D"mi">16</span><span class=3D"p=
+">,</span><span class=3D"w"> </span><span class=3D"mi">32</span><span class=
+=3D"p">,</span><span class=3D"w"> </span><span class=3D"mi">64</span><span =
+class=3D"p">,</span><span class=3D"w"> </span><span class=3D"mi">-128</span=
+><span class=3D"p">);</span><span class=3D"w">
+
+</span><span class=3D"c1">// bitmasks       =3D [08|02|02|02|02|40|40|02|08=
+|08|08|04|02|02|40|02]
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kr">__m128i</span><span class=3D"w"> </span><span class=3D"n">bitmask</=
+span><span class=3D"w"> </span><span class=3D"o">=3D</span><span class=3D"w=
+"> </span><span class=3D"n">_mm_shuffle_epi8</span><span class=3D"p">(</spa=
+n><span class=3D"n">bitmask_lookup</span><span class=3D"p">,</span><span cl=
+ass=3D"w"> </span><span class=3D"n">higher_nibbles</span><span class=3D"p">=
+);</span>
+</pre>
+</li>
+<li><p class=3D"first">Choose rows halves depending on higher nibbles.</p>
+<pre class=3D"code cpp literal-block"><span class=3D"c1">// mask           =
+=3D [ff|ff|00|ff|ff|00|00|ff|ff|00|ff|ff|00|00|00|ff]
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kr">__m128i</span><span class=3D"w"> </span><span class=3D"n">mask</spa=
+n><span class=3D"w">    </span><span class=3D"o">=3D</span><span class=3D"w=
+"> </span><span class=3D"n">_mm_cmplt_epi8</span><span class=3D"p">(</span>=
+<span class=3D"n">higher_nibbles</span><span class=3D"p">,</span><span clas=
+s=3D"w"> </span><span class=3D"n">_mm_set1_epi8</span><span class=3D"p">(</=
+span><span class=3D"mi">8</span><span class=3D"p">));</span><span class=3D"=
+w">
+
+</span><span class=3D"c1">// bitsets        =3D [ff|ff|00|ff|ff|00|00|ff|ff=
+|00|ff|ff|00|00|00|ff]
+//                ? [a1|43|..|6f|43|..|..|6f|a1|..|a1|6f|..|..|..|43]
+//                : [..|..|b0|..|..|0c|0c|..|..|0c|..|..|b0|b0|0c|..]
+//
+//                =3D [a1|43|b0|6f|43|0c|0c|6f|a1|0c|a1|6f|b0|b0|0c|43]
+</span><span class=3D"w">
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kr">__m128i</span><span class=3D"w"> </span><span class=3D"n">bitsets</=
+span><span class=3D"w"> </span><span class=3D"o">=3D</span><span class=3D"w=
+"> </span><span class=3D"n">_mm_blendv_epi8</span><span class=3D"p">(</span=
+><span class=3D"n">row_0_7</span><span class=3D"p">,</span><span class=3D"w=
+"> </span><span class=3D"n">row_8_15</span><span class=3D"p">,</span><span =
+class=3D"w"> </span><span class=3D"n">mask</span><span class=3D"p">);</span=
+>
+</pre>
+</li>
+<li><p class=3D"first">Finally check which bytes belong to the set.</p>
+<pre class=3D"code cpp literal-block"><span class=3D"c1">// tmp            =
+=3D [a1|43|b0|6f|43|0c|0c|6f|a1|0c|a1|6f|b0|b0|0c|43]
+//                &amp; [08|02|02|02|02|40|40|02|08|08|08|04|02|02|40|02]
+</span><span class=3D"w">
+</span><span class=3D"c1">//                =3D [00|02|00|02|02|00|00|02|00=
+|08|00|04|00|00|00|02]
+//                      ^^    ^^ ^^       ^^    ^^    ^^          ^^
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kr">__m128i</span><span class=3D"w"> </span><span class=3D"n">tmp</span=
+><span class=3D"w">    </span><span class=3D"o">=3D</span><span class=3D"w"=
+> </span><span class=3D"n">_mm_and_si128</span><span class=3D"p">(</span><s=
+pan class=3D"n">bitsets</span><span class=3D"p">,</span><span class=3D"w"> =
+</span><span class=3D"n">bitmask</span><span class=3D"p">);</span><span cla=
+ss=3D"w">
+
+</span><span class=3D"c1">// result         =3D [00|ff|00|ff|ff|00|00|ff|00=
+|ff|00|ff|00|00|00|ff]
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kr">__m128i</span><span class=3D"w"> </span><span class=3D"n">result</s=
+pan><span class=3D"w"> </span><span class=3D"o">=3D</span><span class=3D"w"=
+> </span><span class=3D"n">_mm_cmpeq_epi8</span><span class=3D"p">(</span><=
+span class=3D"n">t0</span><span class=3D"p">,</span><span class=3D"w"> </sp=
+an><span class=3D"n">bitmask</span><span class=3D"p">);</span>
+</pre>
+</li>
+</ol>
+<p>Number of instructions:</p>
+<ul class=3D"simple">
+<li>3 x bit-and;</li>
+<li>1 x shift;</li>
+<li>3 x shuffle bytes;</li>
+<li>2 x comparison;</li>
+<li>1 x blend.</li>
+</ul>
+</div>
+<div class=3D"section" id=3D"alternative-implementation">
+<h2>Alternative implementation</h2>
+<p><a class=3D"reference external" href=3D"https://twitter.com/geofflangdal=
+e/status/1053227022795722752">Geoff Langdale</a> pointed out that we might =
+get rid of the blend instruction,
+which is not the fastest one. Instead, we use <tt class=3D"docutils literal=
+">pshufb</tt>, that zeros
+destination bytes when the highest bit of index is 1.</p>
+<p>This requires different indices when fetching <tt class=3D"docutils lite=
+ral">row_0_7</tt> and <tt class=3D"docutils literal">row_8_15</tt>. The
+indices for <tt class=3D"docutils literal">bitmap_0_7</tt> keep bits 0..3 a=
+nd also <strong>the most significant</strong>, i.e.
+7th bit of the input. Similarly the indices for <tt class=3D"docutils liter=
+al">bitmap_8_15</tt> have also bits 0..3,
+but the bit 7th is negated.</p>
+<p>When the most significant bit is set, it means that the higher nibble is=
+ greater
+or equal 8 =E2=80=94 in such situation <tt class=3D"docutils literal">bitse=
+t_0_7</tt> is zeroed and <tt class=3D"docutils literal">bitset_8_15</tt> ke=
+pt.</p>
+<p>The modified algorithm:</p>
+<ol class=3D"arabic">
+<li><p class=3D"first">Load 16 input bytes.</p>
+<pre class=3D"code cpp literal-block"><span class=3D"k">const</span><span c=
+lass=3D"w"> </span><span class=3D"kr">__m128i</span><span class=3D"w"> </sp=
+an><span class=3D"n">input</span><span class=3D"w"> </span><span class=3D"o=
+">=3D</span><span class=3D"w"> </span><span class=3D"n">_mm_loadu_si128</sp=
+an><span class=3D"p">(</span><span class=3D"n">ptr</span><span class=3D"p">=
+);</span>
+</pre>
+</li>
+<li><p class=3D"first">Extract indices for <tt class=3D"docutils literal">r=
+ow_0_7</tt>.</p>
+<pre class=3D"code cpp literal-block"><span class=3D"k">const</span><span c=
+lass=3D"w"> </span><span class=3D"kr">__m128i</span><span class=3D"w"> </sp=
+an><span class=3D"n">indices_0_7</span><span class=3D"w">  </span><span cla=
+ss=3D"o">=3D</span><span class=3D"w"> </span><span class=3D"n">_mm_and_si12=
+8</span><span class=3D"p">(</span><span class=3D"n">input</span><span class=
+=3D"p">,</span><span class=3D"w"> </span><span class=3D"n">_mm_set1_epi8</s=
+pan><span class=3D"p">(</span><span class=3D"mh">0x8f</span><span class=3D"=
+p">));</span><span class=3D"w"> </span><span class=3D"c1">// 0b1000_1111</s=
+pan>
+</pre>
+</li>
+<li><p class=3D"first">Extract indices for <tt class=3D"docutils literal">r=
+ow_8_15</tt>.</p>
+<pre class=3D"code cpp literal-block"><span class=3D"k">const</span><span c=
+lass=3D"w"> </span><span class=3D"kr">__m128i</span><span class=3D"w"> </sp=
+an><span class=3D"n">msb</span><span class=3D"w">          </span><span cla=
+ss=3D"o">=3D</span><span class=3D"w"> </span><span class=3D"n">_mm_and_si12=
+8</span><span class=3D"p">(</span><span class=3D"n">input</span><span class=
+=3D"p">,</span><span class=3D"w"> </span><span class=3D"n">_mm_set1_epi</sp=
+an><span class=3D"p">(</span><span class=3D"mh">0x80</span><span class=3D"p=
+">));</span><span class=3D"w">
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kr">__m128i</span><span class=3D"w"> </span><span class=3D"n">indices_8=
+_15</span><span class=3D"w"> </span><span class=3D"o">=3D</span><span class=
+=3D"w"> </span><span class=3D"n">_mm_xor_si128</span><span class=3D"p">(</s=
+pan><span class=3D"n">indices_0_7</span><span class=3D"p">,</span><span cla=
+ss=3D"w"> </span><span class=3D"n">msb</span><span class=3D"p">);</span>
+</pre>
+</li>
+<li><p class=3D"first">Fetch <tt class=3D"docutils literal">row_0_7</tt> an=
+d <tt class=3D"docutils literal">row_8_15</tt>:</p>
+<pre class=3D"code cpp literal-block"><span class=3D"k">const</span><span c=
+lass=3D"w"> </span><span class=3D"kr">__m128i</span><span class=3D"w"> </sp=
+an><span class=3D"n">row_0_7</span><span class=3D"w">  </span><span class=
+=3D"o">=3D</span><span class=3D"w"> </span><span class=3D"n">_mm_shuffle_ep=
+i8</span><span class=3D"p">(</span><span class=3D"n">bitmap_0_7</span><span=
+ class=3D"p">,</span><span class=3D"w"> </span><span class=3D"n">indices_0_=
+7</span><span class=3D"p">);</span><span class=3D"w">
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kr">__m128i</span><span class=3D"w"> </span><span class=3D"n">row_8_15<=
+/span><span class=3D"w"> </span><span class=3D"o">=3D</span><span class=3D"=
+w"> </span><span class=3D"n">_mm_shuffle_epi8</span><span class=3D"p">(</sp=
+an><span class=3D"n">bitmap_8_15</span><span class=3D"p">,</span><span clas=
+s=3D"w"> </span><span class=3D"n">indices_8_15</span><span class=3D"p">);</=
+span>
+</pre>
+</li>
+<li><p class=3D"first">Calculate a bitmask, i.e. <tt class=3D"docutils lite=
+ral">(1 &lt;&lt; hi_nibble % 8)</tt>.</p>
+<pre class=3D"code cpp literal-block"><span class=3D"k">const</span><span c=
+lass=3D"w"> </span><span class=3D"kr">__m128i</span><span class=3D"w"> </sp=
+an><span class=3D"n">bitmask</span><span class=3D"w"> </span><span class=3D=
+"o">=3D</span><span class=3D"w"> </span><span class=3D"n">_mm_shuffle_epi8<=
+/span><span class=3D"p">(</span><span class=3D"n">bitmask_lookup</span><spa=
+n class=3D"p">,</span><span class=3D"w"> </span><span class=3D"n">higher_ni=
+bbles</span><span class=3D"p">);</span>
+</pre>
+</li>
+<li><p class=3D"first">Choose rows halves depending on higher nibbles.</p>
+<pre class=3D"code cpp literal-block"><span class=3D"k">const</span><span c=
+lass=3D"w"> </span><span class=3D"kr">__m128i</span><span class=3D"w"> </sp=
+an><span class=3D"n">bitsets</span><span class=3D"w"> </span><span class=3D=
+"o">=3D</span><span class=3D"w"> </span><span class=3D"n">_mm_or_si128</spa=
+n><span class=3D"p">(</span><span class=3D"n">row_0_7</span><span class=3D"=
+p">,</span><span class=3D"w"> </span><span class=3D"n">row_8_15</span><span=
+ class=3D"p">);</span>
+</pre>
+</li>
+<li><p class=3D"first">Finally check which bytes belong to the set.</p>
+<pre class=3D"code cpp literal-block"><span class=3D"k">const</span><span c=
+lass=3D"w"> </span><span class=3D"kr">__m128i</span><span class=3D"w"> </sp=
+an><span class=3D"n">tmp</span><span class=3D"w">    </span><span class=3D"=
+o">=3D</span><span class=3D"w"> </span><span class=3D"n">_mm_and_si128</spa=
+n><span class=3D"p">(</span><span class=3D"n">bitsets</span><span class=3D"=
+p">,</span><span class=3D"w"> </span><span class=3D"n">bitmask</span><span =
+class=3D"p">);</span><span class=3D"w">
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kr">__m128i</span><span class=3D"w"> </span><span class=3D"n">result</s=
+pan><span class=3D"w"> </span><span class=3D"o">=3D</span><span class=3D"w"=
+> </span><span class=3D"n">_mm_cmpeq_epi8</span><span class=3D"p">(</span><=
+span class=3D"n">t0</span><span class=3D"p">,</span><span class=3D"w"> </sp=
+an><span class=3D"n">bitmask</span><span class=3D"p">);</span>
+</pre>
+</li>
+</ol>
+<p>Number of instructions:</p>
+<ul class=3D"simple">
+<li>3 x bit-and,</li>
+<li>1 x bit-or,</li>
+<li>1 x bit-xor,</li>
+<li>3 x shuffle,</li>
+<li>1 x compare.</li>
+</ul>
+</div>
+</div>
+<div class=3D"section" id=3D"special-case-1-small-sets">
+<h1>Special case 1 =E2=80=94 small sets</h1>
+<p>This method handles up to eight distinct elements.</p>
+<p>Let's consider this sample set: {0x01, 0x31, 0xc1, 0x35, 0x65, 0x77, 0x8=
+b, 0x3e};
+elements are labelled with letters K .. R.</p>
+<div class=3D"asciidiag"><pre class=3D"asciidiag">lo / hi nibble
+  =E2=94=8C=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=
+=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=
+=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=
+=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=95=B4
+  =E2=94=82 0 1 2 3 4 5 6 7 8 9 a b c d e f
+=E2=95=B6=E2=94=80=E2=94=BC=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=
+=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=
+=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=
+=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=
+=94=80=E2=95=B4
+0 =E2=94=82 <span style=3D"color: lightgray">.</span> <span style=3D"color:=
+ lightgray">.</span> <span style=3D"color: lightgray">.</span> <span style=
+=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span> <s=
+pan style=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.<=
+/span> <span style=3D"color: lightgray">.</span> <span style=3D"color: ligh=
+tgray">.</span> <span style=3D"color: lightgray">.</span> <span style=3D"co=
+lor: lightgray">.</span> <span style=3D"color: lightgray">.</span> <span st=
+yle=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span>=
+ <span style=3D"color: lightgray">.</span> <span style=3D"color: lightgray"=
+>.</span>
+1 =E2=94=82 <span style=3D"font-weight: bold">K</span> <span style=3D"color=
+: lightgray">.</span> <span style=3D"color: lightgray">.</span> <span style=
+=3D"font-weight: bold">L</span> <span style=3D"color: lightgray">.</span> <=
+span style=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.=
+</span> <span style=3D"color: lightgray">.</span> <span style=3D"color: lig=
+htgray">.</span> <span style=3D"color: lightgray">.</span> <span style=3D"c=
+olor: lightgray">.</span> <span style=3D"color: lightgray">.</span> <span s=
+tyle=3D"font-weight: bold">M</span> <span style=3D"color: lightgray">.</spa=
+n> <span style=3D"color: lightgray">.</span> <span style=3D"color: lightgra=
+y">.</span>
+2 =E2=94=82 <span style=3D"color: lightgray">.</span> <span style=3D"color:=
+ lightgray">.</span> <span style=3D"color: lightgray">.</span> <span style=
+=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span> <s=
+pan style=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.<=
+/span> <span style=3D"color: lightgray">.</span> <span style=3D"color: ligh=
+tgray">.</span> <span style=3D"color: lightgray">.</span> <span style=3D"co=
+lor: lightgray">.</span> <span style=3D"color: lightgray">.</span> <span st=
+yle=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span>=
+ <span style=3D"color: lightgray">.</span> <span style=3D"color: lightgray"=
+>.</span>
+3 =E2=94=82 <span style=3D"color: lightgray">.</span> <span style=3D"color:=
+ lightgray">.</span> <span style=3D"color: lightgray">.</span> <span style=
+=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span> <s=
+pan style=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.<=
+/span> <span style=3D"color: lightgray">.</span> <span style=3D"color: ligh=
+tgray">.</span> <span style=3D"color: lightgray">.</span> <span style=3D"co=
+lor: lightgray">.</span> <span style=3D"color: lightgray">.</span> <span st=
+yle=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span>=
+ <span style=3D"color: lightgray">.</span> <span style=3D"color: lightgray"=
+>.</span>
+4 =E2=94=82 <span style=3D"color: lightgray">.</span> <span style=3D"color:=
+ lightgray">.</span> <span style=3D"color: lightgray">.</span> <span style=
+=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span> <s=
+pan style=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.<=
+/span> <span style=3D"color: lightgray">.</span> <span style=3D"color: ligh=
+tgray">.</span> <span style=3D"color: lightgray">.</span> <span style=3D"co=
+lor: lightgray">.</span> <span style=3D"color: lightgray">.</span> <span st=
+yle=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span>=
+ <span style=3D"color: lightgray">.</span> <span style=3D"color: lightgray"=
+>.</span>
+5 =E2=94=82 <span style=3D"color: lightgray">.</span> <span style=3D"color:=
+ lightgray">.</span> <span style=3D"color: lightgray">.</span> <span style=
+=3D"font-weight: bold">N</span> <span style=3D"color: lightgray">.</span> <=
+span style=3D"color: lightgray">.</span> <span style=3D"font-weight: bold">=
+O</span> <span style=3D"color: lightgray">.</span> <span style=3D"color: li=
+ghtgray">.</span> <span style=3D"color: lightgray">.</span> <span style=3D"=
+color: lightgray">.</span> <span style=3D"color: lightgray">.</span> <span =
+style=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</spa=
+n> <span style=3D"color: lightgray">.</span> <span style=3D"color: lightgra=
+y">.</span>
+6 =E2=94=82 <span style=3D"color: lightgray">.</span> <span style=3D"color:=
+ lightgray">.</span> <span style=3D"color: lightgray">.</span> <span style=
+=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span> <s=
+pan style=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.<=
+/span> <span style=3D"color: lightgray">.</span> <span style=3D"color: ligh=
+tgray">.</span> <span style=3D"color: lightgray">.</span> <span style=3D"co=
+lor: lightgray">.</span> <span style=3D"color: lightgray">.</span> <span st=
+yle=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span>=
+ <span style=3D"color: lightgray">.</span> <span style=3D"color: lightgray"=
+>.</span>
+7 =E2=94=82 <span style=3D"color: lightgray">.</span> <span style=3D"color:=
+ lightgray">.</span> <span style=3D"color: lightgray">.</span> <span style=
+=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span> <s=
+pan style=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.<=
+/span> <span style=3D"font-weight: bold">P</span> <span style=3D"color: lig=
+htgray">.</span> <span style=3D"color: lightgray">.</span> <span style=3D"c=
+olor: lightgray">.</span> <span style=3D"color: lightgray">.</span> <span s=
+tyle=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span=
+> <span style=3D"color: lightgray">.</span> <span style=3D"color: lightgray=
+">.</span>
+8 =E2=94=82 <span style=3D"color: lightgray">.</span> <span style=3D"color:=
+ lightgray">.</span> <span style=3D"color: lightgray">.</span> <span style=
+=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span> <s=
+pan style=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.<=
+/span> <span style=3D"color: lightgray">.</span> <span style=3D"color: ligh=
+tgray">.</span> <span style=3D"color: lightgray">.</span> <span style=3D"co=
+lor: lightgray">.</span> <span style=3D"color: lightgray">.</span> <span st=
+yle=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span>=
+ <span style=3D"color: lightgray">.</span> <span style=3D"color: lightgray"=
+>.</span>
+9 =E2=94=82 <span style=3D"color: lightgray">.</span> <span style=3D"color:=
+ lightgray">.</span> <span style=3D"color: lightgray">.</span> <span style=
+=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span> <s=
+pan style=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.<=
+/span> <span style=3D"color: lightgray">.</span> <span style=3D"color: ligh=
+tgray">.</span> <span style=3D"color: lightgray">.</span> <span style=3D"co=
+lor: lightgray">.</span> <span style=3D"color: lightgray">.</span> <span st=
+yle=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span>=
+ <span style=3D"color: lightgray">.</span> <span style=3D"color: lightgray"=
+>.</span>
+a =E2=94=82 <span style=3D"color: lightgray">.</span> <span style=3D"color:=
+ lightgray">.</span> <span style=3D"color: lightgray">.</span> <span style=
+=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span> <s=
+pan style=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.<=
+/span> <span style=3D"color: lightgray">.</span> <span style=3D"color: ligh=
+tgray">.</span> <span style=3D"color: lightgray">.</span> <span style=3D"co=
+lor: lightgray">.</span> <span style=3D"color: lightgray">.</span> <span st=
+yle=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span>=
+ <span style=3D"color: lightgray">.</span> <span style=3D"color: lightgray"=
+>.</span>
+b =E2=94=82 <span style=3D"color: lightgray">.</span> <span style=3D"color:=
+ lightgray">.</span> <span style=3D"color: lightgray">.</span> <span style=
+=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span> <s=
+pan style=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.<=
+/span> <span style=3D"color: lightgray">.</span> <span style=3D"font-weight=
+: bold">Q</span> <span style=3D"color: lightgray">.</span> <span style=3D"c=
+olor: lightgray">.</span> <span style=3D"color: lightgray">.</span> <span s=
+tyle=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span=
+> <span style=3D"color: lightgray">.</span> <span style=3D"color: lightgray=
+">.</span>
+c =E2=94=82 <span style=3D"color: lightgray">.</span> <span style=3D"color:=
+ lightgray">.</span> <span style=3D"color: lightgray">.</span> <span style=
+=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span> <s=
+pan style=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.<=
+/span> <span style=3D"color: lightgray">.</span> <span style=3D"color: ligh=
+tgray">.</span> <span style=3D"color: lightgray">.</span> <span style=3D"co=
+lor: lightgray">.</span> <span style=3D"color: lightgray">.</span> <span st=
+yle=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span>=
+ <span style=3D"color: lightgray">.</span> <span style=3D"color: lightgray"=
+>.</span>
+d =E2=94=82 <span style=3D"color: lightgray">.</span> <span style=3D"color:=
+ lightgray">.</span> <span style=3D"color: lightgray">.</span> <span style=
+=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span> <s=
+pan style=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.<=
+/span> <span style=3D"color: lightgray">.</span> <span style=3D"color: ligh=
+tgray">.</span> <span style=3D"color: lightgray">.</span> <span style=3D"co=
+lor: lightgray">.</span> <span style=3D"color: lightgray">.</span> <span st=
+yle=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span>=
+ <span style=3D"color: lightgray">.</span> <span style=3D"color: lightgray"=
+>.</span>
+e =E2=94=82 <span style=3D"color: lightgray">.</span> <span style=3D"color:=
+ lightgray">.</span> <span style=3D"color: lightgray">.</span> <span style=
+=3D"font-weight: bold">R</span> <span style=3D"color: lightgray">.</span> <=
+span style=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.=
+</span> <span style=3D"color: lightgray">.</span> <span style=3D"color: lig=
+htgray">.</span> <span style=3D"color: lightgray">.</span> <span style=3D"c=
+olor: lightgray">.</span> <span style=3D"color: lightgray">.</span> <span s=
+tyle=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span=
+> <span style=3D"color: lightgray">.</span> <span style=3D"color: lightgray=
+">.</span>
+f =E2=95=B5 <span style=3D"color: lightgray">.</span> <span style=3D"color:=
+ lightgray">.</span> <span style=3D"color: lightgray">.</span> <span style=
+=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span> <s=
+pan style=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.<=
+/span> <span style=3D"color: lightgray">.</span> <span style=3D"color: ligh=
+tgray">.</span> <span style=3D"color: lightgray">.</span> <span style=3D"co=
+lor: lightgray">.</span> <span style=3D"color: lightgray">.</span> <span st=
+yle=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span>=
+ <span style=3D"color: lightgray">.</span> <span style=3D"color: lightgray"=
+>.</span></pre></div><p>We separately consider lower and higher nibble, i.e=
+. rows and columns in the
+diagram above. We associate a subset with each nibble, for lower nibbles th=
+ere
+are following subsets:</p>
+<ul class=3D"simple">
+<li>1: {K, L, M}</li>
+<li>5: {N, O}</li>
+<li>7: {P}</li>
+<li>b: {Q}</li>
+<li>e: {R}</li>
+</ul>
+<p>For higher nibbles we have:</p>
+<ul class=3D"simple">
+<li>0: {K}</li>
+<li>3: {L, N, R}</li>
+<li>6: {O}</li>
+<li>7: {P}</li>
+<li>8: {Q}</li>
+<li>c: {M}</li>
+</ul>
+<p>These subsets are encoded using <strong>bit sets</strong>, i.e. each ele=
+ment has assigned a bit
+in a byte (this is the source of size limit). For the example data we might=
+ have
+following mapping:</p>
+<pre class=3D"code cpp literal-block"><span class=3D"k">const</span><span c=
+lass=3D"w"> </span><span class=3D"kt">uint8_t</span><span class=3D"w"> </sp=
+an><span class=3D"n">empty</span><span class=3D"w"> </span><span class=3D"o=
+">=3D</span><span class=3D"w"> </span><span class=3D"mh">0x00</span><span c=
+lass=3D"p">;</span><span class=3D"w">
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kt">uint8_t</span><span class=3D"w"> </span><span class=3D"n">K</span><=
+span class=3D"w"> </span><span class=3D"o">=3D</span><span class=3D"w"> </s=
+pan><span class=3D"p">(</span><span class=3D"mi">1</span><span class=3D"w">=
+ </span><span class=3D"o">&lt;&lt;</span><span class=3D"w"> </span><span cl=
+ass=3D"mi">0</span><span class=3D"p">);</span><span class=3D"w"> </span><sp=
+an class=3D"c1">// 0x01
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kt">uint8_t</span><span class=3D"w"> </span><span class=3D"n">L</span><=
+span class=3D"w"> </span><span class=3D"o">=3D</span><span class=3D"w"> </s=
+pan><span class=3D"p">(</span><span class=3D"mi">1</span><span class=3D"w">=
+ </span><span class=3D"o">&lt;&lt;</span><span class=3D"w"> </span><span cl=
+ass=3D"mi">1</span><span class=3D"p">);</span><span class=3D"w"> </span><sp=
+an class=3D"c1">// 0x02
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kt">uint8_t</span><span class=3D"w"> </span><span class=3D"n">M</span><=
+span class=3D"w"> </span><span class=3D"o">=3D</span><span class=3D"w"> </s=
+pan><span class=3D"p">(</span><span class=3D"mi">1</span><span class=3D"w">=
+ </span><span class=3D"o">&lt;&lt;</span><span class=3D"w"> </span><span cl=
+ass=3D"mi">2</span><span class=3D"p">);</span><span class=3D"w"> </span><sp=
+an class=3D"c1">// 0x04
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kt">uint8_t</span><span class=3D"w"> </span><span class=3D"n">N</span><=
+span class=3D"w"> </span><span class=3D"o">=3D</span><span class=3D"w"> </s=
+pan><span class=3D"p">(</span><span class=3D"mi">1</span><span class=3D"w">=
+ </span><span class=3D"o">&lt;&lt;</span><span class=3D"w"> </span><span cl=
+ass=3D"mi">3</span><span class=3D"p">);</span><span class=3D"w"> </span><sp=
+an class=3D"c1">// 0x08
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kt">uint8_t</span><span class=3D"w"> </span><span class=3D"n">O</span><=
+span class=3D"w"> </span><span class=3D"o">=3D</span><span class=3D"w"> </s=
+pan><span class=3D"p">(</span><span class=3D"mi">1</span><span class=3D"w">=
+ </span><span class=3D"o">&lt;&lt;</span><span class=3D"w"> </span><span cl=
+ass=3D"mi">4</span><span class=3D"p">);</span><span class=3D"w"> </span><sp=
+an class=3D"c1">// 0x10
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kt">uint8_t</span><span class=3D"w"> </span><span class=3D"n">P</span><=
+span class=3D"w"> </span><span class=3D"o">=3D</span><span class=3D"w"> </s=
+pan><span class=3D"p">(</span><span class=3D"mi">1</span><span class=3D"w">=
+ </span><span class=3D"o">&lt;&lt;</span><span class=3D"w"> </span><span cl=
+ass=3D"mi">5</span><span class=3D"p">);</span><span class=3D"w"> </span><sp=
+an class=3D"c1">// 0x20
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kt">uint8_t</span><span class=3D"w"> </span><span class=3D"n">Q</span><=
+span class=3D"w"> </span><span class=3D"o">=3D</span><span class=3D"w"> </s=
+pan><span class=3D"p">(</span><span class=3D"mi">1</span><span class=3D"w">=
+ </span><span class=3D"o">&lt;&lt;</span><span class=3D"w"> </span><span cl=
+ass=3D"mi">6</span><span class=3D"p">);</span><span class=3D"w"> </span><sp=
+an class=3D"c1">// 0x40
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kt">uint8_t</span><span class=3D"w"> </span><span class=3D"n">R</span><=
+span class=3D"w"> </span><span class=3D"o">=3D</span><span class=3D"w"> </s=
+pan><span class=3D"p">(</span><span class=3D"mi">1</span><span class=3D"w">=
+ </span><span class=3D"o">&lt;&lt;</span><span class=3D"w"> </span><span cl=
+ass=3D"mi">7</span><span class=3D"p">);</span><span class=3D"w"> </span><sp=
+an class=3D"c1">// 0x80</span>
+</pre>
+<p>And then lookup tables are:</p>
+<pre class=3D"code cpp literal-block"><span class=3D"k">const</span><span c=
+lass=3D"w"> </span><span class=3D"kt">uint8_t</span><span class=3D"w"> </sp=
+an><span class=3D"n">lo_nibbles_lookup</span><span class=3D"p">[</span><spa=
+n class=3D"mi">16</span><span class=3D"p">]</span><span class=3D"w"> </span=
+><span class=3D"o">=3D</span><span class=3D"w"> </span><span class=3D"p">{<=
+/span><span class=3D"w">
+    </span><span class=3D"cm">/* 0 */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0x00</span><span class=3D"p">,</span><span class=3D"w">
+    </span><span class=3D"cm">/* 1 */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0x07</span><span class=3D"p">,</span><span class=3D"w"> </spa=
+n><span class=3D"c1">// K | L | M
+</span><span class=3D"w">    </span><span class=3D"cm">/* 2 */</span><span =
+class=3D"w"> </span><span class=3D"mh">0x00</span><span class=3D"p">,</span=
+><span class=3D"w">
+    </span><span class=3D"cm">/* 3 */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0x00</span><span class=3D"p">,</span><span class=3D"w">
+    </span><span class=3D"cm">/* 4 */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0x00</span><span class=3D"p">,</span><span class=3D"w">
+    </span><span class=3D"cm">/* 5 */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0x18</span><span class=3D"p">,</span><span class=3D"w"> </spa=
+n><span class=3D"c1">// N | O
+</span><span class=3D"w">    </span><span class=3D"cm">/* 6 */</span><span =
+class=3D"w"> </span><span class=3D"mh">0x00</span><span class=3D"p">,</span=
+><span class=3D"w">
+    </span><span class=3D"cm">/* 7 */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0x20</span><span class=3D"p">,</span><span class=3D"w"> </spa=
+n><span class=3D"c1">// P
+</span><span class=3D"w">    </span><span class=3D"cm">/* 8 */</span><span =
+class=3D"w"> </span><span class=3D"mh">0x00</span><span class=3D"p">,</span=
+><span class=3D"w">
+    </span><span class=3D"cm">/* 9 */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0x00</span><span class=3D"p">,</span><span class=3D"w">
+    </span><span class=3D"cm">/* a */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0x00</span><span class=3D"p">,</span><span class=3D"w">
+    </span><span class=3D"cm">/* b */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0x40</span><span class=3D"p">,</span><span class=3D"w"> </spa=
+n><span class=3D"c1">// Q
+</span><span class=3D"w">    </span><span class=3D"cm">/* c */</span><span =
+class=3D"w"> </span><span class=3D"mh">0x00</span><span class=3D"p">,</span=
+><span class=3D"w">
+    </span><span class=3D"cm">/* d */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0x00</span><span class=3D"p">,</span><span class=3D"w">
+    </span><span class=3D"cm">/* e */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0x80</span><span class=3D"p">,</span><span class=3D"w"> </spa=
+n><span class=3D"c1">// R
+</span><span class=3D"w">    </span><span class=3D"cm">/* f */</span><span =
+class=3D"w"> </span><span class=3D"mh">0x00</span><span class=3D"w">
+</span><span class=3D"p">};</span><span class=3D"w">
+
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kt">uint8_t</span><span class=3D"w"> </span><span class=3D"n">hi_nibble=
+s_lookup</span><span class=3D"p">[</span><span class=3D"mi">16</span><span =
+class=3D"p">]</span><span class=3D"w"> </span><span class=3D"o">=3D</span><=
+span class=3D"w"> </span><span class=3D"p">{</span><span class=3D"w">
+    </span><span class=3D"cm">/* 0 */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0x01</span><span class=3D"p">,</span><span class=3D"w"> </spa=
+n><span class=3D"c1">// K
+</span><span class=3D"w">    </span><span class=3D"cm">/* 1 */</span><span =
+class=3D"w"> </span><span class=3D"mh">0x00</span><span class=3D"p">,</span=
+><span class=3D"w">
+    </span><span class=3D"cm">/* 2 */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0x00</span><span class=3D"p">,</span><span class=3D"w">
+    </span><span class=3D"cm">/* 3 */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0x8a</span><span class=3D"p">,</span><span class=3D"w"> </spa=
+n><span class=3D"c1">// L | N | R
+</span><span class=3D"w">    </span><span class=3D"cm">/* 4 */</span><span =
+class=3D"w"> </span><span class=3D"mh">0x00</span><span class=3D"p">,</span=
+><span class=3D"w">
+    </span><span class=3D"cm">/* 5 */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0x00</span><span class=3D"p">,</span><span class=3D"w">
+    </span><span class=3D"cm">/* 6 */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0x10</span><span class=3D"p">,</span><span class=3D"w"> </spa=
+n><span class=3D"c1">// O
+</span><span class=3D"w">    </span><span class=3D"cm">/* 7 */</span><span =
+class=3D"w"> </span><span class=3D"mh">0x20</span><span class=3D"p">,</span=
+><span class=3D"w"> </span><span class=3D"c1">// P
+</span><span class=3D"w">    </span><span class=3D"cm">/* 8 */</span><span =
+class=3D"w"> </span><span class=3D"mh">0x40</span><span class=3D"p">,</span=
+><span class=3D"w"> </span><span class=3D"c1">// Q
+</span><span class=3D"w">    </span><span class=3D"cm">/* 9 */</span><span =
+class=3D"w"> </span><span class=3D"mh">0x00</span><span class=3D"p">,</span=
+><span class=3D"w">
+    </span><span class=3D"cm">/* a */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0x00</span><span class=3D"p">,</span><span class=3D"w">
+    </span><span class=3D"cm">/* b */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0x00</span><span class=3D"p">,</span><span class=3D"w">
+    </span><span class=3D"cm">/* c */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0x04</span><span class=3D"p">,</span><span class=3D"w"> </spa=
+n><span class=3D"c1">// M
+</span><span class=3D"w">    </span><span class=3D"cm">/* d */</span><span =
+class=3D"w"> </span><span class=3D"mh">0x00</span><span class=3D"p">,</span=
+><span class=3D"w">
+    </span><span class=3D"cm">/* e */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0x00</span><span class=3D"p">,</span><span class=3D"w">
+    </span><span class=3D"cm">/* f */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0x00</span><span class=3D"w">
+</span><span class=3D"p">};</span>
+</pre>
+<p>Algorithm consist following steps (SSE code is shown in example):</p>
+<ol class=3D"arabic">
+<li><p class=3D"first">Load 16 input bytes.</p>
+<pre class=3D"code cpp literal-block"><span class=3D"c1">// input          =
+=3D [11|31|11|35|8b|ff|ee|77|11|c1|11|8b|11|11|ff|01]
+//                      ^^    ^^ ^^       ^^    ^^    ^^          ^^
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kr">__m128i</span><span class=3D"w"> </span><span class=3D"n">input</sp=
+an><span class=3D"w"> </span><span class=3D"o">=3D</span><span class=3D"w">=
+ </span><span class=3D"n">_mm_loadu_si128</span><span class=3D"p">(</span><=
+span class=3D"n">ptr</span><span class=3D"p">);</span>
+</pre>
+</li>
+<li><p class=3D"first">Extract lower nibbles.</p>
+<pre class=3D"code cpp literal-block"><span class=3D"c1">// lower_nibbles  =
+=3D [01|01|01|05|0b|0f|0e|07|01|01|01|0b|01|01|0f|01]
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kr">__m128i</span><span class=3D"w"> </span><span class=3D"n">lower_nib=
+bles</span><span class=3D"w"> </span><span class=3D"o">=3D</span><span clas=
+s=3D"w"> </span><span class=3D"n">_mm_and_si128</span><span class=3D"p">(</=
+span><span class=3D"n">input</span><span class=3D"p">,</span><span class=3D=
+"w"> </span><span class=3D"n">_mm_set1_epi8</span><span class=3D"p">(</span=
+><span class=3D"mh">0x0f</span><span class=3D"p">));</span>
+</pre>
+</li>
+<li><p class=3D"first">Extract higher nibbles.</p>
+<pre class=3D"code cpp literal-block"><span class=3D"c1">// higher_nibbles =
+=3D [01|03|01|03|08|0f|0e|07|01|0c|01|08|01|01|0f|00]
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kr">__m128i</span><span class=3D"w"> </span><span class=3D"n">higher_ni=
+bbles</span><span class=3D"w"> </span><span class=3D"o">=3D</span><span cla=
+ss=3D"w"> </span><span class=3D"n">_mm_and_si128</span><span class=3D"p">(<=
+/span><span class=3D"n">_mm_srli_epi16</span><span class=3D"p">(</span><spa=
+n class=3D"n">input</span><span class=3D"p">,</span><span class=3D"w"> </sp=
+an><span class=3D"mi">4</span><span class=3D"p">),</span><span class=3D"w">=
+ </span><span class=3D"n">_mm_set1_epi8</span><span class=3D"p">(</span><sp=
+an class=3D"mh">0x0f</span><span class=3D"p">));</span>
+</pre>
+</li>
+<li><p class=3D"first">Translate the lower and higher nibbles (the lookup t=
+ables are defined above).</p>
+<pre class=3D"code cpp literal-block"><span class=3D"c1">// lo_translated  =
+=3D [07|07|07|18|40|00|80|20|07|07|07|40|07|07|00|07]
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kr">__m128i</span><span class=3D"w"> </span><span class=3D"n">lo_transl=
+ated</span><span class=3D"w"> </span><span class=3D"o">=3D</span><span clas=
+s=3D"w"> </span><span class=3D"n">_mm_shuffle_epi8</span><span class=3D"p">=
+(</span><span class=3D"w">
+                                </span><span class=3D"n">_mm_load_si128</sp=
+an><span class=3D"p">(</span><span class=3D"n">lo_nibbles_lookup</span><spa=
+n class=3D"p">),</span><span class=3D"w"> </span><span class=3D"n">lower_ni=
+bbles</span><span class=3D"p">);</span><span class=3D"w">
+
+</span><span class=3D"c1">// hi_translated  =3D [00|8a|00|8a|40|00|00|20|00=
+|04|00|40|00|00|00|01]
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kr">__m128i</span><span class=3D"w"> </span><span class=3D"n">hi_transl=
+ated</span><span class=3D"w"> </span><span class=3D"o">=3D</span><span clas=
+s=3D"w"> </span><span class=3D"n">_mm_shuffle_epi8</span><span class=3D"p">=
+(</span><span class=3D"w">
+                                </span><span class=3D"n">_mm_load_si128</sp=
+an><span class=3D"p">(</span><span class=3D"n">hi_nibbles_lookup</span><spa=
+n class=3D"p">),</span><span class=3D"w"> </span><span class=3D"n">higher_n=
+ibbles</span><span class=3D"p">);</span>
+</pre>
+</li>
+<li><p class=3D"first">Test bitsets for intersection.</p>
+<pre class=3D"code cpp literal-block"><span class=3D"c1">// lo_translated  =
+=3D [07|07|07|18|40|00|80|20|07|07|07|40|07|07|00|07]
+// hi_translated  =3D [00|8a|00|8a|40|00|00|20|00|04|00|40|00|00|00|01]
+// intersection   =3D [00|02|00|08|40|00|00|20|00|04|00|40|00|00|00|01]
+//                      ^^    ^^ ^^       ^^    ^^    ^^          ^^
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kr">__m128i</span><span class=3D"w"> </span><span class=3D"n">intersect=
+ion</span><span class=3D"w"> </span><span class=3D"o">=3D</span><span class=
+=3D"w"> </span><span class=3D"n">_mm_and_si128</span><span class=3D"p">(</s=
+pan><span class=3D"n">lo_translated</span><span class=3D"p">,</span><span c=
+lass=3D"w"> </span><span class=3D"n">hi_translated</span><span class=3D"p">=
+);</span>
+</pre>
+</li>
+<li><p class=3D"first">Fix up if necessary. Convert all non-zero elements i=
+nto <tt class=3D"docutils literal">0xff</tt>.</p>
+<pre class=3D"code cpp literal-block"><span class=3D"c1">// t0             =
+=3D [ff|00|ff|00|00|ff|ff|00|ff|00|ff|00|ff|ff|ff|00]
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kr">__m128i</span><span class=3D"w"> </span><span class=3D"n">t0</span>=
+<span class=3D"w"> </span><span class=3D"o">=3D</span><span class=3D"w"> </=
+span><span class=3D"n">_mm_cmpeq_epi8</span><span class=3D"p">(</span><span=
+ class=3D"n">intersection</span><span class=3D"p">,</span><span class=3D"w"=
+> </span><span class=3D"n">_mm_setzero_si128</span><span class=3D"p">());</=
+span><span class=3D"w">
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kr">__m128i</span><span class=3D"w"> </span><span class=3D"n">t1</span>=
+<span class=3D"w"> </span><span class=3D"o">=3D</span><span class=3D"w"> </=
+span><span class=3D"n">_mm_andnot_si128</span><span class=3D"p">(</span><sp=
+an class=3D"n">t0</span><span class=3D"p">,</span><span class=3D"w"> </span=
+><span class=3D"n">_mm_setzero_si128</span><span class=3D"p">());</span>
+</pre>
+</li>
+</ol>
+<p>Number of instructions:</p>
+<ul class=3D"simple">
+<li>2 x bit-and;</li>
+<li>1 x shift</li>
+<li>2 x shuffle bytes;</li>
+<li>1 x comparison [optional];</li>
+<li>1 x bit-andnot [optional].</li>
+</ul>
+</div>
+<div class=3D"section" id=3D"special-case-2-constant-nibble">
+<span id=3D"constantnibble"></span><h1>Special case 2 =E2=80=94 constant ni=
+bble</h1>
+<p>When either higher or lower nibbles of set values are constant, a single
+invocation of <tt class=3D"docutils literal">pshufb</tt> is sufficient to c=
+lassify up to 16-element set.</p>
+<p>The <strong>variable</strong> nibble addresses a lookup vector which con=
+tains elements from
+the set; nibbles not present in the set are marked with some other value. T=
+he
+translated vector is finally compared for equal with the input vector, yiel=
+ding
+zeros for bytes that are not in the set.</p>
+<p>Let's consider set {0x10, 0x12, 0x14, 0x15, 0x17, 0x18, 0x1a, 0x1f}.</p>
+<div class=3D"asciidiag"><pre class=3D"asciidiag">lo / hi nibble
+  =E2=94=8C=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=
+=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=
+=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=
+=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=95=B4
+  =E2=94=82 0 1 2 3 4 5 6 7 8 9 a b c d e f
+=E2=95=B6=E2=94=80=E2=94=BC=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=
+=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=
+=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=
+=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=
+=94=80=E2=95=B4
+0 =E2=94=82 <span style=3D"color: lightgray">.</span> <span style=3D"font-w=
+eight: bold">x</span> <span style=3D"color: lightgray">.</span> <span style=
+=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span> <s=
+pan style=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.<=
+/span> <span style=3D"color: lightgray">.</span> <span style=3D"color: ligh=
+tgray">.</span> <span style=3D"color: lightgray">.</span> <span style=3D"co=
+lor: lightgray">.</span> <span style=3D"color: lightgray">.</span> <span st=
+yle=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span>=
+ <span style=3D"color: lightgray">.</span> <span style=3D"color: lightgray"=
+>.</span>
+1 =E2=94=82 <span style=3D"color: lightgray">.</span> <span style=3D"color:=
+ lightgray">.</span> <span style=3D"color: lightgray">.</span> <span style=
+=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span> <s=
+pan style=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.<=
+/span> <span style=3D"color: lightgray">.</span> <span style=3D"color: ligh=
+tgray">.</span> <span style=3D"color: lightgray">.</span> <span style=3D"co=
+lor: lightgray">.</span> <span style=3D"color: lightgray">.</span> <span st=
+yle=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span>=
+ <span style=3D"color: lightgray">.</span> <span style=3D"color: lightgray"=
+>.</span>
+2 =E2=94=82 <span style=3D"color: lightgray">.</span> <span style=3D"color:=
+ lightgray">.</span> <span style=3D"color: lightgray">.</span> <span style=
+=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span> <s=
+pan style=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.<=
+/span> <span style=3D"color: lightgray">.</span> <span style=3D"color: ligh=
+tgray">.</span> <span style=3D"color: lightgray">.</span> <span style=3D"co=
+lor: lightgray">.</span> <span style=3D"color: lightgray">.</span> <span st=
+yle=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span>=
+ <span style=3D"color: lightgray">.</span> <span style=3D"color: lightgray"=
+>.</span>
+3 =E2=94=82 <span style=3D"color: lightgray">.</span> <span style=3D"color:=
+ lightgray">.</span> <span style=3D"color: lightgray">.</span> <span style=
+=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span> <s=
+pan style=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.<=
+/span> <span style=3D"color: lightgray">.</span> <span style=3D"color: ligh=
+tgray">.</span> <span style=3D"color: lightgray">.</span> <span style=3D"co=
+lor: lightgray">.</span> <span style=3D"color: lightgray">.</span> <span st=
+yle=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span>=
+ <span style=3D"color: lightgray">.</span> <span style=3D"color: lightgray"=
+>.</span>
+4 =E2=94=82 <span style=3D"color: lightgray">.</span> <span style=3D"font-w=
+eight: bold">x</span> <span style=3D"color: lightgray">.</span> <span style=
+=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span> <s=
+pan style=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.<=
+/span> <span style=3D"color: lightgray">.</span> <span style=3D"color: ligh=
+tgray">.</span> <span style=3D"color: lightgray">.</span> <span style=3D"co=
+lor: lightgray">.</span> <span style=3D"color: lightgray">.</span> <span st=
+yle=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span>=
+ <span style=3D"color: lightgray">.</span> <span style=3D"color: lightgray"=
+>.</span>
+5 =E2=94=82 <span style=3D"color: lightgray">.</span> <span style=3D"font-w=
+eight: bold">x</span> <span style=3D"color: lightgray">.</span> <span style=
+=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span> <s=
+pan style=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.<=
+/span> <span style=3D"color: lightgray">.</span> <span style=3D"color: ligh=
+tgray">.</span> <span style=3D"color: lightgray">.</span> <span style=3D"co=
+lor: lightgray">.</span> <span style=3D"color: lightgray">.</span> <span st=
+yle=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span>=
+ <span style=3D"color: lightgray">.</span> <span style=3D"color: lightgray"=
+>.</span>
+6 =E2=94=82 <span style=3D"color: lightgray">.</span> <span style=3D"color:=
+ lightgray">.</span> <span style=3D"color: lightgray">.</span> <span style=
+=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span> <s=
+pan style=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.<=
+/span> <span style=3D"color: lightgray">.</span> <span style=3D"color: ligh=
+tgray">.</span> <span style=3D"color: lightgray">.</span> <span style=3D"co=
+lor: lightgray">.</span> <span style=3D"color: lightgray">.</span> <span st=
+yle=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span>=
+ <span style=3D"color: lightgray">.</span> <span style=3D"color: lightgray"=
+>.</span>
+7 =E2=94=82 <span style=3D"color: lightgray">.</span> <span style=3D"font-w=
+eight: bold">x</span> <span style=3D"color: lightgray">.</span> <span style=
+=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span> <s=
+pan style=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.<=
+/span> <span style=3D"color: lightgray">.</span> <span style=3D"color: ligh=
+tgray">.</span> <span style=3D"color: lightgray">.</span> <span style=3D"co=
+lor: lightgray">.</span> <span style=3D"color: lightgray">.</span> <span st=
+yle=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span>=
+ <span style=3D"color: lightgray">.</span> <span style=3D"color: lightgray"=
+>.</span>
+8 =E2=94=82 <span style=3D"color: lightgray">.</span> <span style=3D"font-w=
+eight: bold">x</span> <span style=3D"color: lightgray">.</span> <span style=
+=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span> <s=
+pan style=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.<=
+/span> <span style=3D"color: lightgray">.</span> <span style=3D"color: ligh=
+tgray">.</span> <span style=3D"color: lightgray">.</span> <span style=3D"co=
+lor: lightgray">.</span> <span style=3D"color: lightgray">.</span> <span st=
+yle=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span>=
+ <span style=3D"color: lightgray">.</span> <span style=3D"color: lightgray"=
+>.</span>
+9 =E2=94=82 <span style=3D"color: lightgray">.</span> <span style=3D"color:=
+ lightgray">.</span> <span style=3D"color: lightgray">.</span> <span style=
+=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span> <s=
+pan style=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.<=
+/span> <span style=3D"color: lightgray">.</span> <span style=3D"color: ligh=
+tgray">.</span> <span style=3D"color: lightgray">.</span> <span style=3D"co=
+lor: lightgray">.</span> <span style=3D"color: lightgray">.</span> <span st=
+yle=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span>=
+ <span style=3D"color: lightgray">.</span> <span style=3D"color: lightgray"=
+>.</span>
+a =E2=94=82 <span style=3D"color: lightgray">.</span> <span style=3D"font-w=
+eight: bold">x</span> <span style=3D"color: lightgray">.</span> <span style=
+=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span> <s=
+pan style=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.<=
+/span> <span style=3D"color: lightgray">.</span> <span style=3D"color: ligh=
+tgray">.</span> <span style=3D"color: lightgray">.</span> <span style=3D"co=
+lor: lightgray">.</span> <span style=3D"color: lightgray">.</span> <span st=
+yle=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span>=
+ <span style=3D"color: lightgray">.</span> <span style=3D"color: lightgray"=
+>.</span>
+b =E2=94=82 <span style=3D"color: lightgray">.</span> <span style=3D"color:=
+ lightgray">.</span> <span style=3D"color: lightgray">.</span> <span style=
+=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span> <s=
+pan style=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.<=
+/span> <span style=3D"color: lightgray">.</span> <span style=3D"color: ligh=
+tgray">.</span> <span style=3D"color: lightgray">.</span> <span style=3D"co=
+lor: lightgray">.</span> <span style=3D"color: lightgray">.</span> <span st=
+yle=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span>=
+ <span style=3D"color: lightgray">.</span> <span style=3D"color: lightgray"=
+>.</span>
+c =E2=94=82 <span style=3D"color: lightgray">.</span> <span style=3D"color:=
+ lightgray">.</span> <span style=3D"color: lightgray">.</span> <span style=
+=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span> <s=
+pan style=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.<=
+/span> <span style=3D"color: lightgray">.</span> <span style=3D"color: ligh=
+tgray">.</span> <span style=3D"color: lightgray">.</span> <span style=3D"co=
+lor: lightgray">.</span> <span style=3D"color: lightgray">.</span> <span st=
+yle=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span>=
+ <span style=3D"color: lightgray">.</span> <span style=3D"color: lightgray"=
+>.</span>
+d =E2=94=82 <span style=3D"color: lightgray">.</span> <span style=3D"color:=
+ lightgray">.</span> <span style=3D"color: lightgray">.</span> <span style=
+=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span> <s=
+pan style=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.<=
+/span> <span style=3D"color: lightgray">.</span> <span style=3D"color: ligh=
+tgray">.</span> <span style=3D"color: lightgray">.</span> <span style=3D"co=
+lor: lightgray">.</span> <span style=3D"color: lightgray">.</span> <span st=
+yle=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span>=
+ <span style=3D"color: lightgray">.</span> <span style=3D"color: lightgray"=
+>.</span>
+e =E2=94=82 <span style=3D"color: lightgray">.</span> <span style=3D"color:=
+ lightgray">.</span> <span style=3D"color: lightgray">.</span> <span style=
+=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span> <s=
+pan style=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.<=
+/span> <span style=3D"color: lightgray">.</span> <span style=3D"color: ligh=
+tgray">.</span> <span style=3D"color: lightgray">.</span> <span style=3D"co=
+lor: lightgray">.</span> <span style=3D"color: lightgray">.</span> <span st=
+yle=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span>=
+ <span style=3D"color: lightgray">.</span> <span style=3D"color: lightgray"=
+>.</span>
+f =E2=95=B5 <span style=3D"color: lightgray">.</span> <span style=3D"font-w=
+eight: bold">x</span> <span style=3D"color: lightgray">.</span> <span style=
+=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span> <s=
+pan style=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.<=
+/span> <span style=3D"color: lightgray">.</span> <span style=3D"color: ligh=
+tgray">.</span> <span style=3D"color: lightgray">.</span> <span style=3D"co=
+lor: lightgray">.</span> <span style=3D"color: lightgray">.</span> <span st=
+yle=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span>=
+ <span style=3D"color: lightgray">.</span> <span style=3D"color: lightgray"=
+>.</span></pre></div><p>The higher nibble is constant, equal to 0x10; we wi=
+ll map lower, <em>variable</em>
+nibbles as shown below.</p>
+<pre class=3D"code cpp literal-block"><span class=3D"k">const</span><span c=
+lass=3D"w"> </span><span class=3D"kt">uint8_t</span><span class=3D"w"> </sp=
+an><span class=3D"n">lookup</span><span class=3D"p">[</span><span class=3D"=
+mi">16</span><span class=3D"p">]</span><span class=3D"w"> </span><span clas=
+s=3D"o">=3D</span><span class=3D"w"> </span><span class=3D"p">{</span><span=
+ class=3D"w">
+    </span><span class=3D"cm">/* 0 */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0x10</span><span class=3D"p">,</span><span class=3D"w">
+    </span><span class=3D"cm">/* 1 */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0x00</span><span class=3D"p">,</span><span class=3D"w"> </spa=
+n><span class=3D"c1">// not in the set
+</span><span class=3D"w">    </span><span class=3D"cm">/* 2 */</span><span =
+class=3D"w"> </span><span class=3D"mh">0x12</span><span class=3D"p">,</span=
+><span class=3D"w">
+    </span><span class=3D"cm">/* 3 */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0x00</span><span class=3D"p">,</span><span class=3D"w"> </spa=
+n><span class=3D"c1">// not in the set
+</span><span class=3D"w">    </span><span class=3D"cm">/* 4 */</span><span =
+class=3D"w"> </span><span class=3D"mh">0x14</span><span class=3D"p">,</span=
+><span class=3D"w">
+    </span><span class=3D"cm">/* 5 */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0x15</span><span class=3D"p">,</span><span class=3D"w">
+    </span><span class=3D"cm">/* 6 */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0x00</span><span class=3D"p">,</span><span class=3D"w"> </spa=
+n><span class=3D"c1">// not in the set
+</span><span class=3D"w">    </span><span class=3D"cm">/* 7 */</span><span =
+class=3D"w"> </span><span class=3D"mh">0x17</span><span class=3D"p">,</span=
+><span class=3D"w">
+    </span><span class=3D"cm">/* 8 */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0x18</span><span class=3D"p">,</span><span class=3D"w">
+    </span><span class=3D"cm">/* 9 */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0x00</span><span class=3D"p">,</span><span class=3D"w"> </spa=
+n><span class=3D"c1">// not in the set
+</span><span class=3D"w">    </span><span class=3D"cm">/* a */</span><span =
+class=3D"w"> </span><span class=3D"mh">0x1a</span><span class=3D"p">,</span=
+><span class=3D"w">
+    </span><span class=3D"cm">/* b */</span><span class=3D"w"> </span><span=
+ class=3D"mh">0x00</span><span class=3D"p">,</span><span class=3D"w"> </spa=
+n><span class=3D"c1">// not in the set
+</span><span class=3D"w">    </span><span class=3D"cm">/* c */</span><span =
+class=3D"w"> </span><span class=3D"mh">0x00</span><span class=3D"p">,</span=
+><span class=3D"w"> </span><span class=3D"c1">// not in the set
+</span><span class=3D"w">    </span><span class=3D"cm">/* d */</span><span =
+class=3D"w"> </span><span class=3D"mh">0x00</span><span class=3D"p">,</span=
+><span class=3D"w"> </span><span class=3D"c1">// not in the set
+</span><span class=3D"w">    </span><span class=3D"cm">/* e */</span><span =
+class=3D"w"> </span><span class=3D"mh">0x00</span><span class=3D"p">,</span=
+><span class=3D"w"> </span><span class=3D"c1">// not in the set
+</span><span class=3D"w">    </span><span class=3D"cm">/* f */</span><span =
+class=3D"w"> </span><span class=3D"mh">0x1f</span><span class=3D"p">,</span=
+><span class=3D"w">
+</span><span class=3D"p">};</span>
+</pre>
+<p>Algorithm consist following steps:</p>
+<ol class=3D"arabic">
+<li><p class=3D"first">Load 16 input bytes.</p>
+<pre class=3D"code cpp literal-block"><span class=3D"c1">// input =3D [21|1=
+2|13|15|14|fa|ca|17|55|aa|2a|1a|3a|ff|af|1f]
+//             ^^    ^^ ^^       ^^          ^^          ^^
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kr">__m128i</span><span class=3D"w"> </span><span class=3D"n">input</sp=
+an><span class=3D"w"> </span><span class=3D"o">=3D</span><span class=3D"w">=
+ </span><span class=3D"n">_mm_loadu_si128</span><span class=3D"p">(</span><=
+span class=3D"n">ptr</span><span class=3D"p">);</span>
+</pre>
+</li>
+<li><p class=3D"first">Extract the variable nibble. If it's lower one, then=
+ simple bit-and is needed;
+for higher nibble also a shift right is required.</p>
+<pre class=3D"code cpp literal-block"><span class=3D"c1">// lower_nibbles  =
+=3D [01|02|03|05|04|0a|0a|07|05|0a|0a|0a|0a|0f|0f|0f]
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kr">__m128i</span><span class=3D"w"> </span><span class=3D"n">lower_nib=
+bles</span><span class=3D"w"> </span><span class=3D"o">=3D</span><span clas=
+s=3D"w"> </span><span class=3D"n">_mm_and_si128</span><span class=3D"p">(</=
+span><span class=3D"n">input</span><span class=3D"p">,</span><span class=3D=
+"w"> </span><span class=3D"n">_mm_set1_epi8</span><span class=3D"p">(</span=
+><span class=3D"mh">0x0f</span><span class=3D"p">));</span><span class=3D"w=
+">
+
+</span><span class=3D"c1">// higher_nibbles =3D [02|01|01|01|01|0f|0c|01|05=
+|0a|02|01|03|0f|0a|01]
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kr">__m128i</span><span class=3D"w"> </span><span class=3D"n">higher_ni=
+bbles</span><span class=3D"w"> </span><span class=3D"o">=3D</span><span cla=
+ss=3D"w"> </span><span class=3D"n">_mm_and_si128</span><span class=3D"p">(<=
+/span><span class=3D"n">_mm_srli_epi16</span><span class=3D"p">(</span><spa=
+n class=3D"n">input</span><span class=3D"p">,</span><span class=3D"w"> </sp=
+an><span class=3D"mi">4</span><span class=3D"p">),</span><span class=3D"w">=
+ </span><span class=3D"n">_mm_set1_epi8</span><span class=3D"p">(</span><sp=
+an class=3D"mh">0x0f</span><span class=3D"p">));</span><span class=3D"w">
+
+</span><span class=3D"c1">// in our example we use lower nibbles
+// nibbles        =3D [01|02|03|05|04|0a|0a|07|05|0a|0a|0a|0a|0f|0f|0f]
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kr">__m128i</span><span class=3D"w"> </span><span class=3D"n">nibbles</=
+span><span class=3D"w"> </span><span class=3D"o">=3D</span><span class=3D"w=
+"> </span><span class=3D"n">lower_nibbles</span><span class=3D"p">;</span>
+</pre>
+</li>
+<li><p class=3D"first">Translate the nibbles using lookup table.</p>
+<pre class=3D"code cpp literal-block"><span class=3D"c1">// translated     =
+=3D [10|12|10|15|14|1a|1a|17|15|1a|1a|1a|1a|1f|1f|1f]
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kr">__m128i</span><span class=3D"w"> </span><span class=3D"n">translate=
+d</span><span class=3D"w"> </span><span class=3D"o">=3D</span><span class=
+=3D"w"> </span><span class=3D"n">_mm_shuffle_epi8</span><span class=3D"p">(=
+</span><span class=3D"n">_mm_load_si128</span><span class=3D"p">(</span><sp=
+an class=3D"n">lookup</span><span class=3D"p">),</span><span class=3D"w"> <=
+/span><span class=3D"n">nibbles</span><span class=3D"p">)</span>
+</pre>
+</li>
+<li><p class=3D"first">Compare the translated vector with the input one.</p=
+>
+<pre class=3D"code cpp literal-block"><span class=3D"c1">// input          =
+=3D [21|12|13|15|14|fa|ca|17|55|aa|2a|1a|3a|ff|af|1f]
+//                      ^^    ^^ ^^       ^^          ^^          ^^
+// translated     =3D [10|12|10|15|14|1a|1a|17|15|1a|1a|1a|1a|1f|1f|1f]
+// eq             =3D [00|ff|00|ff|ff|00|00|ff|00|00|00|ff|00|00|00|ff]
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kr">__m128i</span><span class=3D"w"> </span><span class=3D"n">eq</span>=
+<span class=3D"w"> </span><span class=3D"o">=3D</span><span class=3D"w"> </=
+span><span class=3D"n">_mm_cmpeq_epi8</span><span class=3D"p">(</span><span=
+ class=3D"n">input</span><span class=3D"p">,</span><span class=3D"w"> </spa=
+n><span class=3D"n">translated</span><span class=3D"p">);</span>
+</pre>
+</li>
+</ol>
+<p>Number of instructions:</p>
+<ul class=3D"simple">
+<li>1 x bit-and;</li>
+<li>1 x shift (if higher nibble is variable);</li>
+<li>1 x shuffle bytes;</li>
+<li>1 x comparison.</li>
+</ul>
+</div>
+<div class=3D"section" id=3D"special-case-3-unique-lower-and-higher-nibbles=
+">
+<h1>Special case 3 =E2=80=94 unique lower and higher nibbles</h1>
+<p>When none of lower and higher nibbles repeats then just two invocations =
+of
+<tt class=3D"docutils literal">pshufb</tt> are needed to classify a vector.=
+ In this case up to 16-elements
+sets are supported.</p>
+<p>Let's consider following 11-element set {0x20, 0x31, 0x42, 0x53, 0x64, 0=
+x75,
+0x86, 0x97, 0xa8, 0xb9, 0xca}. Lower nibbles are {0, 1, 2, 3, 4, 5, 6, 7, 8=
+, 9,
+a}, higher nibbles are {2, 3, 4, 5, 6, 7, 8, 9, a, b, c} =E2=80=94 as we se=
+e, the both
+sets contain unique values.</p>
+<div class=3D"asciidiag"><pre class=3D"asciidiag">lo / hi nibble
+  =E2=94=8C=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=
+=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=
+=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=
+=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=95=B4
+  =E2=94=82 0 1 2 3 4 5 6 7 8 9 a b c d e f
+=E2=95=B6=E2=94=80=E2=94=BC=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=
+=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=
+=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=
+=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=94=80=E2=
+=94=80=E2=95=B4
+0 =E2=94=82 <span style=3D"color: lightgray">.</span> <span style=3D"color:=
+ lightgray">.</span> <span style=3D"font-weight: bold">K</span> <span style=
+=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span> <s=
+pan style=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.<=
+/span> <span style=3D"color: lightgray">.</span> <span style=3D"color: ligh=
+tgray">.</span> <span style=3D"color: lightgray">.</span> <span style=3D"co=
+lor: lightgray">.</span> <span style=3D"color: lightgray">.</span> <span st=
+yle=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span>=
+ <span style=3D"color: lightgray">.</span> <span style=3D"color: lightgray"=
+>.</span>
+1 =E2=94=82 <span style=3D"color: lightgray">.</span> <span style=3D"color:=
+ lightgray">.</span> <span style=3D"color: lightgray">.</span> <span style=
+=3D"font-weight: bold">L</span> <span style=3D"color: lightgray">.</span> <=
+span style=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.=
+</span> <span style=3D"color: lightgray">.</span> <span style=3D"color: lig=
+htgray">.</span> <span style=3D"color: lightgray">.</span> <span style=3D"c=
+olor: lightgray">.</span> <span style=3D"color: lightgray">.</span> <span s=
+tyle=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span=
+> <span style=3D"color: lightgray">.</span> <span style=3D"color: lightgray=
+">.</span>
+2 =E2=94=82 <span style=3D"color: lightgray">.</span> <span style=3D"color:=
+ lightgray">.</span> <span style=3D"color: lightgray">.</span> <span style=
+=3D"color: lightgray">.</span> <span style=3D"font-weight: bold">M</span> <=
+span style=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.=
+</span> <span style=3D"color: lightgray">.</span> <span style=3D"color: lig=
+htgray">.</span> <span style=3D"color: lightgray">.</span> <span style=3D"c=
+olor: lightgray">.</span> <span style=3D"color: lightgray">.</span> <span s=
+tyle=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span=
+> <span style=3D"color: lightgray">.</span> <span style=3D"color: lightgray=
+">.</span>
+3 =E2=94=82 <span style=3D"color: lightgray">.</span> <span style=3D"color:=
+ lightgray">.</span> <span style=3D"color: lightgray">.</span> <span style=
+=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span> <s=
+pan style=3D"font-weight: bold">N</span> <span style=3D"color: lightgray">.=
+</span> <span style=3D"color: lightgray">.</span> <span style=3D"color: lig=
+htgray">.</span> <span style=3D"color: lightgray">.</span> <span style=3D"c=
+olor: lightgray">.</span> <span style=3D"color: lightgray">.</span> <span s=
+tyle=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span=
+> <span style=3D"color: lightgray">.</span> <span style=3D"color: lightgray=
+">.</span>
+4 =E2=94=82 <span style=3D"color: lightgray">.</span> <span style=3D"color:=
+ lightgray">.</span> <span style=3D"color: lightgray">.</span> <span style=
+=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span> <s=
+pan style=3D"color: lightgray">.</span> <span style=3D"font-weight: bold">O=
+</span> <span style=3D"color: lightgray">.</span> <span style=3D"color: lig=
+htgray">.</span> <span style=3D"color: lightgray">.</span> <span style=3D"c=
+olor: lightgray">.</span> <span style=3D"color: lightgray">.</span> <span s=
+tyle=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span=
+> <span style=3D"color: lightgray">.</span> <span style=3D"color: lightgray=
+">.</span>
+5 =E2=94=82 <span style=3D"color: lightgray">.</span> <span style=3D"color:=
+ lightgray">.</span> <span style=3D"color: lightgray">.</span> <span style=
+=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span> <s=
+pan style=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.<=
+/span> <span style=3D"font-weight: bold">P</span> <span style=3D"color: lig=
+htgray">.</span> <span style=3D"color: lightgray">.</span> <span style=3D"c=
+olor: lightgray">.</span> <span style=3D"color: lightgray">.</span> <span s=
+tyle=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span=
+> <span style=3D"color: lightgray">.</span> <span style=3D"color: lightgray=
+">.</span>
+6 =E2=94=82 <span style=3D"color: lightgray">.</span> <span style=3D"color:=
+ lightgray">.</span> <span style=3D"color: lightgray">.</span> <span style=
+=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span> <s=
+pan style=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.<=
+/span> <span style=3D"color: lightgray">.</span> <span style=3D"font-weight=
+: bold">Q</span> <span style=3D"color: lightgray">.</span> <span style=3D"c=
+olor: lightgray">.</span> <span style=3D"color: lightgray">.</span> <span s=
+tyle=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span=
+> <span style=3D"color: lightgray">.</span> <span style=3D"color: lightgray=
+">.</span>
+7 =E2=94=82 <span style=3D"color: lightgray">.</span> <span style=3D"color:=
+ lightgray">.</span> <span style=3D"color: lightgray">.</span> <span style=
+=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span> <s=
+pan style=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.<=
+/span> <span style=3D"color: lightgray">.</span> <span style=3D"color: ligh=
+tgray">.</span> <span style=3D"font-weight: bold">R</span> <span style=3D"c=
+olor: lightgray">.</span> <span style=3D"color: lightgray">.</span> <span s=
+tyle=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span=
+> <span style=3D"color: lightgray">.</span> <span style=3D"color: lightgray=
+">.</span>
+8 =E2=94=82 <span style=3D"color: lightgray">.</span> <span style=3D"color:=
+ lightgray">.</span> <span style=3D"color: lightgray">.</span> <span style=
+=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span> <s=
+pan style=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.<=
+/span> <span style=3D"color: lightgray">.</span> <span style=3D"color: ligh=
+tgray">.</span> <span style=3D"color: lightgray">.</span> <span style=3D"fo=
+nt-weight: bold">S</span> <span style=3D"color: lightgray">.</span> <span s=
+tyle=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span=
+> <span style=3D"color: lightgray">.</span> <span style=3D"color: lightgray=
+">.</span>
+9 =E2=94=82 <span style=3D"color: lightgray">.</span> <span style=3D"color:=
+ lightgray">.</span> <span style=3D"color: lightgray">.</span> <span style=
+=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span> <s=
+pan style=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.<=
+/span> <span style=3D"color: lightgray">.</span> <span style=3D"color: ligh=
+tgray">.</span> <span style=3D"color: lightgray">.</span> <span style=3D"co=
+lor: lightgray">.</span> <span style=3D"font-weight: bold">T</span> <span s=
+tyle=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span=
+> <span style=3D"color: lightgray">.</span> <span style=3D"color: lightgray=
+">.</span>
+a =E2=94=82 <span style=3D"color: lightgray">.</span> <span style=3D"color:=
+ lightgray">.</span> <span style=3D"color: lightgray">.</span> <span style=
+=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span> <s=
+pan style=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.<=
+/span> <span style=3D"color: lightgray">.</span> <span style=3D"color: ligh=
+tgray">.</span> <span style=3D"color: lightgray">.</span> <span style=3D"co=
+lor: lightgray">.</span> <span style=3D"color: lightgray">.</span> <span st=
+yle=3D"font-weight: bold">U</span> <span style=3D"color: lightgray">.</span=
+> <span style=3D"color: lightgray">.</span> <span style=3D"color: lightgray=
+">.</span>
+b =E2=94=82 <span style=3D"color: lightgray">.</span> <span style=3D"color:=
+ lightgray">.</span> <span style=3D"color: lightgray">.</span> <span style=
+=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span> <s=
+pan style=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.<=
+/span> <span style=3D"color: lightgray">.</span> <span style=3D"color: ligh=
+tgray">.</span> <span style=3D"color: lightgray">.</span> <span style=3D"co=
+lor: lightgray">.</span> <span style=3D"color: lightgray">.</span> <span st=
+yle=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span>=
+ <span style=3D"color: lightgray">.</span> <span style=3D"color: lightgray"=
+>.</span>
+c =E2=94=82 <span style=3D"color: lightgray">.</span> <span style=3D"color:=
+ lightgray">.</span> <span style=3D"color: lightgray">.</span> <span style=
+=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span> <s=
+pan style=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.<=
+/span> <span style=3D"color: lightgray">.</span> <span style=3D"color: ligh=
+tgray">.</span> <span style=3D"color: lightgray">.</span> <span style=3D"co=
+lor: lightgray">.</span> <span style=3D"color: lightgray">.</span> <span st=
+yle=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span>=
+ <span style=3D"color: lightgray">.</span> <span style=3D"color: lightgray"=
+>.</span>
+d =E2=94=82 <span style=3D"color: lightgray">.</span> <span style=3D"color:=
+ lightgray">.</span> <span style=3D"color: lightgray">.</span> <span style=
+=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span> <s=
+pan style=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.<=
+/span> <span style=3D"color: lightgray">.</span> <span style=3D"color: ligh=
+tgray">.</span> <span style=3D"color: lightgray">.</span> <span style=3D"co=
+lor: lightgray">.</span> <span style=3D"color: lightgray">.</span> <span st=
+yle=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span>=
+ <span style=3D"color: lightgray">.</span> <span style=3D"color: lightgray"=
+>.</span>
+e =E2=94=82 <span style=3D"color: lightgray">.</span> <span style=3D"color:=
+ lightgray">.</span> <span style=3D"color: lightgray">.</span> <span style=
+=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span> <s=
+pan style=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.<=
+/span> <span style=3D"color: lightgray">.</span> <span style=3D"color: ligh=
+tgray">.</span> <span style=3D"color: lightgray">.</span> <span style=3D"co=
+lor: lightgray">.</span> <span style=3D"color: lightgray">.</span> <span st=
+yle=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span>=
+ <span style=3D"color: lightgray">.</span> <span style=3D"color: lightgray"=
+>.</span>
+f =E2=95=B5 <span style=3D"color: lightgray">.</span> <span style=3D"color:=
+ lightgray">.</span> <span style=3D"color: lightgray">.</span> <span style=
+=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span> <s=
+pan style=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.<=
+/span> <span style=3D"color: lightgray">.</span> <span style=3D"color: ligh=
+tgray">.</span> <span style=3D"color: lightgray">.</span> <span style=3D"co=
+lor: lightgray">.</span> <span style=3D"color: lightgray">.</span> <span st=
+yle=3D"color: lightgray">.</span> <span style=3D"color: lightgray">.</span>=
+ <span style=3D"color: lightgray">.</span> <span style=3D"color: lightgray"=
+>.</span></pre></div><p>The idea is to label each set element with unique i=
+ndex and then map lower and
+higher nibbles to that index. If the indices are equal, it means that both
+nibbles form set's element.  Mapping for nibbles outside the valid set must
+yield different values, so comparison is always false.</p>
+<p>For instance, we might have following mapping:</p>
+<pre class=3D"code cpp literal-block"><span class=3D"k">const</span><span c=
+lass=3D"w"> </span><span class=3D"kt">uint8_t</span><span class=3D"w"> </sp=
+an><span class=3D"n">K</span><span class=3D"w"> </span><span class=3D"o">=
+=3D</span><span class=3D"w"> </span><span class=3D"mi">0</span><span class=
+=3D"p">;</span><span class=3D"w">
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kt">uint8_t</span><span class=3D"w"> </span><span class=3D"n">L</span><=
+span class=3D"w"> </span><span class=3D"o">=3D</span><span class=3D"w"> </s=
+pan><span class=3D"mi">1</span><span class=3D"p">;</span><span class=3D"w">
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kt">uint8_t</span><span class=3D"w"> </span><span class=3D"n">M</span><=
+span class=3D"w"> </span><span class=3D"o">=3D</span><span class=3D"w"> </s=
+pan><span class=3D"mi">2</span><span class=3D"p">;</span><span class=3D"w">
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kt">uint8_t</span><span class=3D"w"> </span><span class=3D"n">N</span><=
+span class=3D"w"> </span><span class=3D"o">=3D</span><span class=3D"w"> </s=
+pan><span class=3D"mi">3</span><span class=3D"p">;</span><span class=3D"w">
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kt">uint8_t</span><span class=3D"w"> </span><span class=3D"n">O</span><=
+span class=3D"w"> </span><span class=3D"o">=3D</span><span class=3D"w"> </s=
+pan><span class=3D"mi">4</span><span class=3D"p">;</span><span class=3D"w">
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kt">uint8_t</span><span class=3D"w"> </span><span class=3D"n">P</span><=
+span class=3D"w"> </span><span class=3D"o">=3D</span><span class=3D"w"> </s=
+pan><span class=3D"mi">5</span><span class=3D"p">;</span><span class=3D"w">
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kt">uint8_t</span><span class=3D"w"> </span><span class=3D"n">Q</span><=
+span class=3D"w"> </span><span class=3D"o">=3D</span><span class=3D"w"> </s=
+pan><span class=3D"mi">6</span><span class=3D"p">;</span><span class=3D"w">
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kt">uint8_t</span><span class=3D"w"> </span><span class=3D"n">R</span><=
+span class=3D"w"> </span><span class=3D"o">=3D</span><span class=3D"w"> </s=
+pan><span class=3D"mi">7</span><span class=3D"p">;</span><span class=3D"w">
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kt">uint8_t</span><span class=3D"w"> </span><span class=3D"n">S</span><=
+span class=3D"w"> </span><span class=3D"o">=3D</span><span class=3D"w"> </s=
+pan><span class=3D"mi">8</span><span class=3D"p">;</span><span class=3D"w">
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kt">uint8_t</span><span class=3D"w"> </span><span class=3D"n">T</span><=
+span class=3D"w"> </span><span class=3D"o">=3D</span><span class=3D"w"> </s=
+pan><span class=3D"mi">9</span><span class=3D"p">;</span><span class=3D"w">
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kt">uint8_t</span><span class=3D"w"> </span><span class=3D"n">U</span><=
+span class=3D"w"> </span><span class=3D"o">=3D</span><span class=3D"w"> </s=
+pan><span class=3D"mi">10</span><span class=3D"p">;</span><span class=3D"w"=
+>
+
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kt">uint8_t</span><span class=3D"w"> </span><span class=3D"n">lo_outsid=
+e</span><span class=3D"w"> </span><span class=3D"o">=3D</span><span class=
+=3D"w"> </span><span class=3D"mh">0x10</span><span class=3D"p">;</span><spa=
+n class=3D"w">
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kt">uint8_t</span><span class=3D"w"> </span><span class=3D"n">hi_outsid=
+e</span><span class=3D"w"> </span><span class=3D"o">=3D</span><span class=
+=3D"w"> </span><span class=3D"mh">0x20</span><span class=3D"p">;</span><spa=
+n class=3D"w"> </span><span class=3D"c1">// lo_outside !=3D hi_outside</spa=
+n>
+</pre>
+<p>Algorithm:</p>
+<ol class=3D"arabic">
+<li><p class=3D"first">Load 16 bytes.</p>
+<pre class=3D"code cpp literal-block"><span class=3D"c1">// in   =3D [20|21=
+|ca|cb|aa|a8|86|42|43|12|44|75|86|8f|fa|97]
+//         ^^    ^^       ^^ ^^ ^^          ^^ ^^       ^^
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kr">__m128</span><span class=3D"w"> </span><span class=3D"n">in</span><=
+span class=3D"w"> </span><span class=3D"o">=3D</span><span class=3D"w"> </s=
+pan><span class=3D"n">_mm_loadu_si128</span><span class=3D"p">(</span><span=
+ class=3D"n">ptr</span><span class=3D"p">);</span>
+</pre>
+</li>
+<li><p class=3D"first">Extract lower nibbles.</p>
+<pre class=3D"code cpp literal-block"><span class=3D"c1">// lo   =3D [ 0| 1=
+| a| b| a| 8| 6| 2| 3| 2| 4| 5| 6| f| a| 7]
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kr">__m128i</span><span class=3D"w"> </span><span class=3D"n">lo</span>=
+<span class=3D"w"> </span><span class=3D"o">=3D</span><span class=3D"w"> </=
+span><span class=3D"n">_mm_and_si128</span><span class=3D"p">(</span><span =
+class=3D"n">in</span><span class=3D"p">,</span><span class=3D"w"> </span><s=
+pan class=3D"n">_mm_set1_epi8</span><span class=3D"p">(</span><span class=
+=3D"mh">0x0f</span><span class=3D"p">));</span>
+</pre>
+</li>
+<li><p class=3D"first">Extract higher nibbles.</p>
+<pre class=3D"code cpp literal-block"><span class=3D"c1">// hi   =3D [ 2| 2=
+| c| c| a| a| 8| 4| 4| 1| 4| 7| 8| 8| f| 9]
+</span><span class=3D"kr">__m128i</span><span class=3D"w"> </span><span cla=
+ss=3D"n">hi</span><span class=3D"w"> </span><span class=3D"o">=3D</span><sp=
+an class=3D"w"> </span><span class=3D"n">_mm_srli_epi16</span><span class=
+=3D"p">(</span><span class=3D"n">in</span><span class=3D"p">,</span><span c=
+lass=3D"w"> </span><span class=3D"mi">4</span><span class=3D"p">);</span><s=
+pan class=3D"w">
+</span><span class=3D"n">hi</span><span class=3D"w"> </span><span class=3D"=
+o">=3D</span><span class=3D"w"> </span><span class=3D"n">_mm_and_si128</spa=
+n><span class=3D"p">(</span><span class=3D"n">hi</span><span class=3D"p">,<=
+/span><span class=3D"w"> </span><span class=3D"n">_mm_set1_epi8</span><span=
+ class=3D"p">(</span><span class=3D"mh">0x0f</span><span class=3D"p">));</s=
+pan>
+</pre>
+</li>
+<li><p class=3D"first">Translate lower nibbles into indices.</p>
+<pre class=3D"code cpp literal-block"><span class=3D"k">const</span><span c=
+lass=3D"w"> </span><span class=3D"kr">__m128i</span><span class=3D"w"> </sp=
+an><span class=3D"n">lo_lookup</span><span class=3D"w"> </span><span class=
+=3D"o">=3D</span><span class=3D"w"> </span><span class=3D"n">_mm_setr_epi8<=
+/span><span class=3D"p">(</span><span class=3D"w">
+    </span><span class=3D"mi">0</span><span class=3D"p">,</span><span class=
+=3D"w"> </span><span class=3D"mi">1</span><span class=3D"p">,</span><span c=
+lass=3D"w"> </span><span class=3D"mi">2</span><span class=3D"p">,</span><sp=
+an class=3D"w"> </span><span class=3D"mi">3</span><span class=3D"p">,</span=
+><span class=3D"w"> </span><span class=3D"mi">4</span><span class=3D"p">,</=
+span><span class=3D"w"> </span><span class=3D"mi">5</span><span class=3D"p"=
+>,</span><span class=3D"w"> </span><span class=3D"mi">6</span><span class=
+=3D"p">,</span><span class=3D"w"> </span><span class=3D"mi">7</span><span c=
+lass=3D"p">,</span><span class=3D"w"> </span><span class=3D"mi">8</span><sp=
+an class=3D"p">,</span><span class=3D"w"> </span><span class=3D"mi">9</span=
+><span class=3D"p">,</span><span class=3D"w"> </span><span class=3D"mh">0xa=
+</span><span class=3D"p">,</span><span class=3D"w">
+    </span><span class=3D"mh">0x20</span><span class=3D"p">,</span><span cl=
+ass=3D"w"> </span><span class=3D"mh">0x20</span><span class=3D"p">,</span><=
+span class=3D"w"> </span><span class=3D"mh">0x20</span><span class=3D"p">,<=
+/span><span class=3D"w"> </span><span class=3D"mh">0x20</span><span class=
+=3D"p">,</span><span class=3D"w"> </span><span class=3D"mh">0x20</span><spa=
+n class=3D"w">
+</span><span class=3D"p">);</span><span class=3D"w">
+
+</span><span class=3D"c1">// lo     =3D [ 0| 1| a| b| a| 8| 6| 2| 3| 2| 4| =
+5| 6| f| a| 7]
+// lo_idx =3D [ 0| 1| a|20| a| 8| 6| 2| 3| 2| 4| 5| 6|20| a| 7]
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kr">__m128i</span><span class=3D"w"> </span><span class=3D"n">lo_idx</s=
+pan><span class=3D"w"> </span><span class=3D"o">=3D</span><span class=3D"w"=
+> </span><span class=3D"n">_mm_shuffle_epi8</span><span class=3D"p">(</span=
+><span class=3D"n">lo</span><span class=3D"p">,</span><span class=3D"w"> </=
+span><span class=3D"n">lo_lookup</span><span class=3D"p">)</span>
+</pre>
+</li>
+<li><p class=3D"first">Translate higher nibbles into indices.</p>
+<pre class=3D"code cpp literal-block"><span class=3D"k">const</span><span c=
+lass=3D"w"> </span><span class=3D"kr">__m128i</span><span class=3D"w"> </sp=
+an><span class=3D"n">hi_lookup</span><span class=3D"w"> </span><span class=
+=3D"o">=3D</span><span class=3D"w"> </span><span class=3D"n">_mm_setr_epi8<=
+/span><span class=3D"p">(</span><span class=3D"w">
+    </span><span class=3D"mh">0x10</span><span class=3D"p">,</span><span cl=
+ass=3D"w"> </span><span class=3D"mh">0x10</span><span class=3D"p">,</span><=
+span class=3D"w">
+    </span><span class=3D"mi">0</span><span class=3D"p">,</span><span class=
+=3D"w"> </span><span class=3D"mi">1</span><span class=3D"p">,</span><span c=
+lass=3D"w"> </span><span class=3D"mi">2</span><span class=3D"p">,</span><sp=
+an class=3D"w"> </span><span class=3D"mi">3</span><span class=3D"p">,</span=
+><span class=3D"w"> </span><span class=3D"mi">4</span><span class=3D"p">,</=
+span><span class=3D"w"> </span><span class=3D"mi">5</span><span class=3D"p"=
+>,</span><span class=3D"w"> </span><span class=3D"mi">6</span><span class=
+=3D"p">,</span><span class=3D"w"> </span><span class=3D"mi">7</span><span c=
+lass=3D"p">,</span><span class=3D"w"> </span><span class=3D"mi">8</span><sp=
+an class=3D"p">,</span><span class=3D"w"> </span><span class=3D"mi">9</span=
+><span class=3D"p">,</span><span class=3D"w"> </span><span class=3D"mh">0xa=
+</span><span class=3D"p">,</span><span class=3D"w">
+    </span><span class=3D"mh">0x10</span><span class=3D"p">,</span><span cl=
+ass=3D"w"> </span><span class=3D"mh">0x10</span><span class=3D"p">,</span><=
+span class=3D"w"> </span><span class=3D"mh">0x10</span><span class=3D"w">
+</span><span class=3D"p">);</span><span class=3D"w">
+
+</span><span class=3D"c1">// hi     =3D [ 2| 2| c| c| a| a| 8| 4| 4| 1| 4| =
+7| 8| 8| f| 9]
+// hi_idx =3D [ 0| 0| a| a| 8| 8| 6| 2| 2|10| 2| 5| 6| 6|10| 7]
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kr">__m128i</span><span class=3D"w"> </span><span class=3D"n">hi_idx</s=
+pan><span class=3D"w"> </span><span class=3D"o">=3D</span><span class=3D"w"=
+> </span><span class=3D"n">_mm_shuffle_epi8</span><span class=3D"p">(</span=
+><span class=3D"n">hi</span><span class=3D"p">,</span><span class=3D"w"> </=
+span><span class=3D"n">hi_lookup</span><span class=3D"p">)</span>
+</pre>
+</li>
+<li><p class=3D"first">Compare translated nibbles =E2=80=94 if they match, =
+it means that
+bytes also match.</p>
+<pre class=3D"code cpp literal-block"><span class=3D"c1">// in     =3D [20|=
+21|ca|cb|aa|a8|86|42|43|12|44|75|86|8f|fa|97]
+//           ^^    ^^       ^^ ^^ ^^          ^^ ^^       ^^
+// lo_idx =3D [ 0| 1| a|20| a| 8| 6| 2| 3| 2| 4| 5| 6|20| a| 7]
+// hi_idx =3D [ 0| 0| a| a| 8| 8| 6| 2| 2|10| 2| 5| 6| 6|10| 7]
+// result =3D [ff|00|ff|00|00|ff|ff|ff|00|00|00|ff|ff|00|00|ff]
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kr">__m128i</span><span class=3D"w"> </span><span class=3D"n">result</s=
+pan><span class=3D"w"> </span><span class=3D"o">=3D</span><span class=3D"w"=
+> </span><span class=3D"n">_mm_cmpeq_epi8</span><span class=3D"p">(</span><=
+span class=3D"n">lo_idx</span><span class=3D"p">,</span><span class=3D"w"> =
+</span><span class=3D"n">hi_idx</span><span class=3D"p">)</span>
+</pre>
+</li>
+</ol>
+<p>Number of instructions:</p>
+<ul class=3D"simple">
+<li>2 x bit-and;</li>
+<li>1 x shift;</li>
+<li>2 x shuffle bytes;</li>
+<li>1 x comparison.</li>
+</ul>
+</div>
+<div class=3D"section" id=3D"basic-simd-methods">
+<span id=3D"basicmethods"></span><h1>Basic SIMD methods</h1>
+<p>Just to make this text complete, we'll enumerate naive SIMD methods:</p>
+<ol class=3D"arabic">
+<li><p class=3D"first">Tiny sets might be classified by compare each elemen=
+t of set with the input
+vector and merge partial results using bit-or. For instance, if the set is
+{' ', 't', 'n'}, then following code matches it.</p>
+<pre class=3D"code cpp literal-block"><span class=3D"k">const</span><span c=
+lass=3D"w"> </span><span class=3D"kr">__m128i</span><span class=3D"w"> </sp=
+an><span class=3D"n">input</span><span class=3D"w"> </span><span class=3D"o=
+">=3D</span><span class=3D"w"> </span><span class=3D"n">_mm_loadu_si128</sp=
+an><span class=3D"p">(</span><span class=3D"n">data</span><span class=3D"p"=
+>);</span><span class=3D"w">
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kr">__m128i</span><span class=3D"w"> </span><span class=3D"n">eq_32</sp=
+an><span class=3D"w"> </span><span class=3D"o">=3D</span><span class=3D"w">=
+ </span><span class=3D"n">_mm_cmpeq_epi8</span><span class=3D"p">(</span><s=
+pan class=3D"n">input</span><span class=3D"p">,</span><span class=3D"w"> </=
+span><span class=3D"n">_mm_set1_epi8</span><span class=3D"p">(</span><span =
+class=3D"sc">' '</span><span class=3D"p">));</span><span class=3D"w">
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kr">__m128i</span><span class=3D"w"> </span><span class=3D"n">eq_13</sp=
+an><span class=3D"w"> </span><span class=3D"o">=3D</span><span class=3D"w">=
+ </span><span class=3D"n">_mm_cmpeq_epi8</span><span class=3D"p">(</span><s=
+pan class=3D"n">input</span><span class=3D"p">,</span><span class=3D"w"> </=
+span><span class=3D"n">_mm_set1_epi8</span><span class=3D"p">(</span><span =
+class=3D"sc">'\n'</span><span class=3D"p">));</span><span class=3D"w">
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kr">__m128i</span><span class=3D"w"> </span><span class=3D"n">eq_09</sp=
+an><span class=3D"w"> </span><span class=3D"o">=3D</span><span class=3D"w">=
+ </span><span class=3D"n">_mm_cmpeq_epi8</span><span class=3D"p">(</span><s=
+pan class=3D"n">input</span><span class=3D"p">,</span><span class=3D"w"> </=
+span><span class=3D"n">_mm_set1_epi8</span><span class=3D"p">(</span><span =
+class=3D"sc">'\t'</span><span class=3D"p">));</span><span class=3D"w">
+
+</span><span class=3D"c1">// any_eq =3D eq_32 | eq_13 | eq_09
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kr">__m128i</span><span class=3D"w"> </span><span class=3D"n">any_eq</s=
+pan><span class=3D"w"> </span><span class=3D"o">=3D</span><span class=3D"w"=
+> </span><span class=3D"n">_mm_or_si128</span><span class=3D"p">(</span><sp=
+an class=3D"n">eq_32</span><span class=3D"p">,</span><span class=3D"w"> </s=
+pan><span class=3D"n">_mm_or_si128</span><span class=3D"p">(</span><span cl=
+ass=3D"n">eq_13</span><span class=3D"p">,</span><span class=3D"w"> </span><=
+span class=3D"n">eq_03</span><span class=3D"p">));</span>
+</pre>
+</li>
+<li><p class=3D"first">If a set is described by ranges, like 0-9, A-Z and a=
+-z, it's sufficient just
+to compare input vector with ranges' boundaries and bit-or partial result.
+Please be aware that both SSE and AVX2 do not support unsigned byte compari=
+sons.
+Thus only when boundaries are non-negative, code shown below works correctl=
+y.</p>
+<pre class=3D"code cpp literal-block"><span class=3D"k">const</span><span c=
+lass=3D"w"> </span><span class=3D"kr">__m128i</span><span class=3D"w"> </sp=
+an><span class=3D"n">input</span><span class=3D"w"> </span><span class=3D"o=
+">=3D</span><span class=3D"w"> </span><span class=3D"n">_mm_loadu_si128</sp=
+an><span class=3D"p">(</span><span class=3D"n">data</span><span class=3D"p"=
+>);</span><span class=3D"w">
+
+</span><span class=3D"c1">// check range 0-9 [ASCII: 48, 57]
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kr">__m128i</span><span class=3D"w"> </span><span class=3D"n">lt_48</sp=
+an><span class=3D"w"> </span><span class=3D"o">=3D</span><span class=3D"w">=
+ </span><span class=3D"n">_mm_cmplt_epi8</span><span class=3D"p">(</span><s=
+pan class=3D"n">input</span><span class=3D"p">,</span><span class=3D"w"> </=
+span><span class=3D"sc">'0'</span><span class=3D"p">);</span><span class=3D=
+"w">
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kr">__m128i</span><span class=3D"w"> </span><span class=3D"n">lt_58</sp=
+an><span class=3D"w"> </span><span class=3D"o">=3D</span><span class=3D"w">=
+ </span><span class=3D"n">_mm_cmplt_epi8</span><span class=3D"p">(</span><s=
+pan class=3D"n">input</span><span class=3D"p">,</span><span class=3D"w"> </=
+span><span class=3D"sc">'9'</span><span class=3D"w"> </span><span class=3D"=
+o">+</span><span class=3D"w"> </span><span class=3D"mi">1</span><span class=
+=3D"p">);</span><span class=3D"w">
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kr">__m128i</span><span class=3D"w"> </span><span class=3D"n">t0</span>=
+<span class=3D"w">    </span><span class=3D"o">=3D</span><span class=3D"w">=
+ </span><span class=3D"n">_mm_andnot_si128</span><span class=3D"p">(</span>=
+<span class=3D"n">lt_48</span><span class=3D"p">,</span><span class=3D"w"> =
+</span><span class=3D"n">lt_58</span><span class=3D"p">);</span><span class=
+=3D"w"> </span><span class=3D"c1">// not (x &lt; 48) and (x &lt; 58) =3D
+</span><span class=3D"w">                                                  =
+    </span><span class=3D"c1">//     (x &gt;=3D 48) and (x &lt; 58)
+</span><span class=3D"w">
+</span><span class=3D"c1">// check range A-Z [ASCII: 65, 90]
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kr">__m128i</span><span class=3D"w"> </span><span class=3D"n">lt_65</sp=
+an><span class=3D"w"> </span><span class=3D"o">=3D</span><span class=3D"w">=
+ </span><span class=3D"n">_mm_cmplt_epi8</span><span class=3D"p">(</span><s=
+pan class=3D"n">input</span><span class=3D"p">,</span><span class=3D"w"> </=
+span><span class=3D"sc">'A'</span><span class=3D"p">);</span><span class=3D=
+"w">
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kr">__m128i</span><span class=3D"w"> </span><span class=3D"n">lt_91</sp=
+an><span class=3D"w"> </span><span class=3D"o">=3D</span><span class=3D"w">=
+ </span><span class=3D"n">_mm_cmplt_epi8</span><span class=3D"p">(</span><s=
+pan class=3D"n">input</span><span class=3D"p">,</span><span class=3D"w"> </=
+span><span class=3D"sc">'Z'</span><span class=3D"w"> </span><span class=3D"=
+o">+</span><span class=3D"w"> </span><span class=3D"mi">1</span><span class=
+=3D"p">);</span><span class=3D"w">
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kr">__m128i</span><span class=3D"w"> </span><span class=3D"n">t1</span>=
+<span class=3D"w">    </span><span class=3D"o">=3D</span><span class=3D"w">=
+ </span><span class=3D"n">_mm_andnot_si128</span><span class=3D"p">(</span>=
+<span class=3D"n">lt_65</span><span class=3D"p">,</span><span class=3D"w"> =
+</span><span class=3D"n">lt_91</span><span class=3D"p">);</span><span class=
+=3D"w">
+
+</span><span class=3D"c1">// check range a-z [ASCII: 97, 122]
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kr">__m128i</span><span class=3D"w"> </span><span class=3D"n">lt_97</sp=
+an><span class=3D"w">  </span><span class=3D"o">=3D</span><span class=3D"w"=
+> </span><span class=3D"n">_mm_cmplt_epi8</span><span class=3D"p">(</span><=
+span class=3D"n">input</span><span class=3D"p">,</span><span class=3D"w"> <=
+/span><span class=3D"sc">'a'</span><span class=3D"p">);</span><span class=
+=3D"w">
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kr">__m128i</span><span class=3D"w"> </span><span class=3D"n">lt_123</s=
+pan><span class=3D"w"> </span><span class=3D"o">=3D</span><span class=3D"w"=
+> </span><span class=3D"n">_mm_cmplt_epi8</span><span class=3D"p">(</span><=
+span class=3D"n">input</span><span class=3D"p">,</span><span class=3D"w"> <=
+/span><span class=3D"sc">'z'</span><span class=3D"w"> </span><span class=3D=
+"o">+</span><span class=3D"w"> </span><span class=3D"mi">1</span><span clas=
+s=3D"p">);</span><span class=3D"w">
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kr">__m128i</span><span class=3D"w"> </span><span class=3D"n">t2</span>=
+<span class=3D"w">     </span><span class=3D"o">=3D</span><span class=3D"w"=
+> </span><span class=3D"n">_mm_andnot_si128</span><span class=3D"p">(</span=
+><span class=3D"n">lt_97</span><span class=3D"p">,</span><span class=3D"w">=
+ </span><span class=3D"n">lt_123</span><span class=3D"p">);</span><span cla=
+ss=3D"w">
+
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kr">__m128i</span><span class=3D"w"> </span><span class=3D"n">result</s=
+pan><span class=3D"w"> </span><span class=3D"o">=3D</span><span class=3D"w"=
+> </span><span class=3D"n">_mm_or_si128</span><span class=3D"p">(</span><sp=
+an class=3D"n">t0</span><span class=3D"p">,</span><span class=3D"w"> </span=
+><span class=3D"n">_mm_or_si128</span><span class=3D"p">(</span><span class=
+=3D"n">t1</span><span class=3D"p">,</span><span class=3D"w"> </span><span c=
+lass=3D"n">t2</span><span class=3D"p">));</span>
+</pre>
+</li>
+<li><p class=3D"first">Range with holes. For instance, we want to match ran=
+ge A-Z except K.  This
+can be expressed as sum of two ranges A-J and L-Z. Then we have: four
+comparisons, two bit-andnot operations, and one bit-or.  However, it's easi=
+er
+to check the whole range and then check for excluded element(s). Then, ther=
+e
+are three comparisons and two bit-andnot operations.</p>
+<pre class=3D"code cpp literal-block"><span class=3D"c1">// check range A-Z=
+ [ASCII: 65, 90]
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kr">__m128i</span><span class=3D"w"> </span><span class=3D"n">lt_65</sp=
+an><span class=3D"w"> </span><span class=3D"o">=3D</span><span class=3D"w">=
+ </span><span class=3D"n">_mm_cmplt_epi8</span><span class=3D"p">(</span><s=
+pan class=3D"n">input</span><span class=3D"p">,</span><span class=3D"w"> </=
+span><span class=3D"sc">'A'</span><span class=3D"p">);</span><span class=3D=
+"w">
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kr">__m128i</span><span class=3D"w"> </span><span class=3D"n">lt_91</sp=
+an><span class=3D"w"> </span><span class=3D"o">=3D</span><span class=3D"w">=
+ </span><span class=3D"n">_mm_cmplt_epi8</span><span class=3D"p">(</span><s=
+pan class=3D"n">input</span><span class=3D"p">,</span><span class=3D"w"> </=
+span><span class=3D"sc">'Z'</span><span class=3D"w"> </span><span class=3D"=
+o">+</span><span class=3D"w"> </span><span class=3D"mi">1</span><span class=
+=3D"p">);</span><span class=3D"w">
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kr">__m128i</span><span class=3D"w"> </span><span class=3D"n">t0</span>=
+<span class=3D"w">    </span><span class=3D"o">=3D</span><span class=3D"w">=
+ </span><span class=3D"n">_mm_andnot_si128</span><span class=3D"p">(</span>=
+<span class=3D"n">lt_65</span><span class=3D"p">,</span><span class=3D"w"> =
+</span><span class=3D"n">lt_91</span><span class=3D"p">);</span><span class=
+=3D"w">
+
+</span><span class=3D"c1">// exclude K
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kr">__m128i</span><span class=3D"w"> </span><span class=3D"n">eq_K</spa=
+n><span class=3D"w">  </span><span class=3D"o">=3D</span><span class=3D"w">=
+ </span><span class=3D"n">_mm_cmpeq_epi8</span><span class=3D"p">(</span><s=
+pan class=3D"sc">'K'</span><span class=3D"p">);</span><span class=3D"w">
+</span><span class=3D"k">const</span><span class=3D"w"> </span><span class=
+=3D"kr">__m128i</span><span class=3D"w"> </span><span class=3D"n">result</s=
+pan><span class=3D"w"> </span><span class=3D"o">=3D</span><span class=3D"w"=
+> </span><span class=3D"n">_mm_andnot_si128</span><span class=3D"p">(</span=
+><span class=3D"n">eq_K</span><span class=3D"p">,</span><span class=3D"w"> =
+</span><span class=3D"n">t0</span><span class=3D"p">);</span>
+</pre>
+</li>
+</ol>
+</div>
+<div class=3D"section" id=3D"acknowledgements">
+<h1>Acknowledgements</h1>
+<p>Thanks to <strong>Geoff Langdale</strong> and <strong>Michael Howard</st=
+rong> for their comments and fixes.</p>
+</div>
+<div class=3D"section" id=3D"see-also">
+<h1>See also</h1>
+<ul class=3D"simple">
+<li><a class=3D"reference external" href=3D"https://github.com/intel/hypers=
+can">Intel Hyperscan</a>, that use similar algorithms</li>
+</ul>
+</div>
+<div class=3D"section" id=3D"source-code">
+<h1>Source code</h1>
+<p>Source code is available on <a class=3D"reference external" href=3D"http=
+s://github.com/WojciechMula/simd-byte-lookup">github</a>.</p>
+</div>
+</div>
+
+
+</body></html>
+------MultipartBoundary--v39GFEw20LTUZrJSNGuP5RHPGZi7Wnmkq9daz6N2z3----
+Content-Type: text/css
+Content-Transfer-Encoding: quoted-printable
+Content-Location: http://0x80.pl/notesen/style.css
+
+@charset "utf-8";
+
+body { background-color: white; color: black; font-family: sans-serif; marg=
+in: 2em; }
+
+body.dark { background-color: rgb(34, 34, 34); color: rgb(204, 204, 204); }
+
+pre { padding: 4px; background-color: rgb(245, 245, 245); margin-left: 20px=
+; margin-right: 0em; overflow: auto; }
+
+.dark pre { background-color: rgb(17, 17, 17); }
+
+pre.asciidiag { border-style: none; padding: 10px; background-color: white;=
+ color: black; }
+
+span.math, span.cmath { font-family: cmr, Times, sans-serif; color: inherit=
+; white-space: nowrap; }
+
+span.cmath { display: block; text-align: center; font-size: larger; }
+
+p { text-align: justify; }
+
+h1.title { font-family: sans-serif; color: darkblue; text-align: center; }
+
+.dark h1.title { color: white; }
+
+div.section h1, h2, h3 { font-family: sans-serif; color: darkblue; margin-t=
+op: 1em; border-bottom: 1px solid lightgray; padding: 4px; }
+
+.dark div.section h1 { color: white; }
+
+.dark div.section h2 { color: white; }
+
+.dark div.section h3 { color: white; }
+
+a { color: darkblue; }
+
+.dark a { color: orange; }
+
+img.align-center { display: block; margin-left: auto; margin-right: auto; t=
+ext-align: center; border: none; }
+
+table.docutils { border-style: solid; border-color: black; border-width: 1p=
+x; padding: 0px; margin: 1em auto; }
+
+table.no-border { border: none !important; }
+
+table.no-border td { border: none !important; }
+
+.dark table.docutils { border-color: gray; }
+
+table.docutils td, table.docutils th { border-style: solid; border-color: b=
+lack; border-width: 1px; padding: 0.5ex; margin: 0.5ex; }
+
+.dark table.docutils td, .dark table.docutils th { border-color: gray; }
+
+table.docutils { border-collapse: collapse; }
+
+table.docutils th { background: rgb(230, 230, 255); }
+
+.dark table.docutils th { background: black; }
+
+table.footnote, table.option-list { border: none; margin: 0px 0px auto; }
+
+table.footnote td { border: none; }
+
+th.docinfo-name { text-align: right; }
+
+blockquote.epigraph { text-align: right; font-style: italic; }
+
+p.attribution { font-style: normal; }
+
+dt { margin-top: 1ex; font-size: larger; }
+
+dd p.first { margin-top: 0pt; }
+
+p.topic-title > a { color: black; font-size: larger; font-weight: bold; }
+
+table.col1center td:nth-of-type(1) { text-align: center; }
+
+table.col2center td:nth-of-type(2) { text-align: center; }
+
+table.col3center td:nth-of-type(3) { text-align: center; }
+
+table.col4center td:nth-of-type(4) { text-align: center; }
+
+table.col5center td:nth-of-type(5) { text-align: center; }
+
+table.col6center td:nth-of-type(6) { text-align: center; }
+
+table.col7center td:nth-of-type(7) { text-align: center; }
+
+table.col8center td:nth-of-type(8) { text-align: center; }
+
+table.col9center td:nth-of-type(9) { text-align: center; }
+
+table.col1right td:nth-of-type(1) { text-align: right; }
+
+table.col2right td:nth-of-type(2) { text-align: right; }
+
+table.col3right td:nth-of-type(3) { text-align: right; }
+
+table.col4right td:nth-of-type(4) { text-align: right; }
+
+table.col5right td:nth-of-type(5) { text-align: right; }
+
+table.col6right td:nth-of-type(6) { text-align: right; }
+
+table.col7right td:nth-of-type(7) { text-align: right; }
+
+table.col8right td:nth-of-type(8) { text-align: right; }
+
+table.col9right td:nth-of-type(9) { text-align: right; }
+
+table.allcolsright td { text-align: right; }
+
+table.highlight-row1 tr:nth-of-type(1) { background-color: rgb(170, 170, 25=
+5); }
+
+table.highlight-row2 tr:nth-of-type(2) { background-color: rgb(170, 170, 25=
+5); }
+
+table.highlight-row3 tr:nth-of-type(3) { background-color: rgb(170, 170, 25=
+5); }
+
+table.highlight-row4 tr:nth-of-type(4) { background-color: rgb(170, 170, 25=
+5); }
+
+table.highlight-row5 tr:nth-of-type(5) { background-color: rgb(170, 170, 25=
+5); }
+
+table.highlight-row6 tr:nth-of-type(6) { background-color: rgb(170, 170, 25=
+5); }
+
+table.highlight-row7 tr:nth-of-type(7) { background-color: rgb(170, 170, 25=
+5); }
+
+table.highlight-row8 tr:nth-of-type(8) { background-color: rgb(170, 170, 25=
+5); }
+
+table.highlight-row9 tr:nth-of-type(9) { background-color: rgb(170, 170, 25=
+5); }
+
+.dark table.highlight-row1 tr:nth-of-type(1) { background-color: rgb(68, 68=
+, 119); }
+
+.dark table.highlight-row2 tr:nth-of-type(2) { background-color: rgb(68, 68=
+, 119); }
+
+.dark table.highlight-row3 tr:nth-of-type(3) { background-color: rgb(68, 68=
+, 119); }
+
+.dark table.highlight-row4 tr:nth-of-type(4) { background-color: rgb(68, 68=
+, 119); }
+
+.dark table.highlight-row5 tr:nth-of-type(5) { background-color: rgb(68, 68=
+, 119); }
+
+.dark table.highlight-row6 tr:nth-of-type(6) { background-color: rgb(68, 68=
+, 119); }
+
+.dark table.highlight-row7 tr:nth-of-type(7) { background-color: rgb(68, 68=
+, 119); }
+
+.dark table.highlight-row8 tr:nth-of-type(8) { background-color: rgb(68, 68=
+, 119); }
+
+.dark table.highlight-row9 tr:nth-of-type(9) { background-color: rgb(68, 68=
+, 119); }
+
+.code .k, .code .kr, .code .kn, .code .kd { font-weight: bold; }
+
+.code .kt { color: darkblue; font-weight: bold; }
+
+.code .mh { color: blue; }
+
+.code .mo { color: green; }
+
+.code .mi { color: magenta; }
+
+.code .c1 { color: rgb(119, 119, 119); font-style: italic; }
+
+.code .cm { color: rgb(119, 119, 119); }
+
+.code .cp { color: magenta; }
+
+.code .sc, .code .s, .code .s1 { color: red; }
+
+.nasm .nb { color: blue; }
+
+.nasm .nf { font-weight: bold; }
+------MultipartBoundary--v39GFEw20LTUZrJSNGuP5RHPGZi7Wnmkq9daz6N2z3------

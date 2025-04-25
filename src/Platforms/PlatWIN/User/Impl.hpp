@@ -13,57 +13,63 @@ SCVR uint32 HashNtDll = NCRYPT::CRC32("ntdll.dll");    // Low Case
 public:
 static const inline uint8* pKiUserSharedData = reinterpret_cast<uint8*>(0x7FFE0000);
 // By putting these in a separate section and then merging with .text allows to preseve declared orded and avoid mixing in of some global variables
-DECL_WSYSCALL(WPROCID(HashNtDll,"NtProtectVirtualMemory"),      NtProtectVirtualMemory     )   // Should be first
-DECL_WSYSCALL(WPROCID(HashNtDll,"NtAllocateVirtualMemory"),     NtAllocateVirtualMemory    )
-DECL_WSYSCALL(WPROCID(HashNtDll,"NtFreeVirtualMemory"),         NtFreeVirtualMemory        )
-DECL_WSYSCALL(WPROCID(HashNtDll,"NtReadVirtualMemory"),         NtReadVirtualMemory        )
-DECL_WSYSCALL(WPROCID(HashNtDll,"NtWriteVirtualMemory"),        NtWriteVirtualMemory       )
-DECL_WSYSCALL(WPROCID(HashNtDll,"NtQueryVirtualMemory"),        NtQueryVirtualMemory       )
-
-DECL_WSYSCALL(WPROCID(HashNtDll,"NtCreateFile"),                NtCreateFile               )     // NtFsControlFile
-DECL_WSYSCALL(WPROCID(HashNtDll,"NtWriteFile"),                 NtWriteFile                )
-DECL_WSYSCALL(WPROCID(HashNtDll,"NtReadFile"),                  NtReadFile                 )
-DECL_WSYSCALL(WPROCID(HashNtDll,"NtDeleteFile"),                NtDeleteFile               )
-DECL_WSYSCALL(WPROCID(HashNtDll,"NtWriteFileGather"),           NtWriteFileGather          )
-DECL_WSYSCALL(WPROCID(HashNtDll,"NtReadFileScatter"),           NtReadFileScatter          )
-DECL_WSYSCALL(WPROCID(HashNtDll,"NtFlushBuffersFile"),          NtFlushBuffersFile         )
-DECL_WSYSCALL(WPROCID(HashNtDll,"NtQueryAttributesFile"),       NtQueryAttributesFile      )   // Uses a file name
-DECL_WSYSCALL(WPROCID(HashNtDll,"NtQueryInformationFile"),      NtQueryInformationFile     )   // Uses a file handle
-DECL_WSYSCALL(WPROCID(HashNtDll,"NtQueryDirectoryFile"),        NtQueryDirectoryFile       )
-DECL_WSYSCALL(WPROCID(HashNtDll,"NtSetInformationFile"),        NtSetInformationFile       )   // NtSetInformationFile supports file information classes not supported by SetFileInformationByHandle (FileDispositionInformationEx: FILE_DISPOSITION_POSIX_SEMANTICS [posix stype delete])
-DECL_WSYSCALL(WPROCID(HashNtDll,"NtMapViewOfSection"),          NtMapViewOfSection         )
-DECL_WSYSCALL(WPROCID(HashNtDll,"NtUnmapViewOfSection"),        NtUnmapViewOfSection       )
-DECL_WSYSCALL(WPROCID(HashNtDll,"NtCreateSection"),             NtCreateSection            )
-DECL_WSYSCALL(WPROCID(HashNtDll,"NtOpenSection"),               NtOpenSection              )
-DECL_WSYSCALL(WPROCID(HashNtDll,"NtQuerySection"),              NtQuerySection             )
-
-DECL_WSYSCALL(WPROCID(HashNtDll,"NtCreateSymbolicLinkObject"),  NtCreateSymbolicLinkObject )
-DECL_WSYSCALL(WPROCID(HashNtDll,"NtOpenSymbolicLinkObject"),    NtOpenSymbolicLinkObject   )
-DECL_WSYSCALL(WPROCID(HashNtDll,"NtQuerySymbolicLinkObject"),   NtQuerySymbolicLinkObject  )
-DECL_WSYSCALL(WPROCID(HashNtDll,"NtQueryInformationProcess"),   NtQueryInformationProcess  )   
-DECL_WSYSCALL(WPROCID(HashNtDll,"NtQueryInformationThread"),    NtQueryInformationThread   ) 
-
-DECL_WSYSCALL(WPROCID(HashNtDll,"NtClose"),                     NtClose                    )
-
-DECL_WSYSCALL(WPROCID(HashNtDll,"NtDelayExecution"),            NtDelayExecution           )
-DECL_WSYSCALL(WPROCID(HashNtDll,"NtCreateThread"),              NtCreateThread             )
-DECL_WSYSCALL(WPROCID(HashNtDll,"NtCreateProcess"),             NtCreateProcess            )   // Use NtCreateProcessEx instead?
-DECL_WSYSCALL(WPROCID(HashNtDll,"NtCreateProcessEx"),           NtCreateProcessEx          )
-DECL_WSYSCALL(WPROCID(HashNtDll,"NtCreateUserProcess"),         NtCreateUserProcess        )
-DECL_WSYSCALL(WPROCID(HashNtDll,"NtResumeThread"),              NtResumeThread             )
-DECL_WSYSCALL(WPROCID(HashNtDll,"NtSuspendThread"),             NtSuspendThread            )
-DECL_WSYSCALL(WPROCID(HashNtDll,"NtGetContextThread"),          NtGetContextThread         )
-DECL_WSYSCALL(WPROCID(HashNtDll,"NtSetContextThread"),          NtSetContextThread         )
-DECL_WSYSCALL(WPROCID(HashNtDll,"NtTerminateThread"),           NtTerminateThread          )
-DECL_WSYSCALL(WPROCID(HashNtDll,"NtTerminateProcess"),          NtTerminateProcess         )   
-DECL_WSYSCALL(WPROCID(HashNtDll,"NtWaitForSingleObject"),       NtWaitForSingleObject      )
-DECL_WSYSCALL(WPROCID(HashNtDll,"NtWaitForMultipleObjects"),    NtWaitForMultipleObjects   )
-
-DECL_WSYSCALL(WPROCID(HashNtDll,"NtLoadDriver"),                NtLoadDriver               )
-DECL_WSYSCALL(WPROCID(HashNtDll,"NtUnloadDriver"),              NtUnloadDriver             )   // Should be last
-
-DECL_WSYSCALL(WPROCID(HashNtDll,"NtFsControlFile"),             NtFsControlFile            )   // FSCTL_XXX
-DECL_WSYSCALL(WPROCID(HashNtDll,"NtDeviceIoControlFile"),       NtDeviceIoControlFile      )   // IOCTL_XXX
+DECL_WSYSCALL(WPROCID(HashNtDll,"NtProtectVirtualMemory"),       NtProtectVirtualMemory       )   // Should be first
+DECL_WSYSCALL(WPROCID(HashNtDll,"NtAllocateVirtualMemory"),      NtAllocateVirtualMemory      )
+DECL_WSYSCALL(WPROCID(HashNtDll,"NtFreeVirtualMemory"),          NtFreeVirtualMemory          )
+DECL_WSYSCALL(WPROCID(HashNtDll,"NtReadVirtualMemory"),          NtReadVirtualMemory          )
+DECL_WSYSCALL(WPROCID(HashNtDll,"NtWriteVirtualMemory"),         NtWriteVirtualMemory         )
+DECL_WSYSCALL(WPROCID(HashNtDll,"NtQueryVirtualMemory"),         NtQueryVirtualMemory         )
+DECL_WSYSCALL(WPROCID(HashNtDll,"NtOpenProcess"),                NtOpenProcess                )   
+DECL_WSYSCALL(WPROCID(HashNtDll,"NtOpenThread"),                 NtOpenThread                 )  
+                                                                                              
+DECL_WSYSCALL(WPROCID(HashNtDll,"NtCreateFile"),                 NtCreateFile                 )     // NtFsControlFile
+DECL_WSYSCALL(WPROCID(HashNtDll,"NtWriteFile"),                  NtWriteFile                  )
+DECL_WSYSCALL(WPROCID(HashNtDll,"NtReadFile"),                   NtReadFile                   )
+DECL_WSYSCALL(WPROCID(HashNtDll,"NtDeleteFile"),                 NtDeleteFile                 )
+DECL_WSYSCALL(WPROCID(HashNtDll,"NtWriteFileGather"),            NtWriteFileGather            )
+DECL_WSYSCALL(WPROCID(HashNtDll,"NtReadFileScatter"),            NtReadFileScatter            )
+DECL_WSYSCALL(WPROCID(HashNtDll,"NtFlushBuffersFile"),           NtFlushBuffersFile           )                                                                                                  
+DECL_WSYSCALL(WPROCID(HashNtDll,"NtQueryAttributesFile"),        NtQueryAttributesFile        )   // Uses a file name
+DECL_WSYSCALL(WPROCID(HashNtDll,"NtQueryInformationFile"),       NtQueryInformationFile       )   // Uses a file handle   
+DECL_WSYSCALL(WPROCID(HashNtDll,"NtQueryVolumeInformationFile"), NtQueryVolumeInformationFile ) 
+DECL_WSYSCALL(WPROCID(HashNtDll,"NtQueryDirectoryFile"),         NtQueryDirectoryFile         )
+DECL_WSYSCALL(WPROCID(HashNtDll,"NtSetInformationFile"),         NtSetInformationFile         )   // NtSetInformationFile supports file information classes not supported by SetFileInformationByHandle (FileDispositionInformationEx: FILE_DISPOSITION_POSIX_SEMANTICS [posix stype delete])
+DECL_WSYSCALL(WPROCID(HashNtDll,"NtMapViewOfSection"),           NtMapViewOfSection           )
+DECL_WSYSCALL(WPROCID(HashNtDll,"NtUnmapViewOfSection"),         NtUnmapViewOfSection         )
+DECL_WSYSCALL(WPROCID(HashNtDll,"NtCreateSection"),              NtCreateSection              )
+DECL_WSYSCALL(WPROCID(HashNtDll,"NtOpenSection"),                NtOpenSection                )
+DECL_WSYSCALL(WPROCID(HashNtDll,"NtQuerySection"),               NtQuerySection               )
+                                                                                              
+DECL_WSYSCALL(WPROCID(HashNtDll,"NtCreateSymbolicLinkObject"),   NtCreateSymbolicLinkObject   )
+DECL_WSYSCALL(WPROCID(HashNtDll,"NtOpenSymbolicLinkObject"),     NtOpenSymbolicLinkObject     )
+DECL_WSYSCALL(WPROCID(HashNtDll,"NtQuerySymbolicLinkObject"),    NtQuerySymbolicLinkObject    )
+DECL_WSYSCALL(WPROCID(HashNtDll,"NtQueryInformationProcess"),    NtQueryInformationProcess    )   
+DECL_WSYSCALL(WPROCID(HashNtDll,"NtQueryInformationThread"),     NtQueryInformationThread     ) 
+                                                                                              
+DECL_WSYSCALL(WPROCID(HashNtDll,"NtClose"),                      NtClose                      )
+DECL_WSYSCALL(WPROCID(HashNtDll,"NtQueryObject"),                NtQueryObject                )
+DECL_WSYSCALL(WPROCID(HashNtDll,"NtOpenDirectoryObject"),        NtOpenDirectoryObject        )
+DECL_WSYSCALL(WPROCID(HashNtDll,"NtQueryDirectoryObject"),       NtQueryDirectoryObject       )
+                                                                                              
+DECL_WSYSCALL(WPROCID(HashNtDll,"NtDelayExecution"),             NtDelayExecution             )
+DECL_WSYSCALL(WPROCID(HashNtDll,"NtCreateThread"),               NtCreateThread               )
+DECL_WSYSCALL(WPROCID(HashNtDll,"NtCreateProcess"),              NtCreateProcess              )   // Use NtCreateProcessEx instead?
+DECL_WSYSCALL(WPROCID(HashNtDll,"NtCreateProcessEx"),            NtCreateProcessEx            )
+DECL_WSYSCALL(WPROCID(HashNtDll,"NtCreateUserProcess"),          NtCreateUserProcess          )
+DECL_WSYSCALL(WPROCID(HashNtDll,"NtResumeThread"),               NtResumeThread               )
+DECL_WSYSCALL(WPROCID(HashNtDll,"NtSuspendThread"),              NtSuspendThread              )
+DECL_WSYSCALL(WPROCID(HashNtDll,"NtGetContextThread"),           NtGetContextThread           )
+DECL_WSYSCALL(WPROCID(HashNtDll,"NtSetContextThread"),           NtSetContextThread           )
+DECL_WSYSCALL(WPROCID(HashNtDll,"NtTerminateThread"),            NtTerminateThread            )
+DECL_WSYSCALL(WPROCID(HashNtDll,"NtTerminateProcess"),           NtTerminateProcess           )   
+DECL_WSYSCALL(WPROCID(HashNtDll,"NtWaitForSingleObject"),        NtWaitForSingleObject        )
+DECL_WSYSCALL(WPROCID(HashNtDll,"NtWaitForMultipleObjects"),     NtWaitForMultipleObjects     )
+                                                                                              
+DECL_WSYSCALL(WPROCID(HashNtDll,"NtLoadDriver"),                 NtLoadDriver                 )
+DECL_WSYSCALL(WPROCID(HashNtDll,"NtUnloadDriver"),               NtUnloadDriver               )   // Should be last
+                                                                 
+DECL_WSYSCALL(WPROCID(HashNtDll,"NtFsControlFile"),              NtFsControlFile              )   // FSCTL_XXX
+DECL_WSYSCALL(WPROCID(HashNtDll,"NtDeviceIoControlFile"),        NtDeviceIoControlFile        )   // IOCTL_XXX
 
 } static constexpr inline SysApi alignas(16);   // Declared to know exact address(?), its size is ALWAYS 1   // Volatile? (static volatile constexpr inline)
 //============================================================================================================
@@ -207,7 +213,7 @@ FUNC_WRAPPERNI(PX::mmapGD,     mmap       )
  NT::NTSTATUS res   = 0;
  if((flags & PX::MAP_ANONYMOUS) && (flags & PX::MAP_PRIVATE))   // Allocate simple private virtual memory      // MAP_ANONYMOUS: No file is used    // MAP_PRIVATE: Changes are privaqte
   {
-   size_t RegionSize  = AlignP2Frwd(length, MEMGRANSIZE);       // Rounded >>>
+   size_t RegionSize  = AlignFrwdP2(length, MEMGRANSIZE);       // Rounded >>>
    uint32 AllocProt   = NTX::MemProtPXtoNT(prot);
    if(flags & PX::MAP_NOCACHE)AllocProt |= NT::PAGE_NOCACHE;    // ???
    res = SAPI::NtAllocateVirtualMemory(NT::NtCurrentProcess, &RegionBase, 0, &RegionSize, NT::MEM_RESERVE, AllocProt);  // First reserve with 64k granularity to avoid memory holes (allowed to fail if already has been done)    (Will cause memory waste in Working Set?)
@@ -237,7 +243,7 @@ FUNC_WRAPPERNI(PX::mmapGD,     mmap       )
  uint32 AllocProt = NTX::MemProtPXtoNT(prot);
  if(flags & PX::MAP_NOCACHE)AllocProt |= NT::PAGE_NOCACHE;    // ???
  sint64 RegionSize;
- if(fd == NT::NtInvalidHandle){RegionSize = AlignP2Frwd(length, MEMGRANSIZE); fd = 0;}  // Unused fd for NtCreateSection is 0 (STATUS_OBJECT_TYPE_MISMATCH if -1)
+ if(fd == NT::NtInvalidHandle){RegionSize = AlignFrwdP2(length, MEMGRANSIZE); fd = 0;}  // Unused fd for NtCreateSection is 0 (STATUS_OBJECT_TYPE_MISMATCH if -1)
   else RegionSize = length;
 
  uint32 SecRights = +NT::SYNCHRONIZE|NT::SECTION_QUERY|NT::STANDARD_RIGHTS_REQUIRED;        // NOTE: Untested
@@ -331,7 +337,7 @@ FUNC_WRAPPERNI(PX::mremap,     mremap     )   // LINUX specific  // Impossible t
  if(mbi.Type != NT::MEM_PRIVATE)return vptr(-PX::EPERM);  // It is impossible to remap a file mapping on Windows by having only a memory pointer to it.
 
  vptr   nptr = nullptr;
- size_t al_new_size = AlignP2Frwd(new_size, MEMGRANSIZE);       // Rounded >>>
+ size_t al_new_size = AlignFrwdP2(new_size, MEMGRANSIZE);       // Rounded >>>
  if(!(flags & PX::MREMAP_FIXED))   // Try to expand/shrink? Shrinking is safe(realign and make remaining pages reserved) Expanding may overlap already committed pages(But only in current allocation block), only sequential expanding is OK.
   {
    vptr   RegionBase = (vptr)old_address;
@@ -345,7 +351,7 @@ FUNC_WRAPPERNI(PX::mremap,     mremap     )   // LINUX specific  // Impossible t
     }
      else   // Resized inplace, shrinked. Must decommit the discarded pages
       {
-       size_t aos = AlignP2Frwd(old_size, MEMPAGESIZE);
+       size_t aos = AlignFrwdP2(old_size, MEMPAGESIZE);
        if(RegionSize < aos)
         {
          RegionBase = (vptr)((size_t)RegionBase + RegionSize);
@@ -385,7 +391,20 @@ FUNC_WRAPPERNI(PX::madvise,    madvise    )
  return 0;
 }
 //------------------------------------------------------------------------------------------------------------
-FUNC_WRAPPERNI(PX::mprotect,   mprotect   ) {return 0;}
+FUNC_WRAPPERNI(PX::mprotectex,   mprotect   ) 
+{
+ vptr    addr    = GetParFromPk<0>(args...);
+ usize   len     = GetParFromPk<1>(args...);
+ uint32  prot    = GetParFromPk<2>(args...);
+ uint32* pprot   = GetParFromPk<3>(args...);
+ uint32  OldProt = 0;
+ uint32  MemProt = NTX::MemProtPXtoNT(prot); 
+ NT::NTSTATUS Status = SAPI::NtProtectVirtualMemory(NT::NtCurrentProcess, &addr, &len, MemProt, &OldProt);
+ if(Status)return -(sint)NTX::NTStatusToLinuxErr(Status);
+ if(pprot)*pprot = NTX::MemProtNTtoPX(OldProt);
+ return PX::NOERROR;
+}
+//------------------------------------------------------------------------------------------------------------
 FUNC_WRAPPERNI(PX::msync,      msync      ) {return 0;}    // NtFlushVirtualMemory  (FlushViewOfFile)
 FUNC_WRAPPERNI(PX::mlock,      mlock      ) {return 0;}    // NtLockVirtualMemory
 FUNC_WRAPPERNI(PX::munlock,    munlock    ) {return 0;}    // NtUnlockVirtualMemory
@@ -462,6 +481,8 @@ FUNC_WRAPPERNI(PX::lseekGD,    lseek      )
  return offset;
 }
 //------------------------------------------------------------------------------------------------------------
+// Sparse files?
+//
 FUNC_WRAPPERNI(PX::ftruncate,     ftruncate     )
 {
  NT::IO_STATUS_BLOCK iosb = {};
@@ -482,7 +503,7 @@ FUNC_WRAPPERNI(PX::truncate,     truncate       )
  NT::HANDLE FileHandle = 0;
  const achar* path = GetParFromPk<0>(args...);
  uint64 Len = GetParFromPk<1>(args...);
- NT::NTSTATUS res = NTX::OpenFileObject(&FileHandle, path, +NT::SYNCHRONIZE|NT::FILE_WRITE_ATTRIBUTES|NT::FILE_WRITE_DATA, 0, NT::FILE_ATTRIBUTE_NORMAL, NT::FILE_SHARE_READ|NT::FILE_SHARE_WRITE|NT::FILE_SHARE_DELETE, NT::FILE_OPEN, NT::FILE_SYNCHRONOUS_IO_NONALERT, &iosb);
+ NT::NTSTATUS res = NTX::OpenFileObject(&FileHandle, path, +NT::SYNCHRONIZE|NT::FILE_WRITE_ATTRIBUTES|NT::FILE_WRITE_DATA, NT::OBJ_PATH_PARSE_DOTS, NT::FILE_ATTRIBUTE_NORMAL, NT::FILE_SHARE_READ|NT::FILE_SHARE_WRITE|NT::FILE_SHARE_DELETE, NT::FILE_OPEN, NT::FILE_SYNCHRONOUS_IO_NONALERT, &iosb);
  if(res)return -NTX::NTStatusToLinuxErr(res);  // Can the handle be open? (Status > 0)
  int rs = NAPI::ftruncate((PX::fdsc_t)FileHandle, Len);
  SAPI::NtClose(FileHandle);
@@ -500,56 +521,131 @@ FUNC_WRAPPERNI(PX::mkdir,      mkdir      )
  const achar* path = (achar*)GetParFromPk<0>(args...);
 // int mode = GetParFromPk<1>(args...);   // TODO: Mode support
 
- NT::NTSTATUS res = NTX::OpenFileObject(&FileHandle, path, +NT::SYNCHRONIZE|NT::FILE_READ_ATTRIBUTES, 0, NT::FILE_ATTRIBUTE_NORMAL, NT::FILE_SHARE_READ|NT::FILE_SHARE_WRITE|NT::FILE_SHARE_DELETE, NT::FILE_CREATE, NT::FILE_DIRECTORY_FILE|NT::FILE_SYNCHRONOUS_IO_NONALERT, &iosb);
+ NT::NTSTATUS res = NTX::OpenFileObject(&FileHandle, path, +NT::SYNCHRONIZE|NT::FILE_READ_ATTRIBUTES, NT::OBJ_PATH_PARSE_DOTS, NT::FILE_ATTRIBUTE_NORMAL, NT::FILE_SHARE_READ|NT::FILE_SHARE_WRITE|NT::FILE_SHARE_DELETE, NT::FILE_CREATE, NT::FILE_DIRECTORY_FILE|NT::FILE_SYNCHRONOUS_IO_NONALERT, &iosb);
  if(res)return -(int32)NTX::NTStatusToLinuxErr(res);  // Can the handle be open? (Status > 0)
  SAPI::NtClose(FileHandle);
  return PX::NOERROR;
 }
 //------------------------------------------------------------------------------------------------------------
+//  CYGWIN: Check for existence of remote dirs after trying to delete them:
+//     - Sometimes SMB indicates failure when it really succeeds.
+//     - Removing a directory on a Samba drive using an old Samba version sometimes doesn't return an error, if the directory can't be removed because it's not empty. 
+// 
+// NOTE: Some files may be in "delete pending" state longer than expected and a directory will refuse to be deleted as "not empty"
+//
 FUNC_WRAPPERNI(PX::rmdir,      rmdir      )
 {
- // !!!!!!!!!!!!!!!
- return 0;
+ const achar* path = (achar*)GetParFromPk<0>(args...);
+ NT::NTSTATUS res  = NTX::DeleteFileObject(path, 1, 0, true, false);   
+ return -(int32)NTX::NTStatusToLinuxErr(res);
 }
 //------------------------------------------------------------------------------------------------------------
+// https://github.com/openunix/cygwin/blob/master/winsup/cygwin/syscalls.cc#L693
 // Note: link behaviour on Windows is different
-//This means its not sufficient to delete a file, it may not be deleted immediately, and this may cause problems in deleting directories and/or creating a new file of the same name.
+// This means its not sufficient to delete a file, it may not be deleted immediately, and this may cause problems in deleting directories and/or creating a new file of the same name.
 
-//But you can closely simulate unix semantics by renaming the file to a temporary directory and scheduling it for deletion.
+// But you can closely simulate unix semantics by renaming the file to a temporary directory and scheduling it for deletion.
 // "File System Behavior Overview.pdf"
 // If the name referred to a SYMBOLIC link, the link is removed.
+// Don't use delete-on-close on remote shares.  If two processes have open handles on a file and one of them calls unlink, the file is removed from the remote share even though the other process still has an open handle.  
+//   That process than gets Win32 error 59, ERROR_UNEXP_NET_ERR when trying to access the file.
+// 
+// FILE_DELETE_ON_CLOSE
+// FILE_SHARE_VALID_FLAGS
+// 
+// unlink(2): Infelicities in the protocol underlying NFS can cause the unexpected disappearance of files which are still being used.
+// unlink(2) can only delete a file, while rmdir(2) can only delete empty directory.
+// On Linux it seems the result is EISDIR, however on OSX the result seems to be EPERM, so apparently you can't safely call unlink() on something and then try it as a directory only if unlink() fails.
 //
 FUNC_WRAPPERNI(PX::unlink,     unlink     )
 {
-
- // !!!!!!!!!!!!!!!
- return 0;
+ const achar* path = (achar*)GetParFromPk<0>(args...);
+ NT::NTSTATUS res  = NTX::DeleteFileObject(path, 0, 0, true, false);   
+ return -(int32)NTX::NTStatusToLinuxErr(res);
+}
+FUNC_WRAPPERNI(PX::unlinkat,  unlinkat    )  
+{                               
+ NT::HANDLE  dirfd = (NT::HANDLE)GetParFromPk<0>(args...);   
+ const achar* path = (achar*)GetParFromPk<1>(args...);
+ uint32 flags      = GetParFromPk<2>(args...);
+ NT::NTSTATUS res  = NTX::DeleteFileObject(path, bool(flags & PX::AT_REMOVEDIR), dirfd, true, false);   
+ return -(int32)NTX::NTStatusToLinuxErr(res);
 }
 //------------------------------------------------------------------------------------------------------------
-FUNC_WRAPPERNI(PX::rename,     rename     ) {return 0;}
+FUNC_WRAPPERNI(PX::link,     link     )
+{
+ const achar* tgtpath = (achar*)GetParFromPk<0>(args...);
+ const achar* lnkpath = (achar*)GetParFromPk<0>(args...);
+ NT::NTSTATUS res = NTX::CreateFileObjectHLink(lnkpath, tgtpath, 0, 0, false, false, true, false);
+ return -(int32)NTX::NTStatusToLinuxErr(res);
+}
+FUNC_WRAPPERNI(PX::linkat,     linkat     )
+{
+ NT::HANDLE   tgtfd   = (NT::HANDLE)GetParFromPk<0>(args...);  
+ const achar* tgtpath = (achar*)GetParFromPk<1>(args...);
+ NT::HANDLE   lnkfd   = (NT::HANDLE)GetParFromPk<2>(args...); 
+ const achar* lnkpath = (achar*)GetParFromPk<3>(args...);
+ uint32 flags         = GetParFromPk<4>(args...);
+ NT::NTSTATUS res = NTX::CreateFileObjectHLink(lnkpath, tgtpath, lnkfd, tgtfd, false, bool(flags & PX::AT_SYMLINK_FOLLOW), true, false);
+ return -(int32)NTX::NTStatusToLinuxErr(res);
+}
 //------------------------------------------------------------------------------------------------------------
+FUNC_WRAPPERNI(PX::symlink,    symlink    )
+{
+ const achar* tgtpath = (achar*)GetParFromPk<0>(args...);
+ const achar* lnkpath = (achar*)GetParFromPk<1>(args...);
+ NT::NTSTATUS res = NTX::CreateFileObjectSLink(lnkpath, tgtpath, 0, 0, false, false, true, false);
+ return -(int32)NTX::NTStatusToLinuxErr(res);
+}
+FUNC_WRAPPERNI(PX::symlinkat,  symlinkat  )
+{
+ const achar* tgtpath = (achar*)GetParFromPk<0>(args...);
+ NT::HANDLE  lnkdirfd = (NT::HANDLE)GetParFromPk<1>(args...);   
+ const achar* lnkpath = (achar*)GetParFromPk<2>(args...);
+ NT::NTSTATUS res = NTX::CreateFileObjectSLink(lnkpath, tgtpath, lnkdirfd, 0, false, false, true, false);
+ return -(int32)NTX::NTStatusToLinuxErr(res);
+}
+//------------------------------------------------------------------------------------------------------------
+// Windows evaluates native symlink literally.  If a remote symlink points to, say, C:\foo, it will be handled as if the target is the local file C:\foo.  
+// That comes in handy since that's how symlinks are treated under POSIX as well. 
+//
 FUNC_WRAPPERNI(PX::readlink,   readlink   )
 {
-/* const achar* path = (achar*)GetParFromPk<0>(args...);
- achar* buf = (achar*)GetParFromPk<1>(args...);
- const size_t bufsiz = GetParFromPk<2>(args...);
-
- NT::OBJECT_ATTRIBUTES oattr = {};
- NT::UNICODE_STRING FilePathUS;               // RtlAcquirePrivilege(&v26, 1i64, 0i64, &v29);
-
- uint plen;
- NTX::EPathType ptype = ptUnknown;
- uint PathLen = NTX::CalcFilePathBufSize(path, plen, ptype);
- uint32 ObjAttributes = 0;  //NT::OBJ_OPENLINK;     // Only Hard Links to a file can be safely deleted without this
- wchar FullPath[PathLen];
- NTX::InitFileObjectAttributes(path, plen, ptype, ObjAttributes, FullPath, &FilePathUS, &oattr);
-
- NT::HANDLE LinkHandle = 0;
- NT::NTSTATUS res = SAPI::NtOpenSymbolicLinkObject(&LinkHandle, NT::GENERIC_READ, &oattr);
- if(res)return -NTX::NTStatusToLinuxErr(res);
-*/
-
- return 0;
+ const achar* path = (achar*)GetParFromPk<0>(args...);
+ achar*       buf  = (achar*)GetParFromPk<1>(args...);
+ usize        len  = GetParFromPk<2>(args...);
+ NT::NTSTATUS res  = NTX::ReadFileObjectSLink(buf, &len, path, 0, true, false);
+ return -(int32)NTX::NTStatusToLinuxErr(res);
+}
+//------------------------------------------------------------------------------------------------------------
+FUNC_WRAPPERNI(PX::readlinkat,   readlinkat   )
+{
+ NT::HANDLE   dirfd = (NT::HANDLE)GetParFromPk<0>(args...);  
+ const achar* path  = (achar*)GetParFromPk<1>(args...);
+ achar*       buf   = (achar*)GetParFromPk<2>(args...);
+ usize        len   = GetParFromPk<3>(args...);
+ NT::NTSTATUS res   = NTX::ReadFileObjectSLink(buf, &len, path, dirfd, true, false);
+ return -(int32)NTX::NTStatusToLinuxErr(res);
+}
+//------------------------------------------------------------------------------------------------------------
+// If newpath already exists it will be atomically replaced
+//
+FUNC_WRAPPERNI(PX::rename,     rename     ) 
+{
+ const achar* oldpath = (achar*)GetParFromPk<0>(args...);
+ const achar* newpath = (achar*)GetParFromPk<0>(args...);
+ NT::NTSTATUS res = NTX::RenameFileObject(oldpath, newpath, 0, 0, true, true, false);
+ return -(int32)NTX::NTStatusToLinuxErr(res);
+}
+//------------------------------------------------------------------------------------------------------------
+FUNC_WRAPPERNI(PX::renameat,   renameat   ) 
+{
+ NT::HANDLE   oldfd   = (NT::HANDLE)GetParFromPk<0>(args...);  
+ const achar* oldpath = (achar*)GetParFromPk<1>(args...);
+ NT::HANDLE   newfd   = (NT::HANDLE)GetParFromPk<2>(args...); 
+ const achar* newpath = (achar*)GetParFromPk<3>(args...);
+ NT::NTSTATUS res = NTX::RenameFileObject(oldpath, newpath, oldfd, newfd, true, true, false);
+ return -(int32)NTX::NTStatusToLinuxErr(res);
 }
 //------------------------------------------------------------------------------------------------------------
 // Compatibility?
@@ -564,7 +660,7 @@ FUNC_WRAPPERNI(PX::access,     access     )
  if(mode & PX::X_OK)BaseAccess |= NT::FILE_EXECUTE;    // Close enough?
  if(mode & PX::W_OK)BaseAccess |= NT::FILE_WRITE_DATA;
  if(mode & PX::R_OK)BaseAccess |= NT::FILE_READ_DATA;
- NT::NTSTATUS res = NTX::OpenFileObject(&FileHandle, path, BaseAccess, 0, NT::FILE_ATTRIBUTE_NORMAL, NT::FILE_SHARE_READ|NT::FILE_SHARE_WRITE|NT::FILE_SHARE_DELETE, NT::FILE_OPEN, NT::FILE_SYNCHRONOUS_IO_NONALERT, &iosb);
+ NT::NTSTATUS res = NTX::OpenFileObject(&FileHandle, path, BaseAccess, NT::OBJ_PATH_PARSE_DOTS, NT::FILE_ATTRIBUTE_NORMAL, NT::FILE_SHARE_READ|NT::FILE_SHARE_WRITE|NT::FILE_SHARE_DELETE, NT::FILE_OPEN, NT::FILE_SYNCHRONOUS_IO_NONALERT, &iosb);
  if(res)return -(int32)NTX::NTStatusToLinuxErr(res);  // Can the handle be open? (Status > 0)
  SAPI::NtClose(FileHandle);
  return PX::NOERROR;
@@ -606,8 +702,8 @@ FUNC_WRAPPERNI(PX::getdentsGD,     getdents     )
    uint32 Attrs = inrec->FileAttributes;
    outrec->ino  = inrec->FileIndex;  // Looks like it is always 0   // Actual inode is probably in FILE_ID_FULL_DIR_INFORMATION::FileId
    outrec->off  = inrec->EndOfFile;  // Who cares
-   size_t nlen  = NUTF::Utf16To8(outrec->name, inrec->FileName, inrec->FileNameLength >> 1);   // Will be smaller     // FileNameLength is in bytes
-   uint offs    = AlignP2Frwd(nlen + sizeof(PX::SDirEnt), sizeof(vptr));
+   size_t nlen  = NUTF::Utf16To8(outrec->name, inrec->FileName, inrec->FileNameLength >> 1);   // Will be smaller     // FileNameLength is in bytes   // TODO: Path normalization?
+   uint offs    = AlignFrwdP2(nlen + sizeof(PX::SDirEnt), sizeof(vptr));
    outrec->name[nlen] = 0;
    outrec->reclen = (uint16)offs;
    OutOffs += offs;
@@ -659,8 +755,8 @@ FUNC_WRAPPERNI(PX::fstatat,       fstatat       )       // TODO: AT_SYMLINK_FOLL
  PX::fdsc_t dirfd  = GetParFromPk<0>(args...);     // How to process AT_FDCWD?   // Add the CWD to the name if it is relative or open the CWD and use its handle? // Is it by default on Windows?  // If pathname is absolute, then dirfd is ignored
  const achar* path = (achar*)GetParFromPk<1>(args...);
  PX::SFStat* sti = (PX::SFStat*)GetParFromPk<2>(args...);
- if(dirfd >= 0)DirHandle = (NT::HANDLE)dirfd;
- NT::NTSTATUS res = NTX::OpenFileObject(&FileHandle, path, +NT::SYNCHRONIZE|NT::FILE_READ_ATTRIBUTES, 0, NT::FILE_ATTRIBUTE_NORMAL, NT::FILE_SHARE_READ|NT::FILE_SHARE_WRITE|NT::FILE_SHARE_DELETE, NT::FILE_OPEN, NT::FILE_SYNCHRONOUS_IO_NONALERT, &iosb, DirHandle);
+ if(dirfd >= 0)DirHandle = (NT::HANDLE)dirfd;     // ???
+ NT::NTSTATUS res = NTX::OpenFileObject(&FileHandle, path, +NT::SYNCHRONIZE|NT::FILE_READ_ATTRIBUTES, NT::OBJ_PATH_PARSE_DOTS, NT::FILE_ATTRIBUTE_NORMAL, NT::FILE_SHARE_READ|NT::FILE_SHARE_WRITE|NT::FILE_SHARE_DELETE, NT::FILE_OPEN, NT::FILE_SYNCHRONOUS_IO_NONALERT, &iosb, DirHandle);
  if(res)return -NTX::NTStatusToLinuxErr(res);  // Can the handle be open? (Status > 0)
  int rs = NAPI::fstat((PX::fdsc_t)FileHandle, sti);
  SAPI::NtClose(FileHandle);
@@ -690,7 +786,7 @@ FUNC_WRAPPERNI(PX::fstat,      fstat      )
  sti->rdev    = 0;  // ???
  sti->size    = inf.StandardInformation.EndOfFile;
  sti->blksize = 0;  // TODO: From AlignmentInformation.AlignmentRequirement somehow
- sti->blocks  = uint64(inf.StandardInformation.AllocationSize / 512);  // AlignP2Frwd(sti->size,512) / 512;   // Number 512-byte blocks allocated.
+ sti->blocks  = uint64(inf.StandardInformation.AllocationSize / 512);  // AlignFrwdP2(sti->size,512) / 512;   // Number 512-byte blocks allocated.
 
  if(inf.StandardInformation.Directory)sti->mode |= PX::S_IFDIR;
    else sti->mode |= PX::S_IFREG;   // Anything else?    // How to get rwe flags of a file?
@@ -756,20 +852,28 @@ the DesiredAccess parameter to ZwCreateFile, IoCreateFile, or ZwOpenFile, and ei
 in the CreateOptions or OpenOptions parameter. Be sure that you do not also specify the FILE_APPEND_DATA access right.
 
 FILE_OPEN_REPARSE_POINT is probably needed together with FILE_DIRECTORY_FILE|FILE_OPEN_FOR_BACKUP_INTENT when opening a directory // FindFirstFile doesn`t use FILE_OPEN_REPARSE_POINT, but uses FILE_OPEN_FOR_BACKUP_INTENT
+
+// TODO: Add Support for '.' and '..' which UNIX supports natively   // Canonicalize it here because // hroot complicates things
+
+ https://github.com/openunix/cygwin/blob/master/winsup/cygwin/fhandler.cc
+ https://github.com/openunix/cygwin/blob/master/winsup/cygwin/fhandler_disk_file.cc
+ NOTE: Network mapped drives are not in \\GLOBAL?? but in \\Sessions\\0\\DosDevices\\00000000-XXXXXXXX\\Z:
+ https://learn.microsoft.com/ru-ru/windows/win32/api/winnetwk/nf-winnetwk-wnetgetconnectiona?redirectedfrom=MSDN
+
 */
 FUNC_WRAPPERNI(PX::openat,       openat       )
 {
  NT::IO_STATUS_BLOCK iosb = {};
  NT::HANDLE FileHandle = 0;
- NT::ULONG ShareAccess = 0;
- NT::ULONG ObjAttributes = 0;
+ NT::ULONG ShareAccess = NT::FILE_SHARE_DELETE;         // unlink will not work if the handle is open without FILE_SHARE_DELETE
+ NT::ULONG ObjAttributes = NT::OBJ_PATH_PARSE_DOTS;
  NT::ULONG CreateOptions = NT::FILE_SYNCHRONOUS_IO_NONALERT;   // This adds file position support
  NT::ULONG FileAttributes = NT::FILE_ATTRIBUTE_NORMAL;
  NT::ULONG CreateDisposition = 0;
  NT::ACCESS_MASK DesiredAccess = NT::SYNCHRONIZE;    // The File handle will be waitable. The handle is signaled each time that an I/O operation that was issued on the handle completes. However, the caller must not wait on a handle that was opened for synchronous file access (FILE_SYNCHRONOUS_IO_NONALERT or FILE_SYNCHRONOUS_IO_ALERT). In this case, ZwReadFile waits on behalf of the caller and does not return until the read operation is complete.
 
  NT::HANDLE hroot = (NT::HANDLE)GetParFromPk<0>(args...);  // ???
- if((int)hroot == PX::AT_FDCWD)hroot = 0;
+ if((int)hroot == PX::AT_FDCWD)hroot = 0;      // Same as 'open'   
  const achar* path  = (achar*)GetParFromPk<1>(args...);
  const uint   flags = GetParFromPk<2>(args...);
 // const uint   mode  = GetParFromPk<3>(args...);  // Unused for now
@@ -786,7 +890,7 @@ FUNC_WRAPPERNI(PX::openat,       openat       )
  if(flags & PX::O_APPEND)  // NOTE: O_RDONLY is 0 and assumed default on Linux but here it is overriden by O_APPEND   // NOTE: Without FILE_APPEND_DATA offsets must be specified to NtWriteFile if no SYNCHRONIZE is specified
   {
    if(amode){DesiredAccess |= +NT::FILE_APPEND_DATA; ShareAccess |= NT::FILE_SHARE_WRITE;}
-    else {DesiredAccess = +NT::FILE_APPEND_DATA|NT::SYNCHRONIZE; ShareAccess = NT::FILE_SHARE_WRITE; CreateOptions = 0;}
+    else {DesiredAccess = +NT::FILE_APPEND_DATA|NT::SYNCHRONIZE; ShareAccess = NT::FILE_SHARE_WRITE|NT::FILE_SHARE_DELETE; CreateOptions = 0;}
   }
 
  if(flags & PX::O_CREAT)      // S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH;
@@ -807,6 +911,7 @@ FUNC_WRAPPERNI(PX::openat,       openat       )
   {
    CreateOptions |= NT::FILE_DIRECTORY_FILE;     // Directory object     // ??? FILE_OPEN_REPARSE_POINT|FILE_OPEN_FOR_BACKUP_INTENT    // Virtual directories/junctions can be mounted as reparse points
    ShareAccess   |= NT::FILE_SHARE_READ|NT::FILE_SHARE_WRITE|NT::FILE_SHARE_DELETE;    // To avoid locking the directory from modification by anyone else while its descriptor is open (Most likely for 'getdents')
+   //DesiredAccess |= NT::FILE_TRAVERSE;  // ??? // For a directory, the right to traverse the directory.  // By default, users are assigned the BYPASS_TRAVERSE_CHECKING privilege, which ignores the FILE_TRAVERSE access right
   }
   else CreateOptions |= NT::FILE_NON_DIRECTORY_FILE;    // File object: a data file, a logical, virtual, or physical device, or a volume
 
@@ -939,8 +1044,16 @@ FUNC_WRAPPERNI(PX::getcwd,  getcwd   )
  return int(DSize); 
 }
 //------------------------------------------------------------------------------------------------------------
-FUNC_WRAPPERFI(PX::chdir,    chdir   ) {return 0;}
-FUNC_WRAPPERFI(PX::fchdir,  fchdir   ) {return 0;}
+FUNC_WRAPPERFI(PX::chdir,    chdir   ) 
+{
+ PX::PCCHAR path = GetParFromPk<0>(args...);           
+ return -NTX::NTStatusToLinuxErr(NTX::SetCurrentDir(path, true)); 
+}
+FUNC_WRAPPERFI(PX::fchdir,  fchdir   ) 
+{
+ PX::fdsc_t fd = GetParFromPk<0>(args...);
+ return -NTX::NTStatusToLinuxErr(NTX::SetCurrentDir((NT::HANDLE)fd));
+}
 //------------------------------------------------------------------------------------------------------------
 FUNC_WRAPPERNI(PX::fcntl,      fcntl      )    // NtFsControlFile?    // F_DUPFD ? F_NOTIFY ?
 {
@@ -1049,10 +1162,10 @@ FUNC_WRAPPERNI(NTHD::spawn,      spawn      )
  uint dir_plen = 0;
  uint exe_PathLen = 0;
  uint dir_PathLen = 0;
- NTX::EPathType exe_ptype = NTX::ptWinUsrLevel;
- NTX::EPathType dir_ptype = NTX::ptWinUsrLevel;
- if(pathname)exe_PathLen  = NTX::CalcFilePathBufSize(pathname,  exe_plen, exe_ptype);// + 2;
- if(AltCurDir || UseAppDir)dir_PathLen = NTX::CalcFilePathBufSize(UseAppDir?pathname:AltCurDir, dir_plen, dir_ptype);// + 2;
+ NTX::EPathType exe_ptype = NTX::EPathType(+NTX::ptWinUsrLevel | NT::OBJ_PATH_GLOBAL_NS | NT::OBJ_PATH_PARSE_DOTS);     // TODO: Check GLOBAL/LOCAL paths (Network shares)
+ NTX::EPathType dir_ptype = NTX::EPathType(+NTX::ptWinUsrLevel | NT::OBJ_PATH_GLOBAL_NS | NT::OBJ_PATH_PARSE_DOTS);
+ if(pathname)exe_PathLen  = NTX::CalcFilePathBufSize(pathname,  exe_plen, exe_ptype);  // + 2;
+ if(AltCurDir || UseAppDir)dir_PathLen = NTX::CalcFilePathBufSize(UseAppDir?pathname:AltCurDir, dir_plen, dir_ptype);  // + 2;
 
  bool   LongPath   = (exe_PathLen > NT::MAX_PATH);    // Will be passed as a lpApplicationName and in lpCommandLine
  size_t ExePLen    = (LongPath|NoPathA0)?exe_PathLen+2:0;
@@ -1385,10 +1498,12 @@ static sint Initialize(vptr StkFrame=nullptr, vptr ArgA=nullptr, vptr ArgB=nullp
   } */
 
  InitSyscalls();
- InitConsole();
+ InitConsole(InitConLog);                   
+ if(InitConLog && !NPTM::NLOG::GLog.ConsHandle) NPTM::NLOG::GLog.ConsHandle = NPTM::GetStdErr();
  InitStartupInfo(StkFrame, ArgA, ArgB, ArgC);
+ if(IsDynamicLib())NTX::LdrDisableThreadDllCalls(GetModuleBase());    // Not cross-platform and useless
  SetErrorHandlers();
-
+                    
  IFDBG{ DbgLogStartupInfo(); }
  if(NTHD::SThCtx* MainTh=&NPTM::GetThDesc()->MainTh; !MainTh->Self)
   {

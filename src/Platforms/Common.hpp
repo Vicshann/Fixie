@@ -296,6 +296,9 @@ static constexpr bool IsDbgBuild = false;
 
 #define SCVR static constexpr const
 
+// NOTE: Stack will be restored at function's end even if it is inlined (Clang)
+// https://stackoverflow.com/questions/55177353/constructing-a-function-pointer-to-alloca-causes-linker-errors
+// C++ is not a data friendly language :(
 #define StkAlloc(x) __builtin_alloca(x)
 /*
 #if defined(PLT_WIN_USR) || defined(PLT_WIN_KRN)
@@ -734,8 +737,8 @@ template<typename N> constexpr _finline static N AlignBkwd(N Value, N Alignment)
 template<typename T> constexpr _finline static bool IsPowOfTwo(T v){return !(v & (v - 1));}   // Will return TRUE for v=0 which may be undesirable (but actually consistent)
 
 // TODO: Cast pointer types to size_t
-template<typename N> constexpr _finline static N AlignP2Frwd(N Value, unsigned int Alignment){return (Value+((N)Alignment-1)) & ~((N)Alignment-1);}    // NOTE: Result is incorrect if Alignment is not power of 2
-template<typename N> constexpr _finline static N AlignP2Bkwd(N Value, unsigned int Alignment){return Value & ~((N)Alignment-1);}                       // NOTE: Result is incorrect if Alignment is not power of 2
+template<typename N> constexpr _finline static N AlignFrwdP2(N Value, unsigned int Alignment){return (Value+((N)Alignment-1)) & ~((N)Alignment-1);}    // NOTE: Result is incorrect if Alignment is not power of 2
+template<typename N> constexpr _finline static N AlignBkwdP2(N Value, unsigned int Alignment){return Value & ~((N)Alignment-1);}                       // NOTE: Result is incorrect if Alignment is not power of 2
 
 template<typename T> constexpr _finline static bool IsRangesIntersect(T OffsA, T SizeA, T OffsB, T SizeB) {return (OffsA < (OffsB + SizeB)) && (OffsB < (OffsA + SizeA));}  
 //------------------------------------------------------------------------------------------------------------
@@ -768,6 +771,18 @@ auto _finline UnbindPtr(auto* ptr)
 {
  volatile size_t tmp = (size_t)ptr;
  return (decltype(ptr))tmp;
+}
+//---------------------------------------------------------------------------
+// Should force compiler to use registers to store constants in code directly instead of putting them into RDATA
+template<typename T> T _finline LoadFromRegister(T value) noexcept       // Actually prevents values from being allocated into RDATA?
+{
+#if defined(__clang__) || defined(__GNUC__)
+ asm("" : "=r"(value) : "0"(value) : );
+ return value;
+#else
+ volatile T reg = value;
+ return reg;
+#endif
 }
 
 //#include "Intrinsic.hpp"   // <<<< Should it be included here?

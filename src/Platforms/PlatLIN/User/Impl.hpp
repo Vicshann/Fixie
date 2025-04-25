@@ -8,6 +8,7 @@
 // It MUST be Namespace, not Struct to keep these in code segment (MSVC linker, even with Clang compiler) // FIXED: declared as _codesec SysApi
 // NOTE: Unreferenced members will be optimized out!
 // NOTE: Do not use these directly, not all of them are portable even between x32/x64 on the same cpu
+// AT* functions are only useful with getdents? (Calculating relative path backward (../) is complicated for them)
 //
 struct SAPI  // POSIX API implementation  // https://docs.oracle.com/cd/E19048-01/chorus4/806-3328/6jcg1bm05/index.html
 {
@@ -25,7 +26,7 @@ DECL_SYSCALL(NSYSC::ESysCNum::fork,       PX::fork,       fork       )
 DECL_SYSCALL(NSYSC::ESysCNum::vfork,      PX::vfork,      vfork      )
 #endif
 DECL_SYSCALL(NSYSC::ESysCNum::execve,     PX::execve,     execve     )
-//DECL_SYSCALL(NSYSC::ESysCNum::ptrace,     PX::ptrace,     ptrace    )
+DECL_SYSCALL(NSYSC::ESysCNum::ptrace,   NDBG::ptrace,     ptrace     )
 DECL_SYSCALL(NSYSC::ESysCNum::process_vm_readv,     PX::process_vm_readv,     process_vm_readv     )
 DECL_SYSCALL(NSYSC::ESysCNum::process_vm_writev,    PX::process_vm_writev,    process_vm_writev    )
 
@@ -80,17 +81,21 @@ DECL_SYSCALL(NSYSC::ESysCNum::fchdir,     PX::fchdir,     fchdir     )
 DECL_SYSCALL(NSYSC::ESysCNum::open,       PX::open,       open       )
 DECL_SYSCALL(NSYSC::ESysCNum::mknod,      PX::mknod,      mknod      )     // Too specific to put in NAPI?
 DECL_SYSCALL(NSYSC::ESysCNum::mkdir,      PX::mkdir,      mkdir      )
-DECL_SYSCALL(NSYSC::ESysCNum::rmdir,      PX::rmdir,      rmdir      )
+DECL_SYSCALL(NSYSC::ESysCNum::rmdir,      PX::rmdir,      rmdir      )     
+DECL_SYSCALL(NSYSC::ESysCNum::link,       PX::link,       link       )
+DECL_SYSCALL(NSYSC::ESysCNum::symlink,    PX::symlink,    symlink    )
 DECL_SYSCALL(NSYSC::ESysCNum::unlink,     PX::unlink,     unlink     )
 DECL_SYSCALL(NSYSC::ESysCNum::rename,     PX::rename,     rename     )
 DECL_SYSCALL(NSYSC::ESysCNum::readlink,   PX::readlink,   readlink   )
 DECL_SYSCALL(NSYSC::ESysCNum::access,     PX::access,     access     )
 DECL_SYSCALL(NSYSC::ESysCNum::poll,       PX::poll,       poll       )
 #endif
-// Bunch of *at functions (Useful together with 'getdents')
+// Bunch of *at functions (Useful together with 'getdents')                 // TODO: rmdirat wrapper
 DECL_SYSCALL(NSYSC::ESysCNum::openat,     PX::openat,     openat     )
 DECL_SYSCALL(NSYSC::ESysCNum::mknodat,    PX::mknodat,    mknodat    )
 DECL_SYSCALL(NSYSC::ESysCNum::mkdirat,    PX::mkdirat,    mkdirat    )
+DECL_SYSCALL(NSYSC::ESysCNum::linkat,     PX::linkat,     linkat     )
+DECL_SYSCALL(NSYSC::ESysCNum::symlinkat,  PX::symlinkat,  symlinkat  )
 DECL_SYSCALL(NSYSC::ESysCNum::unlinkat,   PX::unlinkat,   unlinkat   )
 DECL_SYSCALL(NSYSC::ESysCNum::renameat,   PX::renameat,   renameat   )
 DECL_SYSCALL(NSYSC::ESysCNum::readlinkat, PX::readlinkat, readlinkat )
@@ -151,7 +156,7 @@ FUNC_WRAPPERNI(PX::gettimeofday,  gettimeofday  )     // TODO: Prefer VDSO
    tz->dsttime = 0;
    if(tz->utcoffs == -1)
     {
-     int resi = UpdateTZOffsUTC(tv->sec);
+     int resi = UNIX::UpdateTZOffsUTC(tv->sec);
      if(resi < 0){tz->utcoffs = 0; return res;}
     }
    tz->utcoffs = GetTZOffsUTC();
@@ -194,7 +199,23 @@ FUNC_WRAPPERFI(PX::mmapGD,     mmap       ) { CALL_IFEXISTRPC(mmap,mmap2,(IsArch
 FUNC_WRAPPERFI(PX::munmap,     munmap     ) {return SAPI::munmap(args...);}
 FUNC_WRAPPERFI(PX::mremap,     mremap     ) {return SAPI::mremap(args...);}
 FUNC_WRAPPERFI(PX::madvise,    madvise    ) {return SAPI::madvise(args...);}
-FUNC_WRAPPERFI(PX::mprotect,   mprotect   ) {return SAPI::mprotect(args...);}
+//------------------------------------------------------------------------------------------------------------
+FUNC_WRAPPERFI(PX::mprotectex,   mprotect   ) 
+{
+ vptr    addr  = GetParFromPk<0>(args...);
+ usize   len   = GetParFromPk<1>(args...);
+ uint32  prot  = GetParFromPk<2>(args...);
+ uint32* pprot = GetParFromPk<3>(args...);
+ if(pprot)
+  {
+   SMemRange Range;
+   sint res = NPFS::FindMappedRangeByAddr(-1, (usize)addr, &Range); 
+   if(!res)*pprot = Range.Mode;
+     else *pprot = 0;   // Means PROT_NONE
+  }
+ return SAPI::mprotect(addr,len,prot);
+}
+//------------------------------------------------------------------------------------------------------------
 FUNC_WRAPPERFI(PX::msync,      msync      ) {return SAPI::msync(args...);}
 FUNC_WRAPPERNI(PX::mlock,      mlock      ) {return SAPI::mlock(args...);}
 FUNC_WRAPPERNI(PX::munlock,    munlock    ) {return SAPI::munlock(args...);}
@@ -226,6 +247,8 @@ FUNC_WRAPPERFI(PX::lseekGD,    lseek      )
 FUNC_WRAPPERFI(PX::mkfifo,     mkfifo     ) { CALL_IFEXISTR(mknod,mknodat,(GetParFromPk<0>(args...), PX::S_IFIFO|GetParFromPk<1>(args...), 0),(PX::AT_FDCWD, GetParFromPk<0>(args...), PX::S_IFIFO|GetParFromPk<1>(args...), 0)) }
 FUNC_WRAPPERFI(PX::mkdir,      mkdir      ) { CALL_IFEXISTR(mkdir,mkdirat,(args...),(PX::AT_FDCWD, args...)) }
 FUNC_WRAPPERFI(PX::rmdir,      rmdir      ) { CALL_IFEXISTR(rmdir,unlinkat,(args...),(PX::AT_FDCWD, args..., PX::AT_REMOVEDIR)) }
+FUNC_WRAPPERFI(PX::link,       link       ) { CALL_IFEXISTRP(link,linkat,(args...),(PX::AT_FDCWD,oldpath,PX::AT_FDCWD,newpath,0),(achar* oldpath, achar* newpath)) }
+FUNC_WRAPPERFI(PX::symlink,    symlink       ) { CALL_IFEXISTRP(symlink,symlinkat,(args...),(target,PX::AT_FDCWD,linkpath),(achar* target, achar* linkpath)) }
 FUNC_WRAPPERFI(PX::unlink,     unlink     ) { CALL_IFEXISTR(unlink,unlinkat,(args...),(PX::AT_FDCWD, args..., 0)) }
 FUNC_WRAPPERFI(PX::rename,     rename     ) { CALL_IFEXISTRP(rename,renameat,(args...),(PX::AT_FDCWD,oldpath,PX::AT_FDCWD,newpath),(achar* oldpath, achar* newpath)) }
 FUNC_WRAPPERFI(PX::readlink,   readlink   ) { CALL_IFEXISTR(readlink,readlinkat,(args...),(PX::AT_FDCWD, args...)) }
@@ -255,10 +278,11 @@ FUNC_WRAPPERFI(PX::fstat,      fstat      )
  return res;
 }
 //------------------------------------------------------------------------------------------------------------
-/*
-https://stackoverflow.com/questions/52329604/how-to-get-the-file-desciptor-of-a-symbolic-link
-https://man7.org/linux/man-pages/man7/symlink.7.html
-*/
+//
+// https://stackoverflow.com/questions/52329604/how-to-get-the-file-desciptor-of-a-symbolic-link
+// https://man7.org/linux/man-pages/man7/symlink.7.html
+// Supports '.' and '..' natively
+//
 FUNC_WRAPPERFI(PX::open,       open       ) { CALL_IFEXISTR(open,openat,(args...),(PX::AT_FDCWD, args...)) }
 FUNC_WRAPPERFI(PX::openat,     openat       ) 
 { 
@@ -774,6 +798,8 @@ FUNC_WRAPPERNI(NTHD::thread_exit,       thread_exit      )
  }
  return NAPI::exit(status);
 }
+//------------------------------------------------------------------------------------------------------------
+FUNC_WRAPPERFI(NDBG::ptrace,  ptrace   ) {return SAPI::ptrace(args...);}
 //------------------------------------------------------------------------------------------------------------
 #include "../../SharedNAPI.hpp"
 

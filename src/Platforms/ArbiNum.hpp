@@ -93,7 +93,7 @@ template<unsigned int S=sizeof(void*)*8, typename DP=unsigned int> class CObfBit
  static constexpr unsigned int UnitSft = ((sizeof(DP) > 1)?( ((sizeof(DP) > 2)?( ((sizeof(DP) > 4)?( 3 ):(2)) ):(1)) ):(0));   // To extract Unit index from Idx
 public:
  static constexpr unsigned int MaxBits     = S;     // Stop any operations on this to allow expected overflow behaviour on derived types?
- static constexpr unsigned int SizeInBits  = AlignP2Frwd(MaxBits, sizeof(DP));   // AlignP2Frwd(sizeof(T)*8, sizeof(DP));  // Bits must fit in DP units as bytes
+ static constexpr unsigned int SizeInBits  = AlignFrwdP2(MaxBits, sizeof(DP));   // AlignFrwdP2(sizeof(T)*8, sizeof(DP));  // Bits must fit in DP units as bytes
  static constexpr unsigned int SizeInUnits = SizeInBits / sizeof(DP);
  static constexpr unsigned int SizeInBytes = SizeInBits / 8;      // Useless. 4 for int32 and so on
 

@@ -470,3 +470,69 @@ struct FILE_ZERO_DATA_INFORMATION    // Structure for FSCTL_SET_ZERO_DATA
  LARGE_INTEGER BeyondFinalZero;
 };
 //------------------------------------------------------------------------------------------------------------
+
+// https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/ntifs/ns-ntifs-_reparse_data_buffer
+// https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-fscc/b41f1cbf-10df-4a47-98d4-1c52a833d913
+// https://github.com/winsiderss/systeminformer/blob/master/phnt/include/ntioapi.h
+// Reparse structure for FSCTL_SET_REPARSE_POINT, FSCTL_GET_REPARSE_POINT, FSCTL_DELETE_REPARSE_POINT
+
+
+enum ESymlnkFlags
+{
+ SYMLINK_FILE          = 0x40000000, // If set then this is a file symlink
+ SYMLINK_DIRECTORY     = 0x80000000, // If set then this is a directory symlink
+ SYMLINK_FLAG_RELATIVE = 0x00000001,
+};
+
+struct REPARSE_DATA_BUFFER 
+{
+ ULONG  ReparseTag;
+ USHORT ReparseDataLength;
+ USHORT Reserved;
+ union {
+ 	struct {
+ 		USHORT SubstituteNameOffset;
+ 		USHORT SubstituteNameLength;
+ 		USHORT PrintNameOffset;
+ 		USHORT PrintNameLength;
+ 		ULONG  Flags;
+ 		WCHAR  PathBuffer[1];
+ 	} SymbolicLinkReparseBuffer;
+ 	struct {
+ 		USHORT SubstituteNameOffset;
+ 		USHORT SubstituteNameLength;
+ 		USHORT PrintNameOffset;
+ 		USHORT PrintNameLength;
+ 		WCHAR  PathBuffer[1];
+ 	} MountPointReparseBuffer;
+ 	struct {
+ 		UCHAR  DataBuffer[1];
+ 	} GenericReparseBuffer;
+ };
+};
+
+enum EReparseTag
+{
+ IO_REPARSE_TAG_MOUNT_POINT      = 0xA0000003,       // winnt
+ IO_REPARSE_TAG_HSM              = 0xC0000004,       // winnt
+ IO_REPARSE_TAG_DRIVE_EXTENDER   = 0x80000005,
+ IO_REPARSE_TAG_HSM2             = 0x80000006,       // winnt
+ IO_REPARSE_TAG_SIS              = 0x80000007,       // winnt
+ IO_REPARSE_TAG_WIM              = 0x80000008,       // winnt
+ IO_REPARSE_TAG_CSV              = 0x80000009,       // winnt
+ IO_REPARSE_TAG_DFS              = 0x8000000A,       // winnt
+ IO_REPARSE_TAG_FILTER_MANAGER   = 0x8000000B,
+ IO_REPARSE_TAG_SYMLINK          = 0xA000000C,       // winnt
+ IO_REPARSE_TAG_IIS_CACHE        = 0xA0000010,
+ IO_REPARSE_TAG_DFSR             = 0x80000012,       // winnt
+ IO_REPARSE_TAG_DEDUP            = 0x80000013,       // winnt
+ IO_REPARSE_TAG_APPXSTRM         = 0xC0000014,
+ IO_REPARSE_TAG_NFS              = 0x80000014,       // winnt
+ IO_REPARSE_TAG_FILE_PLACEHOLDER = 0x80000015,       // winnt
+ IO_REPARSE_TAG_DFM              = 0x80000016,
+ IO_REPARSE_TAG_WOF              = 0x80000017,       // winnt
+};
+
+//#define REPARSE_DATA_BUFFER_HEADER_SIZE  FIELD_OFFSET(REPARSE_DATA_BUFFER, GenericReparseBuffer)
+//#define MAXIMUM_REPARSE_DATA_BUFFER_SIZE  ( 16 * 1024 )
+//------------------------------------------------------------------------------------------------------------

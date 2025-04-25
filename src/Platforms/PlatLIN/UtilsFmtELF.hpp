@@ -5,177 +5,50 @@
 //============================================================================================================
 template<typename PHT=PTRCURRENT> struct NUFELF: public NFMTELF<PHT>    // NUFmtELF
 {
-//------------------------------------------------------------------------------------------------------------
-// AddrOnStack is any address on stack because __builtin_frame_address(0) is unreliable
-// NOTE: ArgC may be 0
-// NOTE: This is not 100% reliable but should help with finding the startup info even if the process started by an loader
-// TEST: Test it with 0 ArgC
+// https://github.com/kushaldas/elfutils/blob/master/libdwfl/elf-from-memory.c
+// NOTE: Target ELF in memory may be of different arch
+// NOTE: Assumed thar PHeaders in memory accessible at the same offset as in the file
+// NOTE: Sections will most likely be at the end of file and they are not define memory mapping anyway
 //
-// Detect:
-//   ArgC
-//   ArgPtrs...
-//   Null
-//   EVarPtrs...
-//   Null
-//
-//
-//
-static vptr FindStartupInfo(vptr AddrOnStack)
+static uint GetModuleSizeInMem(vptr Base)
 {
- constexpr const size_t MaxArgC  = 0x1000;   // Max is 4k of arguments
- constexpr const size_t StkAlgn  = 0x1000;   // Max is 4k forward   // NOTE: Bottom of the stack is unknown
- size_t* CurPtr = (size_t*)AddrOnStack;
- size_t* EndPtr = (size_t*)AlignP2Frwd((size_t)AddrOnStack, StkAlgn);
- enum EState {stZero,stArgC,stArgs,stEnvs,stAuxV,stDone};
- EState state = stZero;
- if(((uint8*)EndPtr - (uint8*)CurPtr) < 0x100)EndPtr += StkAlgn;  // Too small, another page must exist
- size_t* TblEndPtr = nullptr;
- size_t* InfoPtr = nullptr;
- size_t ArgC  = 0;    // Counts everything
- size_t ZeroC = 0;
-// DBGDBG("Scanning range: %p - %p",CurPtr,EndPtr);
-
- for(;;)
+ if(!ELF::IsValidHeaderELF(Base))return 0;
+ size_t MaxOffs = 0;   // Will include BSS
+ size_t MinOffs = -1;
+ if(((ELF::Elf_Hdr*)Base)->arch == ELF::ELFCLASS64)
   {
-   if(CurPtr >= EndPtr)
+   ELF::Elf64_Hdr* hdr = (ELF::Elf64_Hdr*)Base;
+   ELF::Elf64_Phdr* phdrs = (ELF::Elf64_Phdr*)((uint8*)Base + hdr->ReadVal(hdr->phoff));
+   for(uint16 idx=0,tot=hdr->ReadVal(hdr->phnum);idx < tot;idx++)  // Or add phentsize???
     {
-     if(state != stArgC)    // Stop only on ArgC search
-      {
-       if(ArgC < 8)    // Min reliable counter
-        {
-         state  = stArgC;
-         CurPtr = InfoPtr;
-        }
-         else {EndPtr += StkAlgn; continue;} // Another page is expected   // DBGDBG("PageAdded: EndPtr=%p",EndPtr);
-      }
-       else break;
+//     DBGDBG("Seg: %p",&phdrs[idx]);
+     uint32 type  = hdr->ReadVal(phdrs[idx].type);
+     if(type != ELF::PT_LOAD)continue;
+     size_t boffs = hdr->ReadVal(phdrs[idx].vaddr);           // Alignment?
+     size_t eoffs = boffs + hdr->ReadVal(phdrs[idx].memsz);   // Alignment?
+     if(boffs < MinOffs)MinOffs = boffs;
+     if(eoffs > MaxOffs)MaxOffs = eoffs;
     }
-   else if(state == stZero)     // There may be only zeroes pushed on stack, they should not be assumed as zero args and evars
-    {
-     size_t val = *CurPtr;
-     if(val)
-      {
-//       DBGDBG("Nonzero at: %p - %p",CurPtr, (vptr)val);
-       if((val > MaxArgC) && (ZeroC >= 2))CurPtr -= 2;    // In case of actually zero ArgC     // Empty ArgV is unlikely
-       state = stArgC;
-       continue;      // Avoid CurPtr++
-      }
-       else ZeroC++;
-    }
-   else if(state == stArgC)
-    {
-     ArgC = *CurPtr;
-     if(ArgC < MaxArgC)
-      {
-       state = stArgs;
-       InfoPtr = CurPtr;
-       TblEndPtr = &CurPtr[ArgC+1];    // Expected to contain NULL but may happen to be outside of our EndPtr or completely wrong if the ArgC is a mistake
-//       DBGDBG("ArgC at: %p",CurPtr);
-      }
-    }
-   else if(state == stArgs)
-    {
-     if(ArgC)
-      {
-//       DBGDBG("ArgRec at: %p",CurPtr);
-       if((uint8*)*CurPtr <= (uint8*)TblEndPtr){state = stArgC; CurPtr = InfoPtr;}    // The string address is wrong - reset    // Pointers should point forward (The strings are closer to the stack`s top)
-        else ArgC--;
-      }
-     else if(!*CurPtr)state = stEnvs;
-           else {state = stArgC; CurPtr = InfoPtr;}     // Unexpected non-null - reset
-    }
-   else if(state == stEnvs)
-    {
-//     DBGDBG("EnvRec at: %p",CurPtr);
-     if(!*CurPtr)state = stAuxV;
-     else if((uint8*)*CurPtr <= (uint8*)TblEndPtr){state = stArgC; CurPtr = InfoPtr;}  // The string address is wrong - reset    // TblEndPtr points not at the end of ENVs but should be OK
-          else ArgC++;
-    }
-   else if(state == stAuxV)   // Only ways out of this state is success or reaching EndPtr
-    {
-//     DBGDBG("AuxRec at: %p",CurPtr);
-     ELF::SAuxVecRec* Rec = (ELF::SAuxVecRec*)CurPtr;
-     if(Rec->type == ELF::AT_NULL){state = stDone; break;}
-      else {CurPtr++; ArgC++;}
-    }
-   CurPtr++;
   }
-// DBGDBG("Finished with: %u",state);
- if(state != stDone)return nullptr;   // Not found
- return InfoPtr;
-}
-//------------------------------------------------------------------------------------------------------------
-static vptr FindStartupInfoByAuxV(vptr AddrOnStack)
-{
- constexpr const size_t MaxArgC  = 0x1000;   // Max is 4k of arguments
- constexpr const size_t StkAlgn  = 0x1000;   // Max is 4k forward   // NOTE: Bottom of the stack is unknown
- size_t* CurPtr = (size_t*)AddrOnStack;
- size_t* EndPtr = (size_t*)AlignP2Frwd((size_t)AddrOnStack, StkAlgn);
- size_t* AuxEndNull = nullptr;
-// DBGDBG("Starting from: %p",CurPtr);
- for(uint ARep=0;!AuxEndNull && (ARep < 2);ARep++)  // Alignment correction
-  {
- for(sint MatchCtr=0,Idx=ARep,pidx=-((bool)!((size_t)CurPtr & (StkAlgn-1)));(Idx < 256)&&(pidx < 2);Idx+=2)
-  {
-   size_t num = CurPtr[Idx];
-   size_t val = CurPtr[Idx+1];
- //  DBGDBG("Aux %p: %p %p, %u",&CurPtr[Idx],(vptr)num,(vptr)val, MatchCtr);
-   if(!((size_t)&CurPtr[Idx] & (StkAlgn-1)))pidx++;
-    else if(!((size_t)&CurPtr[Idx+1] & (StkAlgn-1)))pidx++;
-   if(!num)
-    {
-     if(MatchCtr > 6){AuxEndNull=&CurPtr[Idx]; break;}  // Probably end of AuxV
-     MatchCtr = 0;
-     continue;
-    }
-// Most popular AUXV pointer values
-   if((num == ELF::AT_PHDR)&&(val >= StkAlgn))MatchCtr++;
-   else if((num == ELF::AT_BASE)&&(val >= StkAlgn))MatchCtr++;
-   else if((num == ELF::AT_ENTRY)&&(val >= StkAlgn))MatchCtr++;
-   else if((num == ELF::AT_EXECFN)&&(val >= StkAlgn))MatchCtr++;
-   else if((num == ELF::AT_RANDOM)&&(val >= StkAlgn))MatchCtr++;
-   else if((num == ELF::AT_SYSINFO_EHDR)&&(val >= StkAlgn))MatchCtr++;
-// Most popular AUXV  integer values
-   else if((num == ELF::AT_PAGESZ)&&(val <= StkAlgn))MatchCtr++;
-   else if((num == ELF::AT_PHNUM)&&(val <= StkAlgn))MatchCtr++;
-   else if((num == ELF::AT_PHENT)&&(val <= StkAlgn))MatchCtr++;
-   else if((num == ELF::AT_UID)&&(val <= StkAlgn))MatchCtr++;
-   else if((num == ELF::AT_GID)&&(val <= StkAlgn))MatchCtr++;
-   else if((num == ELF::AT_EUID)&&(val <= StkAlgn))MatchCtr++;
-   else if((num == ELF::AT_EGID)&&(val <= StkAlgn))MatchCtr++;
-  }
-  }
-// DBGDBG("AuxVec end: %p",AuxEndNull);
- if(!AuxEndNull)return nullptr;
- size_t* VPtr = AuxEndNull;
- bool NullTbl = false;
- for(;;) // Count AuxV
-  {
-   VPtr -= 2;
-   if(!VPtr[0] && !VPtr[1]){NullTbl=true;break;}  // End of the AuxV table (Prev tables is null)  // NOTE: No way to know what tables are null there (Most likely EnvP)
-   if(!VPtr[1] && (VPtr[0] >= StkAlgn) && (VPtr[0] >= (size_t)AuxEndNull))break;   // The ID is actually a valid pointer in a table above
-  }
-// DBGDBG("Ptr AuxV: %p ",VPtr);
- if(!NullTbl)
-  {
- for(;;)  // Count EnvP
-  {
-   VPtr--;
-   if(!*VPtr)break;  // End of the EnvP table
-   if(*VPtr < StkAlgn)return nullptr; // Not a pointer
-   if((size_t*)*VPtr <= AuxEndNull)return nullptr;   // The data is not after the table
-  }
-  }
-// DBGDBG("Ptr EnvP: %p ",VPtr);
- for(;;)  // Count ArgV
-  {
-   VPtr--;
-   if(!*VPtr)break;  // End of the ArgV table (No records)
-   if(*VPtr < StkAlgn)break; // Probably ArgC is reached
-   if((size_t*)*VPtr <= AuxEndNull)return nullptr;   // The data is not after the table
-  }
-// DBGDBG("Ptr Final: %p ",VPtr);
- return VPtr;
+  else
+   {
+    ELF::Elf32_Hdr* hdr = (ELF::Elf32_Hdr*)Base;
+    ELF::Elf32_Phdr* phdrs = (ELF::Elf32_Phdr*)((uint8*)Base + hdr->ReadVal(hdr->phoff));
+    for(uint16 idx=0,tot=hdr->ReadVal(hdr->phnum);idx < tot;idx++)  // Or add phentsize???
+     {
+//      DBGDBG("Seg: %p",&phdrs[idx]);
+      uint32 type  = hdr->ReadVal(phdrs[idx].type);
+      if(type != ELF::PT_LOAD)continue;
+      size_t boffs = hdr->ReadVal(phdrs[idx].vaddr);           // Alignment?
+      size_t eoffs = boffs + hdr->ReadVal(phdrs[idx].memsz);   // Alignment?
+      if(boffs < MinOffs)MinOffs = boffs;
+      if(eoffs > MaxOffs)MaxOffs = eoffs;
+     }
+   }
+ MaxOffs = AlignFrwdP2(MaxOffs, MEMPAGESIZE);
+ MinOffs = AlignBkwdP2(MinOffs, MEMPAGESIZE);
+ if(MinOffs){MaxOffs -= MinOffs; MinOffs = 0;}   // Usually default base is 0 but not have to be
+ return AlignFrwdP2(MaxOffs - MinOffs, MEMPAGESIZE);
 }
 //------------------------------------------------------------------------------------------------------------
 // Why Linux loads VDSO ELF between Code and Data/BSS of the executable?    (.dynamic + 0x10000 bytes of a hole)
@@ -186,11 +59,11 @@ static vptr FindStartupInfoByAuxV(vptr AddrOnStack)
 // NOTE: Very inefficient way to determine own base address!
 // ARM: 'Bus Error' inside a mapped module on an read-only pages which belong to alignment holes (msync fails to detect that! 'write' also have no problem accessing that memory; process_vm_readv works) // Range,Mode,INode is defined
 //
-static vptr FindElfByAddr(vptr Addr, size_t* ModSize, bool SafeAddr=true)   // Unsafe!  Pass only an address in code - less likely to have a hole of not mapped pages
+static vptr FindModuleByAddr(vptr Addr, size_t* ModSize, bool SafeAddr=true)   // Unsafe!  Pass only an address in code - less likely to have a hole of not mapped pages
 {
  static constexpr size_t MaxPages4K = 16;
  size_t PageLen = GetPageSize();
- size_t ptr = AlignP2Bkwd((size_t)Addr, PageLen);
+ size_t ptr = AlignBkwdP2((size_t)Addr, PageLen);
  size_t LastElfSize = 0;
  size_t LastElfAddr = 0;
  size_t MaxElfDist  = MaxPages4K * PageLen;  // In case of 64K pages
@@ -221,7 +94,7 @@ static vptr FindElfByAddr(vptr Addr, size_t* ModSize, bool SafeAddr=true)   // U
       }
     }
      else SafeAddr = false;
-   size_t size = ELF::GetModuleSizeInMem((vptr)ptr);
+   size_t size = GetModuleSizeInMem((vptr)ptr);
 //   DBGDBG("Addr=%p, Size=%p",(vptr)ptr,(vptr)size);
 //   DBGDBG("\r\n%#*.32D",256,(vptr)ptr);
    if(!size)continue;
@@ -233,25 +106,6 @@ static vptr FindElfByAddr(vptr Addr, size_t* ModSize, bool SafeAddr=true)   // U
   }
  if(ModSize)*ModSize = LastElfSize;
  return (vptr)LastElfAddr;
-}
-//------------------------------------------------------------------------------------------------------------
-// Reads a string from a null-terminated string array such as Args or EVars
-static sint GetStrFromArr(sint* AIndex, const achar** Array, achar* DstBuf, uint BufLen=uint(-1))
-{
- if(DstBuf)*DstBuf = 0;
- if(*AIndex < 0)return -3;     // Already finished
- if(!Array[*AIndex])return -2;    // No such arg   // (AOffs >= (sint)GetArgC())
- const achar* CurStr = Array[(*AIndex)++];  //  GetArgV()[AOffs++];
- uint ArgLen = 0;
- if(!DstBuf)
-  {
-   while(CurStr[ArgLen])ArgLen++;
-   return sint(ArgLen+1);   // +Space for terminating 0
-  }
- for(;CurStr[ArgLen] && (ArgLen < BufLen);ArgLen++)DstBuf[ArgLen] = CurStr[ArgLen];
- DstBuf[ArgLen] = 0;
- if(!Array[*AIndex])*AIndex = -1;    // (AOffs >= (sint)GetArgC())
- return sint(ArgLen);
 }
 //------------------------------------------------------------------------------------------------------------
 

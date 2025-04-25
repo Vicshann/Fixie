@@ -79,6 +79,7 @@ SCVR int EOF    = -1;
 SCVR int BadFD  = -1;
 
 static constexpr bool _finline IsBadFD(fdsc_t fd){return fd < 0;}
+static constexpr bool _finline IsError(int val){return (bool)val;}   // Anything but NOERROR
 
 enum EDFD  // These are just for convenience. These descriptors don`t have to be open on every system (Android?)
 {
@@ -114,7 +115,7 @@ enum EErrs   // Linux
  EXDEV           = 18 , // Cross-device link
  ENODEV          = 19 , // No such device
  ENOTDIR         = 20 , // Not a directory
- EISDIR          = 21 , // Is a directory
+ EISDIR          = 21 , // Is a directory       // Non POSIX
  EINVAL          = 22 , // Invalid argument
  ENFILE          = 23 , // File table overflow
  EMFILE          = 24 , // Too many open files
@@ -424,7 +425,7 @@ static int PXCALL unlink(PCCHAR pathname);
 static int PXCALL link(PCCHAR oldpath, PCCHAR newpath);
 
 // creates a SYMBOLIC link named linkpath which contains the string target.
-// Symbolic links are interpreted at run time as if the contents of the link had been substituted into the path being followed tofind a file or directory.
+// Symbolic links are interpreted at run time as if the contents of the link had been substituted into the path being followed to find a file or directory.
 // Symbolic links may contain ..  path components, which (if used at the start of the link) refer to the parent directories of that in which the link resides.
 // A symbolic link (also known as a soft link) may point to an existing file or to a nonexistent one; the latter case is known as a dangling link.
 static int PXCALL symlink(PCCHAR target, PCCHAR linkpath);
@@ -770,7 +771,7 @@ static int PXCALL fstatat64(fdsc_t dirfd, PCCHAR pathname, PFStat64 buf, int fla
 
 enum EATExtra
 {
- AT_FDCWD            = DCV< (uint)-100, (uint)-2 >::V,  // Special value used to indicate openat should use the current working directory.
+ AT_FDCWD            = IsSysWindows?0:DCV< (uint)-100, (uint)-2 >::V,  // Special value used to indicate openat should use the current working directory.
  AT_SYMLINK_NOFOLLOW = DCV< 0x100, 0x0020 >::V,  // Do not follow symbolic links.
  AT_REMOVEDIR        = DCV< 0x200, 0x0080 >::V,  // Remove directory instead of unlinking file.
  AT_SYMLINK_FOLLOW   = DCV< 0x400, 0x0040 >::V,  // Follow symbolic links.
@@ -887,7 +888,9 @@ enum EMapProt
 
 // Changes the access protections for the calling process's memory pages containing any part of the address range in the interval [addr, addr+len-1].  addr must be aligned to a page boundary.
 // On success, mprotect() and pkey_mprotect() return zero.  On error, these system calls return -1, and errno is set to indicate the error.
-static int PXCALL mprotect(PVOID addr, SIZE_T len, int prot);
+static int PXCALL mprotect(PVOID addr, SIZE_T len, uint32 prot);
+
+static int PXCALL mprotectex(PVOID addr, SIZE_T len, uint32 prot, uint32* prev);  // Entension    // prev may be NULL
 
 // https://github.com/nneonneo/osx-10.9-opensource/blob/master/xnu-2422.1.72/bsd/sys/mman.h#L150     // <<<<<<<<<<<<<<< Not match!
 //

@@ -38,7 +38,13 @@ CMyObj  - Have some nonstatic members and requires some initialization(A constru
 SMyObj  - A simple struct, usually POD. May have couple of simple static/nonstatic member functions. Usually does not requires initialization or it is a simple memset.
 
 ----------------------------------------------------
-
+ld.so --preload "/home/user/TESTS/testmod" /bin/apt
+#-------- or in Bash ----------------
+export LD_PRELOAD=/home/user/TESTS/fwktst
+/bin/apt
+#-------- or in CmdLine ----------------
+env LD_PRELOAD=/tmp/testmod.so /bin/apt
+----------------------------------------------------
 
 AARCH64: Ok = (CM == "tiny" || CM == "small" || CM == "large");
 x86_64: Ok = {"small", "kernel", "medium", "large", "tiny"}

@@ -14,6 +14,28 @@
   WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
+// https://tip.golang.org/src/unicode/utf8/utf8.go
+// http://bjoern.hoehrmann.de/utf-8/decoder/dfa/
+// https://github.com/BobSteagall/utf_utils
+// https://chromium.googlesource.com/breakpad/breakpad/src/+/chrome_49/common/convert_UTF.c
+// https://github.com/CppCon/CppCon2018/blob/master/Presentations/fast_conversion_from_utf8_with_cpp_dfas_and_sse_intrinsics/fast_conversion_from_utf8_with_cpp_dfas_and_sse_intrinsics__bob_steagall__cppcon_2018.pdf
+// Specifically, the first byte holds two or more uppermost set bits,
+// a zero bit, and some payload; the second and later bytes each start with
+// their uppermost bit set, the next bit clear, and six bits of payload.
+// Payload parcels are in big-endian order.  All bytes must be present in a
+// valid sequence; i.e., low-order sezo bits must be explicit.  UTF-8 is
+// self-synchronizing on input as any byte value cannot be both a valid
+// first byte or trailing byte.
+//
+// 0xxxxxxx - 7 bit ASCII
+// 110xxxxx 10xxxxxx - 11-bit value
+// 1110xxxx 10xxxxxx 10xxxxxx - 16-bit value
+// 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx - 21-bit value
+// 111110xx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx - 26-bit value
+// 1111110x 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx - 31-bit value
+// 11111110 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx - 36-bit value
+//   // TODO: Size is {Invert and count leading zeroes}
+// #define UNICODE_VALID(Char)  ((Char) < 0x110000 && (((Char) & 0xFFFFF800) != 0xD800))
 //===========================================================================
 struct NUTF
 {    // NOTE: Streams should emulate array access
@@ -33,9 +55,9 @@ static const inline uint8  UTF8_BYTES[] = {
     2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, 3,3,3,3,3,3,3,3,4,4,4,4,5,5,5,5};
 // TODO: Make the table shorter by replacing values with their correspoindig counts: {192, 32, 16, 8, 4, 4}  for 0, 1, 2, 3, 4, 5
 //---------------------------------------------------------------------------
-static uint GetCharSize(uint8 LeadChr){return UTF8_BYTES[LeadChr]+1;}     // Any validation?
+static uint CpSizeUtf8(uint8 LeadChr){return UTF8_BYTES[LeadChr]+1;}     // Any validation?    // TODO: Use lead 1 bit counting
 //---------------------------------------------------------------------------
-static uint CharLenUtf8(achar LeadChr)     // Same as 'return UTF8_BYTES[LeadChr]+1'
+/*static uint CharLenUtf8(achar LeadChr)     // Same as 'return UTF8_BYTES[LeadChr]+1'
 {
  if((LeadChr & 0xFE) == 0xFC)return 6;
  if((LeadChr & 0xFC) == 0xF8)return 5;
@@ -43,13 +65,13 @@ static uint CharLenUtf8(achar LeadChr)     // Same as 'return UTF8_BYTES[LeadChr
  else if ((LeadChr & 0xF0) == 0xE0)return 3;
  else if ((LeadChr & 0xE0) == 0xC0)return 2;
  return 1;
-}
+}*/
 //---------------------------------------------------------------------------
 // Convert UTF-32 character to UTF-16
 // Input:  1 UTF-32 char
 // Output: 1 - 2 UTF-16 chars
 // Return: Updated DstIdx (Number of destination uint16 written if initial DstIdx is 0)
-template<typename TDst, typename TSrc> static uint ChrUtf32To16(TDst Dst, TSrc Src, uint DstIdx=0, uint SrcIdx=0)
+template<typename TDst, typename TSrc> static uint CpUtf32To16(TDst Dst, TSrc Src, uint DstIdx=0, uint SrcIdx=0)
 {
  constexpr uint32 highBegin = 0xD800;
  constexpr uint32 lowBegin  = 0xDC00;
@@ -78,7 +100,7 @@ template<typename TDst, typename TSrc> static uint ChrUtf32To16(TDst Dst, TSrc S
 // Input:  1 UTF-32 char
 // Output: 1 - 4 UTF-8 chars
 // Return: Updated DstIdx (Number of destination uint8 written if initial DstIdx is 0)
-template<typename TDst, typename TSrc> static uint ChrUtf32To8(TDst Dst, TSrc Src, uint DstIdx=0, uint SrcIdx=0)
+template<typename TDst, typename TSrc> static uint CpUtf32To8(TDst Dst, TSrc Src, uint DstIdx=0, uint SrcIdx=0)
 {
  constexpr uint32 bytemark = 0x80;
  constexpr uint32 bytemask = 0xBF;
@@ -110,6 +132,32 @@ BadChar:
    Dst[DstIdx++] = DType(uint8((c | bytemark) & bytemask));
   }
  else {c = IllegalChar[0]; goto BadChar;}  // 3 bytes, IllegalChar
+/*
+  } else if (ucs <= 0x3ffffff) {
+    p[0] = 0xf8 | (ucs >> 24);
+    p[1] = 0x80 | ((ucs >> 18) & 0x3f);
+    p[2] = 0x80 | ((ucs >> 12) & 0x3f);
+    p[3] = 0x80 | ((ucs >> 6) & 0x3f);
+    p[4] = 0x80 | (ucs & 0x3f);
+    return 5;
+  } else if (ucs <= 0x7ffffff) {
+    p[0] = 0xf8 | (ucs >> 30);
+    p[1] = 0x80 | ((ucs >> 24) & 0x3f);
+    p[2] = 0x80 | ((ucs >> 18) & 0x3f);
+    p[3] = 0x80 | ((ucs >> 12) & 0x3f);
+    p[4] = 0x80 | ((ucs >> 6) & 0x3f);
+    p[5] = 0x80 | (ucs & 0x3f);
+    return 6;
+  } else {
+    p[0] = 0xfe;
+    p[1] = 0x80 | ((ucs >> 30) & 0x3f);
+    p[2] = 0x80 | ((ucs >> 24) & 0x3f);
+    p[3] = 0x80 | ((ucs >> 18) & 0x3f);
+    p[4] = 0x80 | ((ucs >> 12) & 0x3f);
+    p[5] = 0x80 | ((ucs >> 6) & 0x3f);
+    p[6] = 0x80 | (ucs & 0x3f);
+    return 7;
+*/
  return DstIdx;
 }
 //---------------------------------------------------------------------------
@@ -117,7 +165,7 @@ BadChar:
 // Input:  1 - 2 UTF-16 chars
 // Output: 1 UTF-32 char
 // Return: Updated SrcIdx (Number of source uint16 read if initial SrcIdx is 0)
-template<typename TDst, typename TSrc> static uint ChrUtf16To32(TDst Dst, TSrc Src, uint DstIdx=0, uint SrcIdx=0)   // TODO: Optimize (It is called in a loop)
+template<typename TDst, typename TSrc> static uint CpUtf16To32(TDst Dst, TSrc Src, uint DstIdx=0, uint SrcIdx=0)   // TODO: Optimize (It is called in a loop)
 {
  constexpr uint32 highBegin = 0xD800;
  constexpr uint32 highEnd   = 0xDBFF;
@@ -142,9 +190,9 @@ template<typename TDst, typename TSrc> static uint ChrUtf16To32(TDst Dst, TSrc S
 // Input:  1 - 4(6?) UTF-8 chars
 // Output: 1 UTF-32 char
 // Return: Updated SrcIdx (Number of source uint8 read if initial SrcIdx is 0)
-template<typename TDst, typename TSrc> static uint ChrUtf8To32(TDst Dst, TSrc Src, uint DstIdx=0, uint SrcIdx=0)
+template<typename TDst, typename TSrc> static uint CpUtf8To32(TDst Dst, TSrc Src, uint DstIdx=0, uint SrcIdx=0)
 {
- uint32 c = 0;
+ uint32 c = 0;                                 // c = (uint32)Src[SrcIdx] & (0x7f >> bytes);
  uint8 bytes = UTF8_BYTES[uint8(Src[SrcIdx])];
  switch(bytes)    // Compose UTF-32 character
   {
@@ -155,8 +203,8 @@ template<typename TDst, typename TSrc> static uint ChrUtf8To32(TDst Dst, TSrc Sr
       c = IllegalChar[0];
       c <<= 6;
    case 3:
-      c += uint8(Src[SrcIdx++]);   // May be 0
-      c <<= 6;
+      c += uint8(Src[SrcIdx++]);   // May be 0    // ERROR: (Src[SrcIdx] < 0x80 || Src[SrcIdx] > 0xbf)
+      c <<= 6;                                    // c = (c << 6) | (Src[SrcIdx] & 0x3f);
    case 2:
       c += uint8(Src[SrcIdx++]);   // May be 0
       c <<= 6;
@@ -174,11 +222,11 @@ template<typename TDst, typename TSrc> static uint ChrUtf8To32(TDst Dst, TSrc Sr
 // Input:  1 - 4(6?) UTF-16 chars
 // Output: 1 - 2 UTF-16 chars
 // Return: Original char value
-template<typename TDst, typename TSrc> static _finline uint32 ChrUtf8To16(TDst Dst, TSrc Src, uint& DstIdx, uint& SrcIdx)
+template<typename TDst, typename TSrc> static _finline uint32 CpUtf8To16(TDst Dst, TSrc Src, uint& DstIdx, uint& SrcIdx)
 {
  uint32 Val;
- SrcIdx = ChrUtf8To32(&Val, Src, 0, SrcIdx);
- DstIdx = ChrUtf32To16(Dst, &Val, DstIdx, 0);
+ SrcIdx = CpUtf8To32(&Val, Src, 0, SrcIdx);
+ DstIdx = CpUtf32To16(Dst, &Val, DstIdx, 0);
  return Val;
 }
 //---------------------------------------------------------------------------
@@ -186,17 +234,17 @@ template<typename TDst, typename TSrc> static _finline uint32 ChrUtf8To16(TDst D
 // Input:  1 - 2 UTF-16 chars
 // Output: 1 - 4(6?) UTF-16 chars
 // Return: Original char value
-template<typename TDst, typename TSrc> static _finline uint32 ChrUtf16To8(TDst Dst, TSrc Src, uint& DstIdx, uint& SrcIdx)
+template<typename TDst, typename TSrc> static _finline uint32 CpUtf16To8(TDst Dst, TSrc Src, uint& DstIdx, uint& SrcIdx)
 {
  uint32 Val;
- SrcIdx = ChrUtf16To32(&Val, Src, 0, SrcIdx);
- DstIdx = ChrUtf32To8(Dst, &Val, DstIdx, 0);
+ SrcIdx = CpUtf16To32(&Val, Src, 0, SrcIdx);
+ DstIdx = CpUtf32To8(Dst, &Val, DstIdx, 0);
  return Val;
 }
 //===========================================================================
 //---------------------------------------------------------------------------
 // Return: Number of destination uint16 chars
-template<typename TSrc> static uint ChrLen32To16(TSrc Src, uint SrcIdx=0)
+template<typename TSrc> static uint CpLen32To16(TSrc Src, uint SrcIdx=0)
 {
  constexpr uint32 highBegin = 0xD800;
  constexpr uint32 lowBegin  = 0xDC00;
@@ -218,7 +266,7 @@ template<typename TSrc> static uint ChrLen32To16(TSrc Src, uint SrcIdx=0)
 }
 //---------------------------------------------------------------------------
 // Return: Number of destination uint8 written
-template<typename TSrc> static uint ChrLen32To8(TSrc Src, uint SrcIdx=0)
+template<typename TSrc> static uint CpLen32To8(TSrc Src, uint SrcIdx=0)
 {
 // constexpr uint32 bytemark = 0x80;
 // constexpr uint32 bytemask = 0xBF;
@@ -234,29 +282,29 @@ template<typename TSrc> static uint ChrLen32To8(TSrc Src, uint SrcIdx=0)
  return DstLen;
 }
 //---------------------------------------------------------------------------
-/*template<typename TSrc> static uint ChrLen16To32(TSrc Src, uint SrcIdx=0)
+/*template<typename TSrc> static uint CpLen16To32(TSrc Src, uint SrcIdx=0)
 {
  return 1;
 }
 //---------------------------------------------------------------------------
-template<typename TSrc> static uint ChrLen8To32(TSrc Src, uint SrcIdx=0)
+template<typename TSrc> static uint CpLen8To32(TSrc Src, uint SrcIdx=0)
 {
  return 1;
 }
 //---------------------------------------------------------------------------
-template<typename TSrc> static uint32 ChrLen8To16(TSrc Src, uint& SrcIdx)
+template<typename TSrc> static uint32 CpLen8To16(TSrc Src, uint& SrcIdx)
 {
  uint32 Val;
- SrcIdx += ChrLen8To32(Src, SrcIdx);
+ SrcIdx += CpLen8To32(Src, SrcIdx);
  DstIdx += 
- return ChrLen32To16(&Val);
+ return CpLen32To16(&Val);
 }
 //---------------------------------------------------------------------------
-template<typename TSrc> static uint32 ChrLen16To8(TSrc Src, uint& SrcIdx)
+template<typename TSrc> static uint32 CpLen16To8(TSrc Src, uint& SrcIdx)
 {
  uint32 Val;
- SrcIdx = ChrUtf16To32(&Val, Src, 0, SrcIdx);
- DstIdx = ChrUtf32To8(Dst, &Val, DstIdx);
+ SrcIdx = CpUtf16To32(&Val, Src, 0, SrcIdx);
+ DstIdx = CpUtf32To8(Dst, &Val, DstIdx);
  return Val;
 }*/
 //===========================================================================
@@ -271,7 +319,7 @@ template<typename TDst, typename TSrc> static size_t Utf32To16(TDst Dst, TSrc Sr
   {
    uint32 Val = Src[SrcIdx++];
    if(!Val)break;
-   DstIdx = ChrUtf32To16(Dst, &Val, DstIdx);
+   DstIdx = CpUtf32To16(Dst, &Val, DstIdx);
   }
  return DstIdx - OrigIdx;
 }
@@ -284,7 +332,7 @@ template<typename TDst, typename TSrc> static size_t Utf16To32(TDst Dst, TSrc Sr
  for(;SrcChrCnt;SrcChrCnt--)
   {
    uint32 Val;
-   SrcIdx = ChrUtf16To32(&Val, Src, 0, SrcIdx);
+   SrcIdx = CpUtf16To32(&Val, Src, 0, SrcIdx);
    if(!Val)break;
    Dst[DstIdx++] = Val;
   }
@@ -300,7 +348,7 @@ template<typename TDst, typename TSrc> static size_t Utf32To8(TDst Dst, TSrc Src
   {
    uint32 Val = Src[SrcIdx++];
    if(!Val)break;
-   DstIdx = ChrUtf32To8(Dst, &Val, DstIdx);
+   DstIdx = CpUtf32To8(Dst, &Val, DstIdx);
   }
  return DstIdx - OrigIdx;
 }
@@ -313,7 +361,7 @@ template<typename TDst, typename TSrc> static size_t Utf8To32(TDst Dst, TSrc Src
  for(;SrcChrCnt;SrcChrCnt--)
   {
    uint32 Val;
-   SrcIdx = ChrUtf8To32(&Val, Src, 0, SrcIdx);
+   SrcIdx = CpUtf8To32(&Val, Src, 0, SrcIdx);
    if(!Val)break;
    Dst[DstIdx++] = Val;
   }
@@ -321,16 +369,16 @@ template<typename TDst, typename TSrc> static size_t Utf8To32(TDst Dst, TSrc Src
 }
 //---------------------------------------------------------------------------
 // Convert UTF-16 to UTF-8
-// Return: Number of chars written to Dst
+// Return: Number of chars written to Dst (May be more DST bytes than SRC chars)
 template<typename TDst, typename TSrc> static size_t Utf16To8(TDst Dst, TSrc Src, size_t SrcChrCnt=(size_t)-1, uint DstIdx=0, uint SrcIdx=0)
 {
  const uint OrigIdx = DstIdx;
  for(;SrcChrCnt;SrcChrCnt--)
   {
    uint32 Val;
-   SrcIdx = ChrUtf16To32(&Val, Src, 0, SrcIdx);
+   SrcIdx = CpUtf16To32(&Val, Src, 0, SrcIdx);
    if(!Val)break;
-   DstIdx = ChrUtf32To8(Dst, &Val, DstIdx);
+   DstIdx = CpUtf32To8(Dst, &Val, DstIdx);
   }
  return DstIdx - OrigIdx;
 }
@@ -345,14 +393,14 @@ template<typename TDst, typename TSrc> static size_t Utf16To8(TDst Dst, TSrc Src
  while((_SrcIdx < SrcEnd)&&(_DstIdx < DstEnd))
   {
    uint32 Val;
-   _SrcIdx = ChrUtf16To32(&Val, Src, 0, _SrcIdx);
+   _SrcIdx = CpUtf16To32(&Val, Src, 0, _SrcIdx);
    if(!Val)break;
-   _DstIdx = ChrUtf32To8(Dst, &Val, _DstIdx, 0);
+   _DstIdx = CpUtf32To8(Dst, &Val, _DstIdx, 0);
   }
  size_t ODIdx = DstIdx;
  DstIdx = _DstIdx;
  SrcIdx = _SrcIdx;
- return _DstIdx - ODIdx;
+ return _DstIdx - ODIdx;    // Number of DST bytes
 }
 //---------------------------------------------------------------------------
 // Convert UTF-8 to UTF-16
@@ -363,9 +411,9 @@ template<typename TDst, typename TSrc> static size_t Utf8To16(TDst Dst, TSrc Src
  for(;SrcChrCnt;SrcChrCnt--)
   {
    uint32 Val;
-   SrcIdx = ChrUtf8To32(&Val, Src, 0, SrcIdx);
+   SrcIdx = CpUtf8To32(&Val, Src, 0, SrcIdx);
    if(!Val)break;
-   DstIdx = ChrUtf32To16(Dst, &Val, DstIdx);
+   DstIdx = CpUtf32To16(Dst, &Val, DstIdx);
   }
  return DstIdx - OrigIdx;
 }
@@ -378,7 +426,7 @@ template<typename TSrc> static size_t Len32To16(TSrc Src, size_t SrcChrCnt=(size
   {
    uint32 Val = Src[SrcIdx++];
    if(!Val)break;
-   DstLen += ChrLen32To16(&Val);
+   DstLen += CpLen32To16(&Val);
   }
  return DstLen;
 }
@@ -389,7 +437,7 @@ template<typename TSrc> static size_t Len16To32(TSrc Src, size_t SrcChrCnt=(size
  for(;SrcChrCnt;SrcChrCnt--,DstLen++)
   {
    uint32 Val;
-   SrcIdx = ChrUtf16To32(&Val, Src, 0, SrcIdx);
+   SrcIdx = CpUtf16To32(&Val, Src, 0, SrcIdx);
    if(!Val)break;
   }
  return DstLen;
@@ -402,7 +450,7 @@ template<typename TSrc> static size_t Len32To8(TSrc Src, size_t SrcChrCnt=(size_
   {
    uint32 Val = Src[SrcIdx++];
    if(!Val)break;
-   DstLen += ChrLen32To8(&Val);
+   DstLen += CpLen32To8(&Val);
   }
  return DstLen;
 }
@@ -413,7 +461,7 @@ template<typename TSrc> static size_t Len8To32(TSrc Src, size_t SrcChrCnt=(size_
  for(;SrcChrCnt;SrcChrCnt--)
   {
    uint32 Val;
-   SrcIdx = ChrUtf8To32(&Val, Src, 0, SrcIdx);
+   SrcIdx = CpUtf8To32(&Val, Src, 0, SrcIdx);
    if(!Val)break;
   }
  return DstLen;
@@ -425,9 +473,9 @@ template<typename TSrc> static size_t Len16To8(TSrc Src, size_t SrcChrCnt=(size_
  for(;SrcChrCnt;SrcChrCnt--)
   {
    uint32 Val;
-   SrcIdx = ChrUtf16To32(&Val, Src, 0, SrcIdx);
+   SrcIdx = CpUtf16To32(&Val, Src, 0, SrcIdx);
    if(!Val)break;
-   DstLen += ChrLen32To8(&Val);
+   DstLen += CpLen32To8(&Val);
   }
  return DstLen;
 }
@@ -438,12 +486,13 @@ template<typename TSrc> static size_t Len8To16(TSrc Src, size_t SrcChrCnt=(size_
  for(;SrcChrCnt;SrcChrCnt--)
   {
    uint32 Val;
-   SrcIdx = ChrUtf8To32(&Val, Src, 0, SrcIdx);
+   SrcIdx = CpUtf8To32(&Val, Src, 0, SrcIdx);
    if(!Val)break;
-   DstLen += ChrLen32To16(&Val);
+   DstLen += CpLen32To16(&Val);
   }
  return DstLen;
 }
 //---------------------------------------------------------------------------
+#include "Unicode.hpp"  // Unicode normalization and case conversion (Directly in UTF-8 encoding)
 };
 //---------------------------------------------------------------------------

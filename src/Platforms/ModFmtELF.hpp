@@ -279,62 +279,6 @@ enum EHFlags
   EV_NUM = 2,
 };
 //------------------------------------------------------------------------------------------------------------
-// AUX vector types
-enum EAFlags
-{
-// Legal values for a_type (entry type).
- AT_NULL              = 0,    // End of vector
- AT_IGNORE            = 1,    // Entry should be ignored
- AT_EXECFD            = 2,    // File descriptor of program
- AT_PHDR              = 3,    // Program headers for program     // &phdr[0]            // <<<<<
- AT_PHENT             = 4,    // Size of program header entry    // sizeof(phdr[0])
- AT_PHNUM             = 5,    // Number of program headers       // # phdr entries
- AT_PAGESZ            = 6,    // System page size                // getpagesize(2)      // <<<<<
- AT_BASE              = 7,    // Base address of interpreter     // ld.so base addr     // <<<<<
- AT_FLAGS             = 8,    // Flags                           // processor flags
- AT_ENTRY             = 9,    // Entry point of program          // a.out entry point   // <<<<<
- AT_NOTELF            = 10,   // Program is not ELF
- AT_UID               = 11,   // Real uid
- AT_EUID              = 12,   // Effective uid
- AT_GID               = 13,   // Real gid
- AT_EGID              = 14,   // Effective gid
- AT_CLKTCK            = 17,   // Frequency of times()
-// Some more special a_type values describing the hardware.
- AT_PLATFORM          = 15,   // String identifying platform.
- AT_HWCAP             = 16,   // Machine-dependent hints about processor capabilities.
-// This entry gives some information about the FPU initialization performed by the kernel.
- AT_FPUCW             = 18,   // Used FPU control word.
-// Cache block sizes.
- AT_DCACHEBSIZE       = 19,   // Data cache block size.
- AT_ICACHEBSIZE       = 20,   // Instruction cache block size.
- AT_UCACHEBSIZE       = 21,   // Unified cache block size.
-// A special ignored value for PPC, used by the kernel to control the interpretation of the AUXV. Must be > 16.
- AT_IGNOREPPC         = 22,   // Entry should be ignored.
- AT_SECURE            = 23,   // Boolean, was exec setuid-like?
- AT_BASE_PLATFORM     = 24,   // String identifying real platforms.
- AT_RANDOM            = 25,   // Address of 16 random bytes.                // <<<<<
- AT_HWCAP2            = 26,   // More machine-dependent hints about processor capabilities.
- AT_EXECFN            = 31,   // Filename of executable.                      // <<<<<
-// Pointer to the global system page used for system calls and other nice things.
- AT_SYSINFO           = 32,
- AT_SYSINFO_EHDR      = 33,   // The base address of the vDSO           // <<<<<
-// Shapes of the caches.  Bits 0-3 contains associativity; bits 4-7 contains log2 of line size; mask those to get cache size.
- AT_L1I_CACHESHAPE    = 34,
- AT_L1D_CACHESHAPE    = 35,
- AT_L2_CACHESHAPE     = 36,
- AT_L3_CACHESHAPE     = 37,
-// Shapes of the caches, with more room to describe them. *GEOMETRY are comprised of cache line size in bytes in the bottom 16 bits and the cache associativity in the next 16 bits.
- AT_L1I_CACHESIZE     = 40,
- AT_L1I_CACHEGEOMETRY = 41,
- AT_L1D_CACHESIZE     = 42,
- AT_L1D_CACHEGEOMETRY = 43,
- AT_L2_CACHESIZE      = 44,
- AT_L2_CACHEGEOMETRY  = 45,
- AT_L3_CACHESIZE      = 46,
- AT_L3_CACHEGEOMETRY  = 47,
- AT_MINSIGSTKSZ       = 51,   // Stack needed for signal delivery (AArch64).
-};
-//------------------------------------------------------------------------------------------------------------
 // Legal values for d_tag (dynamic entry type).
 enum EDTags
 {
@@ -422,20 +366,6 @@ using Elf_Hdr   = SElf_Hdr<SIZE_T>;
 using Elf32_Hdr = SElf_Hdr<uint32>;
 using Elf64_Hdr = SElf_Hdr<uint64>;
 
-//------------------------------------------------------------------------------------------------------------
-//------------------------------------------------------------------------------------------------------------
-//------------------------------------------------------------------------------------------------------------
-
-struct SAuxVecRec
-{
-  SIZE_T type;                // Entry type
-  union
-    {
-      SIZE_T val;                // Integer value
-      PVOID  ptr;                // Pointer value
-    };
-};
-//------------------------------------------------------------------------------------------------------------
 //------------------------------------------------------------------------------------------------------------
 // This info is needed when parsing the symbol table
 //#define STB_LOCAL  0
@@ -597,52 +527,6 @@ static bool IsModuleX64(vptr Base)  // NOTE: The header must be already validate
 //static bool GetSectionForAddress(void* Base, void* Address, SSecHdr** ResSec)
 //------------------------------------------------------------------------------------------------------------
 //static bool GetModuleSection(void* Base, char *SecName, SSecHdr** ResSec)
-//------------------------------------------------------------------------------------------------------------
-// https://github.com/kushaldas/elfutils/blob/master/libdwfl/elf-from-memory.c
-// NOTE: Target ELF in memory may be of different arch
-// NOTE: Assumed thar PHeaders in memory accessible at the same offset as in the file
-// NOTE: Sections will most likely be at the end of file and they are not define memory mapping anyway
-//
-static uint GetModuleSizeInMem(vptr Base)
-{
- if(!IsValidHeaderELF(Base))return 0;
- size_t MaxOffs = 0;   // Will include BSS
- size_t MinOffs = -1;
- if(((Elf_Hdr*)Base)->arch == ELFCLASS64)
-  {
-   Elf64_Hdr* hdr = (Elf64_Hdr*)Base;
-   Elf64_Phdr* phdrs = (Elf64_Phdr*)((uint8*)Base + hdr->ReadVal(hdr->phoff));
-   for(uint16 idx=0,tot=hdr->ReadVal(hdr->phnum);idx < tot;idx++)  // Or add phentsize???
-    {
-//     DBGDBG("Seg: %p",&phdrs[idx]);
-     uint32 type  = hdr->ReadVal(phdrs[idx].type);
-     if(type != PT_LOAD)continue;
-     size_t boffs = hdr->ReadVal(phdrs[idx].vaddr);           // Alignment?
-     size_t eoffs = boffs + hdr->ReadVal(phdrs[idx].memsz);   // Alignment?
-     if(boffs < MinOffs)MinOffs = boffs;
-     if(eoffs > MaxOffs)MaxOffs = eoffs;
-    }
-  }
-  else
-   {
-    Elf32_Hdr* hdr = (Elf32_Hdr*)Base;
-    Elf32_Phdr* phdrs = (Elf32_Phdr*)((uint8*)Base + hdr->ReadVal(hdr->phoff));
-    for(uint16 idx=0,tot=hdr->ReadVal(hdr->phnum);idx < tot;idx++)  // Or add phentsize???
-     {
-//      DBGDBG("Seg: %p",&phdrs[idx]);
-      uint32 type  = hdr->ReadVal(phdrs[idx].type);
-      if(type != PT_LOAD)continue;
-      size_t boffs = hdr->ReadVal(phdrs[idx].vaddr);           // Alignment?
-      size_t eoffs = boffs + hdr->ReadVal(phdrs[idx].memsz);   // Alignment?
-      if(boffs < MinOffs)MinOffs = boffs;
-      if(eoffs > MaxOffs)MaxOffs = eoffs;
-     }
-   }
- MaxOffs = AlignP2Frwd(MaxOffs, MEMPAGESIZE);
- MinOffs = AlignP2Bkwd(MinOffs, MEMPAGESIZE);
- if(MinOffs){MaxOffs -= MinOffs; MinOffs = 0;}   // Usually default base is 0 but not have to be
- return AlignP2Frwd(MaxOffs - MinOffs, MEMPAGESIZE);
-}
 //------------------------------------------------------------------------------------------------------------
 // static void* GetLoadedModuleEntryPoint(void* Base)
 //------------------------------------------------------------------------------------------------------------

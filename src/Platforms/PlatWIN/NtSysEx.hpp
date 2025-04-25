@@ -110,6 +110,8 @@ static inline bool IsWow64(void)
  return false;
 }
 //---------------------------------------------------------------------------
+// http://waleedassar.blogspot.com/2012/12/skipthreadattach.html
+//
 /*static int SetSkipThreadReport(HANDLE ThLocalThread)
 {
  THREAD_BASIC_INFORMATION tinf;
@@ -148,6 +150,21 @@ static int SetSkipThreadReport(PTEB ThTeb)  // See RtlIsCurrentThreadAttachExemp
   }
  return 0;
 } */
+//------------------------------------------------------------------------------------
+static bool LdrDisableThreadDllCalls(vptr DllBase)
+{
+ NT::PEB* CurPeb = NT::NtCurrentPeb();
+ NT::PEB_LDR_DATA* ldr = CurPeb->Ldr;
+ for(NT::LDR_DATA_TABLE_ENTRY_MO* me = ldr->InMemoryOrderModuleList.Flink;me != (NT::LDR_DATA_TABLE_ENTRY_MO*)&ldr->InMemoryOrderModuleList;me = me->InMemoryOrderLinks.Flink)     // Or just use LdrFindEntryForAddress?
+  {
+   if(DllBase == me->DllBase)
+    {
+     me->u.Flags |= NT::LDRP_DONT_CALL_FOR_THREADS;   // .DontCallForThreads
+     return true;
+    }
+  }
+ return false;
+}
 //------------------------------------------------------------------------------------
 // Returns base of NTDLL and optionally its path (can be used to get the system drive letter)
 //
@@ -211,7 +228,7 @@ template<typename T> static vptr LdrGetModuleBase(T ModName, size_t* Size=nullpt
 // DBGMSG("Not found for: %s",ModName);   // TODO: Use only in FULL info mode
  return nullptr;
 }
-//------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------
 static vptr LdrGetModuleBase(uint32 NameHash, size_t* Size=nullptr, uint32* BaseIdx=nullptr)  // NOTE: No loader locking used!  // NOTE: NameHash of a low case string (ANSI)
 {
  NT::PPEB_LDR_DATA ldr = NT::NtCurrentTeb()->ProcessEnvironmentBlock->Ldr;
@@ -235,7 +252,7 @@ static vptr LdrGetModuleBase(uint32 NameHash, size_t* Size=nullptr, uint32* Base
 // DBGMSG("Not found for: %s",ModName);   // TODO: Use only in FULL info mode
  return nullptr;
 }
-//------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------
 static vptr LdrGetModuleByAddr(vptr ModAddr, size_t* ModSize=nullptr)
 {
  NT::PPEB_LDR_DATA ldr = NT::NtCurrentTeb()->ProcessEnvironmentBlock->Ldr;    // TODO: Loader lock
@@ -247,8 +264,8 @@ static vptr LdrGetModuleByAddr(vptr ModAddr, size_t* ModSize=nullptr)
   }
  return nullptr;
 }
-//------------------------------------------------------------------------------------
-static vptr LdrLoadLibrary(achar* LibName, vptr pLdrLoadDll)
+//---------------------------------------------------------------------------
+static vptr LdrLoadLibrary(const achar* LibName, vptr pLdrLoadDll)
 {
  wchar NamBuf[PATH_MAX];
  NT::UNICODE_STRING DllName; // we will use this to hold the information for the LdrLoadDll call
@@ -259,90 +276,473 @@ static vptr LdrLoadLibrary(achar* LibName, vptr pLdrLoadDll)
  DllName.Buffer = (wchar*)&NamBuf; // the dll path must be the .Buffer -> you can always just do = L"path" instead of passing a param for it
  DllName.Length = (ctr * sizeof(wchar)); // calc the length
  DllName.MaximumLength = (DllName.Length + sizeof(wchar)); // max length calc
- if(((decltype(NT::LdrLoadDll)*)pLdrLoadDll)(nullptr, nullptr, &DllName, (vptr*)&ModBase))return nullptr;
+ if(((decltype(NT::LdrLoadDll)*)pLdrLoadDll)(nullptr, 0, &DllName, (vptr*)&ModBase))return nullptr;   // Can load EXE but won't call its entry point
  return ModBase;
 }
 //---------------------------------------------------------------------------
-enum EPathType {ptUnknown=0,ptAbsolute=1,ptSysRootRel=2,ptCurrDirRel=3,ptWinUsrLevel=0x10000,ptWinUsrAtRel=0x10001};
+// "\\GLOBAL??\\A:"    // LOCAL: "\\??"  (Network drives are mapped there)
+//
+static uint32 GetObjectNS(wchar* buf, bool Global)
+{
+ return NSTR::StrCopy(buf, Global?_PS(L"\\GLOBAL??\\"):_PS(L"\\??\\"));
+}
+//---------------------------------------------------------------------------
+static sint32 IsGlobalObjectNS(const wchar* buf)
+{
+ if(buf[0] != '\\')return -1;
+ if(buf[1] == '?')
+  {         
+   if(buf[2] != '?')return -2;
+   if(buf[3] != '\\')return -3;
+   return 0;    // LOCAL
+  }
+ if(buf[1] == 'G')
+  {
+   if(buf[7] != '?')return -4;
+   if(buf[8] != '?')return -5;
+   if(buf[9] != '\\')return -6;
+   return 1;    // GLOBAL
+  }
+ return -9;
+}
+//---------------------------------------------------------------------------
+// https://github.com/MartinDrab/VrtuleTree/blob/master/vtdrv/utils-devices.c
+// /Device/HardDisk... to C:
+// DstLen in bytes
+//
+static NT::NTSTATUS FindDosDevForPath(wchar* DosPart, const wchar* NtPath, uint32 DstLen, uint32* OldPLen=nullptr, uint32* NewPLen=nullptr, bool Global=true)   
+{
+ NT::HANDLE hODir = 0;
+ NT::UNICODE_STRING path;
+ NT::OBJECT_ATTRIBUTES oattr;
+ wchar PathLnk[64];
+ uint32 onslen = GetObjectNS(PathLnk, Global);
+ path.Set(PathLnk, onslen-1);  
+ oattr.Length = sizeof(NT::OBJECT_ATTRIBUTES);
+ oattr.RootDirectory = 0;
+ oattr.ObjectName = &path;
+ oattr.Attributes = 0;   //NT::OBJ_INHERIT;            // OBJ_CASE_INSENSITIVE;  
+ oattr.SecurityDescriptor = nullptr;           
+ oattr.SecurityQualityOfService = nullptr;
+ NT::NTSTATUS res = SAPI::NtOpenDirectoryObject(&hODir, NT::DIRECTORY_QUERY | NT::DIRECTORY_TRAVERSE, &oattr);
+ if(res)return res;
+ sint32 MupPxLen  = NSTR::MatchCI(NtPath, _PS(L"\\Device\\Mup\\"));   // \Device\LanmanRedirector\;Z:0000000000063507\192.168.32.50\workfolder
+ sint32 mpoffs = 0;     // offset of \workfolder
+ bool IsMupNtPath = (MupPxLen == 12);
+ if(IsMupNtPath)
+  {
+   NtPath += 11;
+   mpoffs  = NSTR::CharOffsetCS(NtPath, PATHSEPWIN, 1);      // mpoffs is OldPLen
+   if(mpoffs <= 0)IsMupNtPath = false;
+  }
+ 
+ const size_t BufLen = 4096;   // Only 10 recs fits in 2K!
+ uint32 PrvIdx = 0;
+ uint32 RecIdx = 0;
+ uint32 RetLen = 0; 
+ alignas(16) uint8  RecBuf[BufLen];
+ usize PathByteLen = NSTR::StrLen(NtPath) << 1;
+ NT::UNICODE_STRING* ObjPath = nullptr;
+ oattr.Attributes = NT::OBJ_CASE_INSENSITIVE;
+ PathLnk[onslen+1] = ':';
+ path.Set(PathLnk, onslen+2);   // Full path  
+
+ NT::UNICODE_STRING lnkpath;
+ wchar pathbuf[PATH_MAX];
+ lnkpath.Buffer = pathbuf;
+ lnkpath.Length = 0;
+ lnkpath.MaximumLength = sizeof(pathbuf);
+ for(;;)
+  {
+   PrvIdx = RecIdx;
+   NT::NTSTATUS stat = SAPI::NtQueryDirectoryObject(hODir, &RecBuf, sizeof(RecBuf), false, false, &RecIdx, &RetLen);   // STATUS_MORE_ENTRIES
+   if(!NT::NT_SUCCESS(stat)){SAPI::NtClose(hODir); return stat;}
+   auto Recs = (NT::OBJECT_DIRECTORY_INFORMATION*)RecBuf;
+   for(uint32 idx=0,tot=RecIdx-PrvIdx;idx < tot;idx++)       // TypeName: SymbolicLink  // Only SymLinks in \\GLOBAL??
+    {
+     NT::OBJECT_DIRECTORY_INFORMATION* rec = &Recs[idx];
+     if(!rec->Name.Buffer || (rec->Name.Length < 4))continue;   // C:
+     if(rec->Name.Buffer[1] != ':')continue;
+     path.Buffer[onslen] = rec->Name.Buffer[0];   // Drive letter
+     NT::HANDLE hSObj = 0;
+     res = SAPI::NtOpenSymbolicLinkObject(&hSObj, NT::SYMBOLIC_LINK_QUERY, &oattr);
+     if(!NT::NT_SUCCESS(res))continue;
+     lnkpath.Length = 0; 
+     res = SAPI::NtQuerySymbolicLinkObject(hSObj, &lnkpath, &RetLen);
+     SAPI::NtClose(hSObj);
+     if(!NT::NT_SUCCESS(res))continue;
+
+     ssize clen;
+     bool Match;
+     if(IsMupNtPath && NSTR::MatchCI(lnkpath.Buffer, _PS(L"\\Device\\LanmanRedirector\\")) == 25)
+      {
+       wchar* lptr  = lnkpath.Buffer + 25;
+       sint32 moffs = NSTR::StrOffset(lptr, NtPath, 0, usize(-1), mpoffs);    // Offset of IP part ( \\192.168.32.50\\ )
+       if(moffs < 0)continue;
+       uint32 fblen = (moffs + 25) << 1;
+       uint32 brem  = (lnkpath.Length - fblen);
+       if(brem >= PathByteLen)continue;
+       lptr += moffs;
+       uint32 crem  = brem >> 1;
+       ssize mlen = NSTR::MatchCI(NtPath, lptr, crem, crem); 
+       Match = (mlen == crem); 
+       clen  = (MupPxLen + mlen) - 1;  //(MupPxLen + mpoffs) - 1;
+      }
+       else
+        {
+         if(lnkpath.Length >= PathByteLen)continue;
+               clen = lnkpath.Length >> 1; 
+         ssize mlen = NSTR::MatchCI(NtPath, lnkpath.Buffer, clen, clen); 
+         Match = (mlen == clen); 
+        }
+     if(Match)
+      {
+       uint32 len = NSTR::StrCopy(DosPart, rec->Name.Buffer, DstLen >> 1);
+       SAPI::NtClose(hODir);
+       if(NewPLen)*NewPLen = len;    // New prefix size
+       if(OldPLen)*OldPLen = clen;   // Old prefix size
+       return NT::STATUS_SUCCESS;
+      }
+    }
+   if(ObjPath || (NT::STATUS_MORE_ENTRIES != stat))break;
+  }
+ SAPI::NtClose(hODir);
+ return NT::STATUS_NOT_FOUND;
+}
+//---------------------------------------------------------------------------
+// C: to /Device/HardDisk... 
+// \Device\LanmanRedirector\;Z:0000000000063507\192.168.32.50\workfolder
+//
+static NT::NTSTATUS FindPathForDosDev(wchar* NtPart, const wchar* DosPath, uint32 DstLen, uint32* OldPLen=nullptr, uint32* NewPLen=nullptr, bool Global=true)   
+{
+ sint32 plen = NSTR::CharOffsetCS(DosPath, PATHSEPWIN); 
+ if(plen <= 0)return NT::STATUS_OBJECT_PATH_INVALID;
+ uint32 RetLen = 0;
+ NT::HANDLE hSObj = 0;
+ NT::UNICODE_STRING path;
+ NT::OBJECT_ATTRIBUTES oattr;
+ wchar PathLnk[PATH_MAX];
+ uint32 onslen = GetObjectNS(PathLnk, Global);
+ if((onslen+plen+1) > (sizeof(PathLnk)/2))return NT::STATUS_NAME_TOO_LONG;
+ uint32 oplen = NSTR::StrCopy(&PathLnk[onslen], DosPath, plen+1);
+ path.Set(PathLnk, onslen+oplen); 
+ oattr.Length = sizeof(NT::OBJECT_ATTRIBUTES);
+ oattr.RootDirectory = 0;
+ oattr.ObjectName = &path;
+ oattr.Attributes = 0;   //NT::OBJ_INHERIT;            // OBJ_CASE_INSENSITIVE;  
+ oattr.SecurityDescriptor = nullptr;           
+ oattr.SecurityQualityOfService = nullptr;
+ NT::NTSTATUS res = SAPI::NtOpenSymbolicLinkObject(&hSObj, NT::SYMBOLIC_LINK_QUERY, &oattr);
+ if(res)return res;
+
+ NT::UNICODE_STRING lnkpath;
+ wchar pathbuf[PATH_MAX];
+ lnkpath.Buffer = pathbuf;
+ lnkpath.Length = 0;
+ lnkpath.MaximumLength = sizeof(pathbuf);
+ res = SAPI::NtQuerySymbolicLinkObject(hSObj, &lnkpath, &RetLen);
+ SAPI::NtClose(hSObj);
+ if(!NT::NT_SUCCESS(res))return res;
+ uint32 dlen = NSTR::StrCopy(NtPart, lnkpath.Buffer, DstLen >> 1);
+ if(NewPLen)*NewPLen = dlen;
+ if(OldPLen)*OldPLen = plen;
+ return NT::STATUS_SUCCESS;
+}
+//---------------------------------------------------------------------------
+static NT::NTSTATUS GetDosDevForPath(wchar* DosPart, const wchar* NtPath, uint32 DstLen, uint32* OldPLen=nullptr, uint32* NewPLen=nullptr)    // Nt path to DOS path
+{
+ NT::NTSTATUS stat = FindDosDevForPath(DosPart, NtPath, DstLen, OldPLen, NewPLen, false);    // Try local first - less entries to process
+ if(!stat)return stat;
+ return FindDosDevForPath(DosPart, NtPath, DstLen, OldPLen, NewPLen, true);   
+}
+//---------------------------------------------------------------------------
+static NT::NTSTATUS GetPathForDosDev(wchar* NtPart, const wchar* DosPath, uint32 DstLen, uint32* OldPLen=nullptr, uint32* NewPLen=nullptr)    // Nt path to DOS path
+{
+ NT::NTSTATUS stat = FindPathForDosDev(NtPart, DosPath, DstLen, OldPLen, NewPLen, true);    // Try global first - more likely
+ if(!stat)return stat;
+ return FindPathForDosDev(NtPart, DosPath, DstLen, OldPLen, NewPLen, false);   
+}
+//---------------------------------------------------------------------------
+// NOTE: It is unspecified if this path is in GLOBAL or LOCAL namespace (Have to try such paths twice)
+//
+static NT::UNICODE_STRING* GetCurrentDir(void)       // 'C:\xxxxx\yyyyy\'
+{
+ auto pars = NT::NtCurrentTeb()->ProcessEnvironmentBlock->ProcessParameters; 
+ if(!pars)return nullptr;   // The process params may be missing (Created by an owner process)
+ return &pars->CurrentDirectory.DosPath; 
+}
+//---------------------------------------------------------------------------
+// Sets the path and handle as is
+static NT::NTSTATUS SetCurrentDirNT(NT::HANDLE hDir, const wchar* sDir, usize PathLen=0)  // Sets the CD directly   
+{
+ static wchar* OwnPtr = nullptr;     // NOTE: Other libs will allocate this on Heap (And will try to free it from heap)
+ auto pars = NT::NtCurrentTeb()->ProcessEnvironmentBlock->ProcessParameters; 
+ if(!pars)return NT::STATUS_INVALID_ADDRESS;  // No ProcessParameters!     // NT::STATUS_NO_SUCH_FILE
+ if(!PathLen)PathLen = NSTR::StrLen(sDir);
+
+ usize ByteLen = (PathLen<<1) + 2;
+ NT::UNICODE_STRING* CurrDir = &pars->CurrentDirectory.DosPath;
+ if(CurrDir->MaximumLength < ByteLen)   // Alloc/Realloc the block
+  {
+   vptr  RegionBase = nullptr;   
+   usize RegionSize = ByteLen;      // + null size
+   NT::NTSTATUS res = SAPI::NtAllocateVirtualMemory(NT::NtCurrentProcess, &RegionBase, 0, &RegionSize, NT::MEM_COMMIT, NT::PAGE_READWRITE); 
+   if(res){SAPI::NtClose(hDir); return res;}    // ENOMEM
+   if(OwnPtr == CurrDir->Buffer)    // Otherwise leak the initial, heap allocated buffer memory (May be allocated by SetCurrentDirectory)
+    {
+     vptr  RBase = OwnPtr;
+     usize RSize = 0;      // Free the entire region by MEM_RELEASE
+     SAPI::NtFreeVirtualMemory(NT::NtCurrentProcess, &RBase, &RSize, NT::MEM_RELEASE); 
+    }
+   usize len = NSTR::StrCopy((wchar*)RegionBase, sDir);        // NOTE: No path validation    // TODO: ENOENT if The file does not exist
+   CurrDir->Buffer = OwnPtr = (wchar*)RegionBase;    
+   CurrDir->Length = len << 1;    // not including the terminating NULL character
+   CurrDir->MaximumLength = RegionSize;
+  }
+   else CurrDir->Length = NSTR::StrCopy(CurrDir->Buffer, sDir) << 1;    // not including the terminating NULL character
+
+ SAPI::NtClose(pars->CurrentDirectory.Handle);    // Close the prev handle
+ pars->CurrentDirectory.Handle = hDir;
+ return NT::STATUS_SUCCESS;
+} 
+//---------------------------------------------------------------------------
+static NT::NTSTATUS SetCurrentDir(const achar* sDir, bool CaseSens=false) 
+{
+ NT::OBJECT_ATTRIBUTES oattr = {};
+ NT::IO_STATUS_BLOCK iosb = {};
+ NT::UNICODE_STRING FilePathUS;
+ NT::HANDLE hDir = 0;
+
+ uint32 CreateOptions  = NT::FILE_DIRECTORY_FILE | NT::FILE_SYNCHRONOUS_IO_NONALERT;
+ uint32 CreateDisposition = NT::FILE_OPEN;
+ uint32 ShareAccess    = NT::FILE_SHARE_READ | NT::FILE_SHARE_WRITE;
+ uint32 FileAttributes = NT::FILE_ATTRIBUTE_NORMAL;
+ uint32 DesiredAccess  = uint32(NT::FILE_TRAVERSE) | NT::SYNCHRONIZE;
+ uint32 ObjAttributes  = NT::OBJ_INHERIT | NT::OBJ_PATH_PARSE_DOTS;
+ if(!CaseSens)oattr.Attributes |= NT::OBJ_CASE_INSENSITIVE;
+
+ uint plen;
+ NTX::EPathType ptype = ptUnknown;;
+ uint PathLen = CalcFilePathBufSize(sDir, plen, ptype);
+ wchar FullPath[PathLen+2];    // NOTE: VLA
+ InitFileObjectAttributes(sDir, plen, ptype, ObjAttributes, FullPath, &FilePathUS, &oattr);   // Normalizes the path  // Try GLOBAL first (reserves path space for LOCAL)
+ NT::NTSTATUS res = SAPI::NtCreateFile(&hDir, DesiredAccess, &oattr, &iosb, nullptr, FileAttributes, ShareAccess, CreateDisposition, CreateOptions, nullptr, 0);   
+ int gls = IsGlobalObjectNS(FullPath);
+ if((res == NT::STATUS_OBJECT_PATH_NOT_FOUND) && (gls > 0))   // Try to open in local object namespace
+  {
+   FilePathUS.Length -= (6*2);
+   FilePathUS.Buffer += 6;            // GLOBAL to LOCAL
+   *FilePathUS.Buffer = PATHSEPWIN;
+   res = SAPI::NtCreateFile(&hDir, DesiredAccess, &oattr, &iosb, nullptr, FileAttributes, ShareAccess, CreateDisposition, CreateOptions, nullptr, 0);    // This will open network shares (mapped drives)
+   gls = 0;
+  }
+ if(!NT::NT_SUCCESS(res))return res;
+ if(gls > 0){FilePathUS.Buffer += 10; FilePathUS.Length -= (10*2);}
+  else if(!gls){FilePathUS.Buffer += 4; FilePathUS.Length -= (4*2);}             
+ return SetCurrentDirNT(hDir, FilePathUS.Buffer, FilePathUS.Length >> 1);
+} 
+//---------------------------------------------------------------------------
+// NtQueryObject: For network shares returns: \Device\Mup\192.168.32.50\workfolder
+//  In LOCAL namespace, mapped drive Z: is a link to \Device\LanmanRedirector\;Z:0000000000063507\192.168.32.50\workfolder
+//  \Device\LanmanRedirector is a link to \Device\Mup\;LanmanRedirector
+//
+static NT::NTSTATUS SetCurrentDir(NT::HANDLE hDir) 
+{
+ wchar* FullPath = nullptr;
+ uint32 PathLen  = 0;   
+ struct SFPath: NT::UNICODE_STRING
+  {
+   wchar RestOfBuf[PATH_MAX];
+  } PathBuf;
+ PathBuf.Length = PathBuf.MaximumLength = 0;
+ NT::NTSTATUS res = SAPI::NtQueryObject(hDir, NT::ObjectNameInformation, &PathBuf, sizeof(PathBuf), &PathLen);  
+ if(res)
+  {
+   if(!PathLen)return res;
+   usize size = AlignFrwdP2(PathLen,16);
+   FullPath = (wchar*)StkAlloc(size);
+   res = SAPI::NtQueryObject(hDir, NT::ObjectNameInformation, FullPath, size, &PathLen);
+   if(!NT::NT_SUCCESS(res))return res;
+  }
+   else FullPath = (wchar*)&PathBuf;
+
+ NT::UNICODE_STRING* str = (NT::UNICODE_STRING*)FullPath;
+ uint32 OldPLen = 0;
+ uint32 NewPLen = 0;
+ wchar DriveLnk[64];
+ res = GetDosDevForPath(DriveLnk, str->Buffer, sizeof(DriveLnk), &OldPLen, &NewPLen);     
+ if(!NT::NT_SUCCESS(res))return res;
+ if(NewPLen > OldPLen)return NT::STATUS_UNSUCCESSFUL;
+
+ NT::OBJECT_ATTRIBUTES oattr = {};
+ NT::IO_STATUS_BLOCK iosb = {};
+ NT::UNICODE_STRING FilePathUS;
+ oattr.Length = sizeof(NT::OBJECT_ATTRIBUTES);
+ oattr.RootDirectory = 0;
+ oattr.ObjectName = str;
+ oattr.Attributes = NT::OBJ_INHERIT;            // OBJ_CASE_INSENSITIVE;   //| OBJ_KERNEL_HANDLE;
+ oattr.SecurityDescriptor = nullptr;            // TODO: Arg3: mode_t mode
+ oattr.SecurityQualityOfService = nullptr;
+ res = SAPI::NtCreateFile(&hDir, uint32(NT::FILE_TRAVERSE) | NT::SYNCHRONIZE, &oattr, &iosb, nullptr, NT::FILE_ATTRIBUTE_NORMAL, NT::FILE_SHARE_READ | NT::FILE_SHARE_WRITE, NT::FILE_OPEN, NT::FILE_DIRECTORY_FILE | NT::FILE_SYNCHRONOUS_IO_NONALERT, nullptr, 0);   
+ if(!NT::NT_SUCCESS(res))return res;
+
+ uint32 plen = OldPLen - NewPLen;
+ str->Buffer += plen;
+ str->Length -= plen << 1;
+ memcpy(str->Buffer, &DriveLnk, NewPLen << 1);  
+ return SetCurrentDirNT(hDir, str->Buffer, str->Length >> 1);             // Case sensitive?
+} 
+//---------------------------------------------------------------------------
+enum EPathType {ptUnknown=0,ptAbsolute=1,ptSysRootRel=2,ptCurrDirRel=3,ptWinUsrLevel=0x00010000,ptWinUsrAtRel=0x00010001, ptFlgMask=0x000FFFFF};  // May be ORed with OBJ_PATH_GLOBAL_NS and OBJ_PATH_PARSE_DOTS
 
 template<typename T> static EPathType GetPathTypeNt(T Src)
 {
- if((Src[0] == ':')||(Src[1] == ':'))return ptAbsolute;   // 'C:\'    // First ':' is a hack to open object symlinksdirectly
- if((Src[0] == '/') || (Src[0] == '\\'))return ptSysRootRel;  // \MyHomeFolder
+ if((Src[0] == ':') || (Src[1] == ':'))return ptAbsolute;   // 'C:\'    // First ':' is a hack to open object SymLinks directly
+ if((Src[0] == '/') || (Src[0] == '\\'))return ptSysRootRel;  // \MyHomeFolder      // Drop that flag if we are at \\Device\\
  //if((Src[0] == '.') && ((Src[1] == '/') || (Src[1] == '\\')))return ptCurrDirRel;    // .\MyDrkDir
- return ptCurrDirRel;  //ptUnknown;
+ return ptCurrDirRel;  // ptUnknown;    // CurrDir must be added and any '.' and '..' will be handled later if needed for UNIX compatibility
 }
 //------------------------------------------------------------------------------------
 static _minline size_t CalcFilePathBufSize(const achar* Path, uint& plen, EPathType& ptype)  // Returns required buffer size ib wchar
 {
- bool Extra = ((uint32)ptype < ptWinUsrLevel); 
- plen  = NUTF::Len8To16(Path);  //  NSTR::StrLen(Path);      // TODO: Check that it is fast enough
+ bool Extra = (((uint32)ptype & ptFlgMask) < ptWinUsrLevel); 
+ plen = NUTF::Len8To16(Path);  //  NSTR::StrLen(Path);      // TODO: Check that it is fast enough
  if(!(uint16)ptype)ptype = EPathType((uint32)NTX::GetPathTypeNt(Path) | (uint32)ptype);  // If ptUnknown
  uint ExtraLen = Extra?(4+10):0;  // +10 for size of "\\GLOBAL??\\"
- NT::UNICODE_STRING* CurrDir = &NT::NtCurrentTeb()->ProcessEnvironmentBlock->ProcessParameters->CurrentDirectory.DosPath;    // 'C:\xxxxx\yyyyy\'
+ NT::UNICODE_STRING* CurrDir = GetCurrentDir();    
  if((uint16)ptype == NTX::ptSysRootRel)ExtraLen += NSTR::StrLen((wchar*)&fwsinf.SysDrive);
- else if((uint16)ptype == NTX::ptCurrDirRel)ExtraLen += CurrDir->Length / sizeof(wchar);
+ else if(((uint16)ptype == NTX::ptCurrDirRel) && CurrDir)ExtraLen += CurrDir->Length / sizeof(wchar);
  return plen + ExtraLen;    // (plen*4)
 }
 //------------------------------------------------------------------------------------
-static _minline size_t InitFilePathBuf(const achar* Path, uint plen, EPathType ptype, wchar* buf_path)
+static _minline size_t InitFilePathBuf(const achar* Path, uint plen, EPathType ptype, wchar* buf_path, const wchar* root_path=nullptr)
 {
- size_t DstLen = ((uint32)ptype < ptWinUsrLevel)?(NSTR::StrCopy(buf_path, L"\\GLOBAL??\\")):0;     // Windows XP?
- size_t POffs  = DstLen;
+ size_t DstLen, POffs;
+ if(root_path)
+  {
+   DstLen = NSTR::StrCopy(buf_path, root_path);
+   if(!IsFilePathSep(buf_path[DstLen-1]))buf_path[DstLen++] = '\\';
+   POffs = 0;
+  }
+   else 
+    {
+     DstLen = (((uint32)ptype & ptFlgMask) < ptWinUsrLevel)?(NSTR::StrCopy(buf_path, (ptype & +NT::OBJ_PATH_GLOBAL_NS)?_PS(L"\\GLOBAL??\\"):_PS(L"\\??\\"))):0;     // Windows XP?
+     POffs  = DstLen;
+    }
  if(*Path == ':'){Path++;plen--;}     // To open symlinks directly
- NT::UNICODE_STRING* CurrDir = &NT::NtCurrentTeb()->ProcessEnvironmentBlock->ProcessParameters->CurrentDirectory.DosPath;
+ NT::UNICODE_STRING* CurrDir = GetCurrentDir(); 
  if((uint16)ptype == NTX::ptSysRootRel)DstLen += NSTR::StrCopy(&buf_path[DstLen], (wchar*)&fwsinf.SysDrive);        // Add system drive path
- else if((uint16)ptype == NTX::ptCurrDirRel)DstLen += NSTR::StrCopy(&buf_path[DstLen], (wchar*)CurrDir->Buffer);    // Add path to current directory
+ else if(((uint16)ptype == NTX::ptCurrDirRel) && CurrDir)DstLen += NSTR::StrCopy(&buf_path[DstLen], (wchar*)CurrDir->Buffer);    // Add path to current directory
  DstLen += NUTF::Utf8To16(&buf_path[DstLen], Path, plen);
  if(buf_path[POffs+1] == ':')POffs += 2;  // Preserve 'DRV:'
  buf_path[DstLen] = 0;
- DstLen  = NormalizePathNt(&buf_path[POffs], &buf_path[POffs]) + POffs;  // TODO: Check that we cannot step back from GLOBAL?? root
+ DstLen  = NormalizePathNt(&buf_path[POffs], &buf_path[POffs], !(ptype & +NT::OBJ_PATH_PARSE_DOTS)) + POffs;  // TODO: Check that we cannot step back from GLOBAL?? root     // TODO: Support of '.' and '..' must be optional
  buf_path[DstLen] = 0;
+// DBGMSG("Path: %ls",buf_path);
  return DstLen;    // Actual size, Not including NULL
 }
 //------------------------------------------------------------------------------------
 // Volume symlinks are \GLOBAL??\C:
 // https://stackoverflow.com/questions/14192887/status-invalid-parameter-from-ntcreatefile
 //
-static void InitFileObjectAttributes(const achar* Path, uint plen, EPathType ptype, uint32 ObjAttributes, wchar* buf_path, NT::UNICODE_STRING* buf_ustr, NT::OBJECT_ATTRIBUTES* oattr, NT::HANDLE RootDir=0)
+static _minline void InitFileObjectAttributes(const achar* Path, uint plen, EPathType ptype, uint32 ObjAttributes, wchar* buf_path, NT::UNICODE_STRING* buf_ustr, NT::OBJECT_ATTRIBUTES* oattr, NT::HANDLE RootDir=0, const wchar* RootPath=nullptr)
 {
- size_t DstLen = InitFilePathBuf(Path, plen, ptype, buf_path);
+ ptype = EPathType(ptype | (ObjAttributes & NT::OBJ_EXTRA_MASK));
+ size_t DstLen = InitFilePathBuf(Path, plen, ptype, buf_path, RootPath);
  if(buf_ustr)
   {
+   if(IsFilePathSep(*buf_path))RootDir = 0;     // Absolute paths start with a slash and incompatible with RootDir (Report STATUS_INVALID_PARAMETER) - let it be STATUS_OBJECT_PATH_NOT_FOUND
    buf_ustr->Set(buf_path, DstLen);
    if(oattr)
     {
      oattr->Length = sizeof(NT::OBJECT_ATTRIBUTES);
      oattr->RootDirectory = RootDir;
      oattr->ObjectName = buf_ustr;
-     oattr->Attributes = ObjAttributes;            // OBJ_CASE_INSENSITIVE;   //| OBJ_KERNEL_HANDLE;
+     oattr->Attributes = ObjAttributes & NT::OBJ_VALID_ATTRIBUTES;            // OBJ_CASE_INSENSITIVE;   //| OBJ_KERNEL_HANDLE;
      oattr->SecurityDescriptor = nullptr;          // TODO: Arg3: mode_t mode
      oattr->SecurityQualityOfService = nullptr;
     }
   }
 }
 //------------------------------------------------------------------------------------
+// Used to replace a directory handle with its path
+// A variable size array's space is freed at the end of the scope of the name of the array. The space allocated with `alloca' remains until the end of the function.
+// NOTE: No returns (except on the end) in case we will have to turn this into a macro
+// NT::NTSTATUS stat = SAPI::NtQueryInformationFile(RootDir, &iost, &RootPathBuf, sizeof(RootPathBuf), NT::FileNameInformation);
+// https://stackoverflow.com/questions/24751387/can-i-comment-multi-line-macros
+//
+#define AllocaObjectPath(hObj, Path)   \        
+{                                                   \
+ uint32 DataLen = AlignFrwdP2(sizeof(NT::UNICODE_STRING)+PATH_MAX,16);   \
+ NT::UNICODE_STRING* ObjPathBuf = (NT::UNICODE_STRING*)StkAlloc(DataLen);   /* NOTE: This allocation may be wasted */ \
+  /*ObjPathBuf->Length = ObjPathBuf->MaximumLength = 0;   // Just in case */ \                                                                  
+ NT::NTSTATUS stat = SAPI::NtQueryObject(hObj, NT::ObjectNameInformation, ObjPathBuf, DataLen, &DataLen);  /* Format: \Device\HarddiskVolume2\    // STATUS_OBJECT_PATH_INVALID or STATUS_BUFFER_OVERFLOW and required len in RetLen */  \
+ if(DataLen && stat)      /* Need more memory (Always STATUS_BUFFER_OVERFLOW ?) */ \  
+  {                    \                                                           
+   DataLen    = AlignFrwdP2(DataLen,16); \                                          
+   ObjPathBuf = (NT::UNICODE_STRING*)StkAlloc(DataLen); \
+  /*ObjPathBuf->Length = ObjPathBuf->MaximumLength = 0;   // Just in case */ \ 
+   stat = SAPI::NtQueryObject(hObj, NT::ObjectNameInformation, ObjPathBuf, DataLen, &DataLen); \
+  }  \
+ if(DataLen && !stat)Path = ObjPathBuf; \
+}                     
+//------------------------------------------------------------------------------------
+// NOTE: RootDir is nullified for absolute paths
+//
+#define AllocaObjectAttrs(sPath, hRootDir, uAttrs, pObjAttr, ForceRel)  \
+{    \
+ uint plen;      \
+ NTX::EPathType ptype = (hRootDir||ForceRel)?ptWinUsrAtRel:ptUnknown;    \
+ uint PathLen = CalcFilePathBufSize(sPath, plen, ptype);  \
+ wchar* RootPath = nullptr;  \
+ if((uAttrs & NT::OBJ_PATH_PARSE_DOTS) && hRootDir && !IsFilePathSep(*sPath) && IsStepBackOutPath(sPath))      /* Need to expand root path to process steps back because there is no actual '..' links as on Linux */ \
+  {            \
+   NT::UNICODE_STRING* ObjPath = nullptr;   \
+   AllocaObjectPath(hRootDir, ObjPath);     \
+   if(ObjPath)                              \
+    {                                       \
+     hRootDir = 0;                          \
+     PathLen += ObjPath->Length >> 1;       \
+     RootPath = ObjPath->Buffer;            \
+    }                                       \
+  }                                         \
+ usize  Offs   = AlignFrwdP2(sizeof(NT::UNICODE_STRING)+32,16);  /* Should fit some info structs which use wchar[1] instead of UNICODE_STRING */  \
+ usize  BufLen = AlignFrwdP2(Offs+(PathLen << 1)+4,16);  \
+ uint8* Buffer = (uint8*)StkAlloc(BufLen);    \
+ InitFileObjectAttributes(sPath, plen, ptype, uAttrs, (wchar*)&Buffer[Offs], (NT::UNICODE_STRING*)Buffer, pObjAttr, hRootDir, RootPath); \
+}
+//------------------------------------------------------------------------------------
+static void _finline ONSGlobalToLocalPtr(auto& Ptr, auto& Len)
+{
+ Len -= (6*2);
+ Ptr += 6;            // GLOBAL to LOCAL
+ *Ptr = PATHSEPWIN;
+}
+//------------------------------------------------------------------------------------
+// On NT systems '.' and '..' can be a file/dir name and NTX::OpenFileObject should support that 
+//  but NtQueryDirectoryFile returns '.' and '..' as first entries, except for a drive's root
+//
 static NT::NTSTATUS OpenFileObject(NT::PHANDLE FileHandle, const achar* Path, NT::ACCESS_MASK DesiredAccess, NT::ULONG ObjAttributes, NT::ULONG FileAttributes, NT::ULONG ShareAccess, NT::ULONG CreateDisposition, NT::ULONG CreateOptions, NT::PIO_STATUS_BLOCK IoStatusBlock, NT::HANDLE RootDir=0)
 {
- NT::OBJECT_ATTRIBUTES oattr = {};
- NT::UNICODE_STRING FilePathUS;
-
- uint plen;
- NTX::EPathType ptype = RootDir?ptWinUsrAtRel:ptUnknown;
- uint PathLen = CalcFilePathBufSize(Path, plen, ptype);
-
- wchar FullPath[PathLen];    // NOTE: VLA
- InitFileObjectAttributes(Path, plen, ptype, ObjAttributes, FullPath, &FilePathUS, &oattr, RootDir);
- return SAPI::NtCreateFile(FileHandle, DesiredAccess, &oattr, IoStatusBlock, nullptr, FileAttributes, ShareAccess, CreateDisposition, CreateOptions, nullptr, 0);
+ NT::OBJECT_ATTRIBUTES oattr;  // = {};
+ ObjAttributes |= NT::OBJ_PATH_GLOBAL_NS;  // Try the global first
+ AllocaObjectAttrs(Path, RootDir, ObjAttributes, &oattr, false);
+ NT::NTSTATUS res = SAPI::NtCreateFile(FileHandle, DesiredAccess, &oattr, IoStatusBlock, nullptr, FileAttributes, ShareAccess, CreateDisposition, CreateOptions, nullptr, 0);   
+ if((res == NT::STATUS_OBJECT_PATH_NOT_FOUND) && (IsGlobalObjectNS(oattr.ObjectName->Buffer) > 0))   // Try to open in local object namespace
+  {
+   ONSGlobalToLocalPtr(oattr.ObjectName->Buffer, oattr.ObjectName->Length);
+   res = SAPI::NtCreateFile(FileHandle, DesiredAccess, &oattr, IoStatusBlock, nullptr, FileAttributes, ShareAccess, CreateDisposition, CreateOptions, nullptr, 0);    // This will open network shares (mapped drives)
+  }
+ return res;
 }
 //------------------------------------------------------------------------------------
 /*
  https://stackoverflow.com/questions/46473507/delete-folder-for-which-every-api-call-fails-with-error-access-denied
 
-for delete file enough 2 things - we have FILE_DELETE_CHILD on parent folder. and file is not read only.
-in this case call ZwDeleteFile (but not DeleteFile or RemoveDirectory - both this api will fail if file have empty DACL) is enough.
-in case file have read-only attribute - ZwDeleteFile fail with code STATUS_CANNOT_DELETE. in this case we need first remove read only.
-for this need open file with FILE_WRITE_ATTRIBUTES access. we can do this if we have SE_RESTORE_PRIVILEGE and set FILE_OPEN_FOR_BACKUP_INTENT option in call to ZwOpenFile.
+To delete a file is enough 2 things - we have FILE_DELETE_CHILD on parent folder. and file is not read only.
+In this case call ZwDeleteFile (but not DeleteFile or RemoveDirectory - both this api will fail if file have empty DACL) is enough.
+In case file have read-only attribute - ZwDeleteFile fail with code STATUS_CANNOT_DELETE. in this case we need first remove read only.
+For this we need to open the file with FILE_WRITE_ATTRIBUTES access. we can do this if we have SE_RESTORE_PRIVILEGE and set FILE_OPEN_FOR_BACKUP_INTENT option in call to ZwOpenFile.
 
 A file in the file system is basically a link to an inode.
 A hard link, then, just creates another file with a link to the same underlying inode.
@@ -354,10 +754,12 @@ Any changes to the data on the inode is reflected in all files that refer to tha
 https://superuser.com/questions/343074/directory-junction-vs-directory-symbolic-link
 
 Default behaviour:
- NtDeleteFile("C:/TST/TestDirJunction");       // Reparse point          // Deleted target directory itself, not the link!
- NtDeleteFile("C:/TST/TestDirSoftLink");       // Reparse point          // Deleted target directory itself, not the link!
- NtDeleteFile("C:/TST/TestFileSoftLink");      // Reparse point          // Deleted target file itself, not the link!
- NtDeleteFile("C:/TST/TestFileHardLink.ini");  // A Link to same INODE   // Deleted the link, not a target file!
+ NtDeleteFile("C:/TST/TestDirJunction");       // Reparse point          // Deleted target directory itself, not the link!   // "mklink  /J"       // Marked by Explorer
+ NtDeleteFile("C:/TST/TestDirSoftLink");       // Reparse point          // Deleted target directory itself, not the link!   // "mklink  /D"       // Marked by Explorer
+ NtDeleteFile("C:/TST/TestFileSoftLink");      // Reparse point          // Deleted target file itself, not the link!        // "mklink "  // Marked by Explorer but size is not correctly displayed (0)
+ NtDeleteFile("C:/TST/TestFileHardLink.ini");  // A Link to same INODE   // Deleted the link, not the target file!    // "mklink  /H" (Works as on Linux)   // Not marked by Explorer
+
+NOTE: Linux does not allows hardlinking directories
 
 IoFileObjectType           // NtDeleteFile (CreateOptions = FILE_DELETE_ON_CLOSE, DeleteOnly)  // IoFileObjectType: InvalidAttributes is OBJ_PERMANENT | OBJ_EXCLUSIVE | OBJ_OPENLINK
 ObpDirectoryObjectType
@@ -365,57 +767,397 @@ ObpSymbolicLinkObjectType
 
 NtOpenSymbolicLinkObject
  NtDeleteFile is much simpler and faster but it is not used by DeleteFileW (Because it just follows a file obect`s name by any link?)
+ NOTE: OBJ_DONT_REPARSE disables following symlinks, including those on Object Directory (Like 'C:')
+       !!! Resolving C: to actual file path is not cheap!
+
+if you have only one handle which was open with FILE_DELETE_ON_CLOSE (let’s call it H1), once it is closed the stream will be deleted. 
+If you have at least one more handle (H2), then once H1 is closed you can use H2 to query and reset the delete disposition which will then prevent the stream from being deleted.
+
+https://devblogs.microsoft.com/oldnewthing/20160108-00/?p=92821
+
+ https://stackoverflow.com/questions/3593768/is-there-a-way-to-remove-file-flag-delete-on-close
+
+https://github.com/dokan-dev/dokany/issues/883
+
+https://stackoverflow.com/questions/3764072/c-win32-how-to-wait-for-a-pending-delete-to-complete
+
+https://stackoverflow.com/questions/52687370/could-dropbox-interfere-with-deletefile-rename   // FILE_DISPOSITION_POSIX_SEMANTICS  (From windows 10 rs1)
+
+ FILE_FLAG_DELETE_ON_CLOSE requires FILE_SHARE_DELETE permission  (CreateFile(FILE_SHARE_DELETE) will fail if someone holds a handle without FILE_SHARE_DELETE)
+
+ MOVEFILE_DELAY_UNTIL_REBOOT
+
+ NOTE: NtDeleteFile will return STATU_SSUCCESS after attempt to remove a nonempty directory (The directory stays)
+
+ NOTE: NtOpenFile may modify last access time
+
+ NOTE: STATUS_NOT_A_REPARSE_POINT is never reported when opening any file/directory with FILE_OPEN_REPARSE_POINT
+        Looks like STATUS_NOT_A_REPARSE_POINT is for NtFsControlFile(FSCTL_GET_REPARSE_POINT) only
+
+ NtDeleteFile:      // ObOpenObjectByName(DELETE)
+    CreateOptions = FILE_DELETE_ON_CLOSE;
+    ShareAccess = (USHORT) FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
+    Disposition = FILE_OPEN;
+    DeleteOnly = TRUE;               (KERNEL, special - forces deref)
+    openPacket.TraversedMountPoint = FALSE; (KERNEL)
+
+ Is ObOpenObjectByName faster with traversing reparse points or with direct paths?????????????????????
+
+ status = NtFsControlFile (h, NULL, NULL, NULL, &io, FSCTL_GET_REPARSE_POINT, NULL, 0, (LPVOID) rp, MAXIMUM_REPARSE_DATA_BUFFER_SIZE);
+
+ Conclusion: NtDeleteFile is useless here
+
+ if the application is using FILE_DISPOSITION_INFO with the DeleteFile member set to TRUE, the file would need DELETE access
+  FILE_DELETE_ON_CLOSE requires DELETE permission too.
+
+  // STATUS_OBJECT_NAME_NOT_FOUND   or   STATUS_OBJECT_PATH_NOT_FOUND
+
+using FILE_DISPOSITION_INFORMATION rather than using the FILE_DELETE_ON_CLOSE flag. it is better as it handles the directory-not-empty case for free and it's complementary to the use of FILE_DISPOSITION_INFORMATION_EX on newer platforms.
+
+// STATUS_SHARING_VIOLATION  --  if there are open handles without SHARE_DELETE   ( OpenFileObject )  // Or STATUS_LOCK_NOT_GRANTED on network shares
+// STATUS_DELETE_PENDING  -- Consider it as success
+// STATUS_CANNOT_DELETE  -- The file is ReadOnly (or there is an existing mapped view to the file)
+
+https://learn.microsoft.com/en-us/windows/win32/fileio/hard-links-and-junctions 
+if you clear the read-only attribute flag on a particular hard link so you can delete that hard link, and there are multiple hard links to the file, the other hard links display that the read-only attribute is still set, which isn't true. 
+To change the file back to the read-only state, you must set the read-only flag on the file from one of its remaining hard links.
 */
-static NT::NTSTATUS DeleteFileObject(const achar* Path, bool Force, int AsDir)     // NtDeleteFile
+
+
+// Working on Windows XP
+// Working with network shares
+// Prefers POSIX delete behaviour   (Microsoft STL does that too)
+// AsDir: <0:File/Dir; 0:File; >0:Dir
+// CaseSens: When need POSIX compatibility
+// KeepDots: Need in special cases when need to delete a file/dir named as '.' or '..'
+//
+static NT::NTSTATUS DeleteFileObject(const achar* Path, int AsDir=-1, NT::HANDLE RootDir=0, bool CaseSens=false, bool KeepDots=false)    
 {
- NT::OBJECT_ATTRIBUTES oattr = {};
- NT::UNICODE_STRING FilePathUS;
-
- uint plen;
- NTX::EPathType ptype = ptUnknown;
- uint PathLen = CalcFilePathBufSize(Path, plen, ptype);
- uint32 ObjAttributes = NT::OBJ_DONT_REPARSE;  //  Symlinks are implemented as Reparse Points   // Only Hard Links to a file can be safely deleted without this
- wchar FullPath[PathLen];
- InitFileObjectAttributes(Path, plen, ptype, ObjAttributes, FullPath, &FilePathUS, &oattr);
- NT::NTSTATUS Status = SAPI::NtDeleteFile(&oattr);     // Deletes files and directories(empty)  // ObOpenObjectByNameEx as
- if(Status != NT::STATUS_REPARSE_POINT_ENCOUNTERED)return Status;   // Succeeded or failed
-
- // A Symlink encountered on the path
-/*
- HANDLE hFile;
- OBJECT_ATTRIBUTES attr;
- IO_STATUS_BLOCK iost;
- FILE_DISPOSITION_INFORMATION fDispositionInfo;
- FILE_BASIC_INFORMATION fBasicInfo;
- UNICODE_STRING TargetFileName;
-
- RtlInitUnicodeString(&TargetFileName, FileName);
- InitializeObjectAttributes(&attr, &TargetFileName, OBJ_CASE_INSENSITIVE, 0, 0);
- NTSTATUS Status = NtOpenFile(&hFile, DELETE | FILE_READ_ATTRIBUTES | FILE_WRITE_ATTRIBUTES, &attr, &iost, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, FILE_NON_DIRECTORY_FILE | FILE_OPEN_FOR_BACKUP_INTENT);
- if(NT_SUCCESS(Status))
+ NT::IO_STATUS_BLOCK iosb = {}; 
+ NT::HANDLE hFileObj = 0; 
+ NT::NTSTATUS res = 0; 
+                        
+// NOTE: Without FILE_OPEN_REPARSE_POINT the target File/Dir will be removed. There will be no STATUS_NOT_A_REPARSE_POINT error if the object is not a reparse point.
+ uint32 CreateOptions  = NT::FILE_OPEN_REPARSE_POINT|NT::FILE_SYNCHRONOUS_IO_NONALERT;     // Opens any file object (files/directories)     // NT::FILE_DELETE_ON_CLOSE| - Makes OpenFileObject fail if the file is ReadOnly
+ uint32 ShareAccess    = NT::FILE_SHARE_VALID_FLAGS;   // NT::FILE_SHARE_READ | NT::FILE_SHARE_WRITE | NT::FILE_SHARE_DELETE
+ uint32 DesiredAccess  = +NT::DELETE | NT::FILE_READ_ATTRIBUTES | NT::FILE_WRITE_ATTRIBUTES | NT::SYNCHRONIZE;        
+ uint32 ObjAttributes  = 0;  // NT::OBJ_INHERIT;
+ if(!KeepDots)ObjAttributes |= NT::OBJ_PATH_PARSE_DOTS;
+ if(!CaseSens)ObjAttributes |= NT::OBJ_CASE_INSENSITIVE; 
+ if(AsDir >= 0)                                              // Most anoying feature of IDEs? - "copy entire line"
   {
-   Status = NtQueryInformationFile(hFile, &iost, &fBasicInfo, sizeof(FILE_BASIC_INFORMATION), FileBasicInformation);
-   if(NT_SUCCESS(Status))
-    {
-     fBasicInfo.FileAttributes = FILE_ATTRIBUTE_NORMAL;
-     NtSetInformationFile(hFile, &iost, &fBasicInfo, sizeof(FILE_BASIC_INFORMATION), FileBasicInformation);
-    }
-   fDispositionInfo.DeleteFile = TRUE;  // puts the file into a "delete pending" state. It will be deleted once all existing handles are closed. No new handles will be possible to open
-   Status = NtSetInformationFile(hFile, &iost, &fDispositionInfo, sizeof(FILE_DISPOSITION_INFORMATION), FileDispositionInformation);
-   NtClose(hFile);
-  }  */
- return Status;
+   if(AsDir > 0)CreateOptions |= NT::FILE_DIRECTORY_FILE;   // Reports STATUS_NOT_A_DIRECTORY on files
+    else CreateOptions |= NT::FILE_NON_DIRECTORY_FILE;      // Reports STATUS_FILE_IS_A_DIRECTORY on directories
+  }
+
+ for(;;){       // Use loop break instead of GOTO                   
+ res = OpenFileObject(&hFileObj, Path, DesiredAccess, ObjAttributes, NT::FILE_ATTRIBUTE_NORMAL, ShareAccess, NT::FILE_OPEN, CreateOptions, &iosb, RootDir);
+ if(res == NT::STATUS_DELETE_PENDING)return NT::STATUS_PENDING;  // Already deleting  // Return a positive to pass NT_SUCCESS() 
+ if(res == NT::STATUS_SHARING_VIOLATION)return res;     // Failed to open  // Nothing can be done about that?
+ if(!NT::NT_SUCCESS(res))return res;  
+           
+ NT::FILE_DISPOSITION_INFORMATION fdi = {NT::FILE_DISPOSITION_DELETE | NT::FILE_DISPOSITION_POSIX_SEMANTICS | NT::FILE_DISPOSITION_IGNORE_READONLY_ATTRIBUTE};  // this can't get around the shared-access mode, and most applications do not open files with delete sharing.
+ res = SAPI::NtSetInformationFile(hFileObj, &iosb, &fdi, sizeof(fdi), NT::FileDispositionInformationEx);
+ if(res == NT::STATUS_DIRECTORY_NOT_EMPTY)break;
+ if(NT::NT_SUCCESS(res))break;     
+   
+// Probably unsupported (WinVer is too low?) - trying old approach
+ fdi.DeleteFile = true;  // puts the file into a "delete pending" state. It will be deleted once all existing handles are closed. No new handles will be possible to open
+ res = SAPI::NtSetInformationFile(hFileObj, &iosb, &fdi, sizeof(fdi), NT::FileDispositionInformation);
+ if(NT::NT_SUCCESS(res) || (res != NT::STATUS_CANNOT_DELETE))break;      // If Success or not ReadOnly
+
+ NT::FILE_BASIC_INFORMATION fBasicInfo;
+ res = SAPI::NtQueryInformationFile(hFileObj, &iosb, &fBasicInfo, sizeof(fBasicInfo), NT::FileBasicInformation);    // STATUS_ACCESS_DENIED if no access to attrs
+ if(!NT::NT_SUCCESS(res))break;   
+ if(!(fBasicInfo.FileAttributes & NT::FILE_ATTRIBUTE_READONLY))break;    // Probably mapped somewhere
+ //fBasicInfo.FileAttributes = NT::FILE_ATTRIBUTE_NORMAL;    // FILE_ATTRIBUTE_NORMAL flag cannot be set or returned in combination with any other attributes.
+ fBasicInfo.FileAttributes &= ~NT::FILE_ATTRIBUTE_READONLY;
+ res = SAPI::NtSetInformationFile(hFileObj, &iosb, &fBasicInfo, sizeof(fBasicInfo), NT::FileBasicInformation);
+ if(!NT::NT_SUCCESS(res))break; 
+ res = SAPI::NtSetInformationFile(hFileObj, &iosb, &fdi, sizeof(fdi), NT::FileDispositionInformation);   // Try again
+  
+ //if(res == NT::STATUS_CANNOT_DELETE){}   // The file is ReadOnly or mapped     // Nothing can be done here?
+ break;}   // End the loop
+
+ SAPI::NtClose(hFileObj);
+ return res;
 }
 //------------------------------------------------------------------------------------
-static NT::NTSTATUS DeleteSymbolicLinkObject(const achar* Path)
+// Check cross-device before touching anything.  Otherwise we might end up with an unlinked target dir even if the actual rename didn't work. (?)
+// 	 - DELETE is required to rename a file.  
+//	 - At least one cifs FS (Tru64) needs FILE_READ_ATTRIBUTE, otherwise the FileRenameInformation call fails with STATUS_ACCESS_DENIED.  However, on NFS we get a STATUS_ACCESS_DENIED if FILE_READ_ATTRIBUTE is used and the file we try to rename is a symlink.  Urgh.
+//	 - Samba (only some versions?) doesn't like the FILE_SHARE_DELETE mode if the file has the R/O attribute set and returns STATUS_ACCESS_DENIED in that case. 
+// 
+// Some virus scanners check newly generated files and while doing that disallow DELETE access. That's really bad because it breaks applications which copy files by creating a 
+//   temporary filename and then rename the temp filename to the target filename.
+// Renaming a dir to another, existing dir fails always, even if ReplaceIfExists is set to TRUE and the existing dir is empty.
+// You can't copy a file if the destination exists and has the R/O attribute set.
+// Do not forget: we cannot move files across mount points
+// 
+// NOTE: Target RootDir is not needed for inplace renaming. Also not needed if target path is fully qualified. If used, the target file name must be a simple file name.  
+// NOTE: A file or directory can only be renamed within a volume. In other words, a rename operation cannot cause a file or directory to be moved to a different volume. 
+// TODO: Check that it does not rename a file to a dir   (AsDir should be useless)
+// ????: Will replace action replace a symlink or its target?
+// 
+// https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-fsa/87f86c9b-6c2a-4803-84b7-131a74a434fa
+//
+static NT::NTSTATUS RenameFileObject(const achar* SrcFile, const achar* DstFile, NT::HANDLE SrcRootDir=0, NT::HANDLE DstRootDir=0, bool Replace=false, bool CaseSens=false, bool KeepDots=false) 
 {
-/*if (NtOpenSymbolicLinkObject( &handle, DELETE, &objectAttributes) == STATUS_SUCCESS)
+ NT::OBJECT_ATTRIBUTES oattr;  // = {};
+ NT::IO_STATUS_BLOCK iosb = {}; 
+ NT::HANDLE hFileObj = 0; 
+ NT::NTSTATUS res = 0; 
+ usize DstLen = NSTR::StrLen(DstFile);
+                        
+// NOTE: Without FILE_OPEN_REPARSE_POINT the target File/Dir will be renamed. There will be no STATUS_NOT_A_REPARSE_POINT error if the object is not a reparse point.
+ uint32 CreateOptions  = NT::FILE_OPEN_REPARSE_POINT|NT::FILE_SYNCHRONOUS_IO_NONALERT;     // Opens any file object (files/directories)   
+ uint32 ShareAccess    = NT::FILE_SHARE_VALID_FLAGS;   // NT::FILE_SHARE_READ | NT::FILE_SHARE_WRITE | NT::FILE_SHARE_DELETE
+ uint32 DesiredAccess  = +NT::DELETE | NT::FILE_READ_ATTRIBUTES | NT::FILE_WRITE_ATTRIBUTES | NT::SYNCHRONIZE;    // DELETE access is required for renaming    
+ uint32 ObjAttributes  = 0;  // NT::OBJ_INHERIT;
+ if(!KeepDots)ObjAttributes |= NT::OBJ_PATH_PARSE_DOTS;
+ if(!CaseSens)ObjAttributes |= NT::OBJ_CASE_INSENSITIVE; 
+                  
+ res = OpenFileObject(&hFileObj, SrcFile, DesiredAccess, ObjAttributes, NT::FILE_ATTRIBUTE_NORMAL, ShareAccess, NT::FILE_OPEN, CreateOptions, &iosb, SrcRootDir);
+ if(!NT::NT_SUCCESS(res))return res;
+ bool  ForceRel = !IsSepOnPath(DstFile);
+ AllocaObjectAttrs(DstFile, DstRootDir, ObjAttributes|NT::OBJ_PATH_GLOBAL_NS, &oattr, ForceRel);
+ usize  PathLen = oattr.ObjectName->Length;   // In bytes
+ wchar* PathPtr = oattr.ObjectName->Buffer;
+
+ for(;;){       // Use loop break instead of GOTO                      // Should not report STATUS_OBJECT_NAME_NOT_FOUND because the DstFile does not contain s path
+ usize InfoSize = PathLen + sizeof(NT::FILE_RENAME_INFORMATION);  //  AlignFrwdP2(DstBLen+sizeof(NT::FILE_RENAME_INFORMATION),16);       
+ NT::FILE_RENAME_INFORMATION* RenameInfo = (NT::FILE_RENAME_INFORMATION*)((uint8*)PathPtr - (sizeof(NT::FILE_RENAME_INFORMATION)-4));     //    StkAlloc(InfoSize);
+ RenameInfo->Flags          = NT::FILE_RENAME_POSIX_SEMANTICS | NT::FILE_RENAME_IGNORE_READONLY_ATTRIBUTE;
+ RenameInfo->RootDirectory  = DstRootDir;    // Relative paths like 'xxx/222/v.7z' are accepted (Tested Win10)
+ RenameInfo->FileNameLength = PathLen;
+ if(Replace)RenameInfo->Flags |= NT::FILE_RENAME_REPLACE_IF_EXISTS;
+ res = SAPI::NtSetInformationFile(hFileObj, &iosb, RenameInfo, InfoSize, NT::FileRenameInformationEx);
+ if(NT::NT_SUCCESS(res))break;          // TODO: Break only on a specific error code when the FileRenameInformationEx is not supported. // NOTE: FS driver decides how to respond if it does not support FileRenameInformationEx
+ if((res = NT::STATUS_OBJECT_PATH_NOT_FOUND) && (IsGlobalObjectNS(RenameInfo->FileName) > 0))
+  {
+   ONSGlobalToLocalPtr(PathPtr, PathLen);
+   continue;
+  }      
+ if(res == NT::STATUS_ACCESS_DENIED)break;
+ if(res == NT::STATUS_DELETE_PENDING)break;  
+ if(res == NT::STATUS_NOT_SAME_DEVICE)break;
+ if(res == NT::STATUS_OBJECT_NAME_INVALID)break;
+ if(res == NT::STATUS_OBJECT_NAME_COLLISION)break;   // Replace is false
+ if(res == NT::STATUS_NOT_A_DIRECTORY)break;         // Tried to replace rename a directory to a file
+ if(res == NT::STATUS_FILE_IS_A_DIRECTORY)break;     // Tried to replace rename a file to a directory  
+// if(res == NT::STATUS_INVALID_PARAMETER)break;       // On a network mapped drive (SMB does not support FileRenameInformationEx?)  (Or if DstRootDir is not 0 and DstFile starts with a slash)               
+ RenameInfo->ReplaceIfExists &= NT::FILE_RENAME_REPLACE_IF_EXISTS;    // Replace ? true : false;
+ res = SAPI::NtSetInformationFile(hFileObj, &iosb, RenameInfo, InfoSize, NT::FileRenameInformation);       
+
+ break;}   // End the loop
+ SAPI::NtClose(hFileObj);
+ return res;
+}
+//------------------------------------------------------------------------------------
+// Attempts to read from a file ReparsePoint will result in STATUS_END_OF_FILE
+// Attempts to read from a directory ReparsePoint will result in STATUS_INVALID_DEVICE_REQUEST
+// Attempts to read from a file HardLink will read its target's contents
+// 
+// https://stackoverflow.com/questions/10260676/programmatically-finding-the-target-of-a-windows-hard-link
+// 
+// https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-fscc/46021e52-29b1-475c-b6d3-fe5497d23277
+// 
+// https://gist.githubusercontent.com/juntalis/4a90ee024732b88539a65d92d0b6a296/raw/1dd9c4aa0374ebf7e1edcad6c2574cc9f72bb97d/findlinks.c
+// https://helgeklein.com/blog/hard-links-soft-symbolic-links-and-junctions-in-ntfs-what-are-they-for/
+// https://googleprojectzero.blogspot.com/2015/12/between-rock-and-hard-link.html
+// 
+// https://github.com/googleprojectzero/symboliclink-testing-tools/blob/main/CommonUtils/Hardlink.cpp
+// 
+// There is no difference between the “original” file and the file created with a hardlink. They are simply directory entries to the same file. And givena file with multiple links, 
+//  there’s no way to find all the links without searching the file system and comparing the file id of each file.
+// 
+// 'readlinkat' reads symlinks created by 'symlinkat'. 'linkat' creates hard links
+// 
+// Conclusion: No reading hard links!
+// 
+//
+static NT::NTSTATUS ReadFileObjectSLink(achar* DstBuf, usize* DstLen, const achar* FilePath, NT::HANDLE RootDir=0, bool CaseSens=false, bool KeepDots=false)
+{
+ uint8 BigBuf[4096];
+ NT::OBJECT_ATTRIBUTES oattr;  // = {};
+ NT::IO_STATUS_BLOCK iosb = {}; 
+ NT::HANDLE hFileObj = 0; 
+ NT::NTSTATUS res = 0;
+ vptr BufPtr = BigBuf;
+ bool AllocatedBuf = false; 
+                        
+ uint32 CreateOptions  = NT::FILE_OPEN_REPARSE_POINT|NT::FILE_SYNCHRONOUS_IO_NONALERT;     // Opens any file object (files/directories)   
+ uint32 ShareAccess    = NT::FILE_SHARE_VALID_FLAGS;   // NT::FILE_SHARE_READ | NT::FILE_SHARE_WRITE | NT::FILE_SHARE_DELETE
+ uint32 DesiredAccess  = +NT::FILE_READ_DATA | NT::FILE_READ_ATTRIBUTES | NT::SYNCHRONIZE;    // DELETE access is required for renaming    
+ uint32 ObjAttributes  = 0;  // NT::OBJ_INHERIT;
+ if(!KeepDots)ObjAttributes |= NT::OBJ_PATH_PARSE_DOTS;
+ if(!CaseSens)ObjAttributes |= NT::OBJ_CASE_INSENSITIVE; 
+                  
+ res = OpenFileObject(&hFileObj, FilePath, DesiredAccess, ObjAttributes, NT::FILE_ATTRIBUTE_NORMAL, ShareAccess, NT::FILE_OPEN, CreateOptions, &iosb, RootDir);
+ if(!NT::NT_SUCCESS(res))return res;
+
+ for(;;){
+ res = SAPI::NtFsControlFile(hFileObj, 0, nullptr, nullptr, &iosb, NT::FSCTL_GET_REPARSE_POINT, nullptr, 0, &BigBuf, sizeof(BigBuf));  // Returns STATUS_BUFFER_OVERFLOW if buffer is too small (Does not report required size)
+ if((res == NT::STATUS_BUFFER_OVERFLOW) && !AllocatedBuf)
+  {
+   usize Size = 0x10000;   // Network shares have problems with buffers larger than 64K
+   res = SAPI::NtAllocateVirtualMemory(NT::NtCurrentProcess, &BufPtr, 0, &Size, NT::MEM_COMMIT, NT::PAGE_READWRITE); 
+   if(!NT::NT_SUCCESS(res))return res;
+   AllocatedBuf = true;
+   continue;
+  }
+ if(!NT::NT_SUCCESS(res))break;
+ NT::REPARSE_DATA_BUFFER* rpd = (NT::REPARSE_DATA_BUFFER*)BufPtr;
+ wchar* Buf;
+ usize  Len;   // In chars
+ bool   Rel = false;   // The Target is relative to hFileObj   // Probably directories only
+ if(rpd->ReparseTag == NT::IO_REPARSE_TAG_SYMLINK)     // Flags?  // SYMLINK_FILE, SYMLINK_DIRECTORY, SYMLINK_FLAG_RELATIVE
+  {
+   Buf = &rpd->SymbolicLinkReparseBuffer.PathBuffer[rpd->SymbolicLinkReparseBuffer.SubstituteNameOffset >> 1];
+   Len = rpd->SymbolicLinkReparseBuffer.SubstituteNameLength >> 1;
+   Rel = (rpd->SymbolicLinkReparseBuffer.Flags & NT::SYMLINK_FLAG_RELATIVE);
+  }
+ else if(rpd->ReparseTag == NT::IO_REPARSE_TAG_MOUNT_POINT)   // NOTE: May be different rules of the path normalization   // \??\C:\TEST\DIR\TESTDIR
+  {
+   Buf = &rpd->MountPointReparseBuffer.PathBuffer[rpd->SymbolicLinkReparseBuffer.SubstituteNameOffset >> 1];
+   Len = rpd->MountPointReparseBuffer.SubstituteNameLength >> 1;
+  }
+ else {res = NT::STATUS_INVALID_INFO_CLASS; break;}  
+
+ size_t nlen = NUTF::Utf16To8((achar*)BufPtr, Buf, Len);   // Will be smaller     // FileNameLength is in bytes   // TODO: Path normalization?   // WARNING: Reusing the same buffer
+// if(Rel) ::: READ hFileObj PATH :::     // TODO:
+ *DstLen = NSTR::StrCopy(DstBuf, (achar*)BufPtr, Min(nlen+1, *DstLen));  // \??\C:\TEST\DIR\TESTDIR\TESTFILE.txt       // TODO: Normalize
+ break;
+ }
+ SAPI::NtClose(hFileObj);
+ if(AllocatedBuf){ usize RSize=0; SAPI::NtFreeVirtualMemory(NT::NtCurrentProcess, &BufPtr, &RSize, NT::MEM_RELEASE); }
+ return res;
+} 
+//------------------------------------------------------------------------------------
+// LnkFollow: AT_SYMLINK_FOLLOW - to cause oldpath to be dereferenced if it is a symbolic link
+// DosDevices is SymLink to \??\
+// https://learn.microsoft.com/en-us/windows/win32/termserv/kernel-object-namespaces
+// There is a global namespace used primarily by services in client/server applications. In addition, each session has a separate namespace for these objects.
+//
+static NT::NTSTATUS CreateFileObjectSLink(const achar* LnkFile, const achar* TgtFile, NT::HANDLE LnkRootDir=0, NT::HANDLE TgtRootDir=0, bool Relative=false, bool LnkFollow=false, bool CaseSens=false, bool KeepDots=false)
+{
+ NT::OBJECT_ATTRIBUTES oattr;  // = {};
+ NT::IO_STATUS_BLOCK iosb = {}; 
+ NT::HANDLE hFileObj = 0; 
+ NT::NTSTATUS res = 0;
+ usize TPathLen = NSTR::StrLen(LnkFile);
+ usize LPathLen = NSTR::StrLen(LnkFile);
+
+ uint32 CreateOptions  = NT::FILE_SYNCHRONOUS_IO_NONALERT;     // Opens any file object (files/directories)   
+ uint32 ShareAccess    = NT::FILE_SHARE_VALID_FLAGS;   // NT::FILE_SHARE_READ | NT::FILE_SHARE_WRITE | NT::FILE_SHARE_DELETE
+ uint32 DesiredAccess  = +NT::FILE_WRITE_ATTRIBUTES | NT::FILE_READ_ATTRIBUTES | NT::SYNCHRONIZE;    // DELETE access is required for renaming    
+ uint32 ObjAttributes  = 0;  // NT::OBJ_INHERIT;
+ if(!KeepDots)ObjAttributes  |= NT::OBJ_PATH_PARSE_DOTS;
+ if(!CaseSens)ObjAttributes  |= NT::OBJ_CASE_INSENSITIVE; 
+ if(!LnkFollow)CreateOptions |= NT::FILE_OPEN_REPARSE_POINT;
+                  
+ res = OpenFileObject(&hFileObj, TgtFile, DesiredAccess, ObjAttributes, NT::FILE_ATTRIBUTE_NORMAL, ShareAccess, NT::FILE_OPEN, CreateOptions, &iosb, TgtRootDir);
+ if(!NT::NT_SUCCESS(res))return res;
+
+ usize FullLen = PATH_MAX*2;
+ // TODO: Convert the hFileObj path to DOS path TgtFile   // How to preserve it without reading by a syscall?
+ // TODO: Add "\\??\\%s" to absolute paths
+   /* https://github.com/neosmart/ln-win/blob/master/ln-win/JunctionPoint.cpp
+        size_t size = sizeof(REPARSE_DATA_BUFFER) - sizeof(TCHAR) + nativeTarget.GetLength() * sizeof(TCHAR);
+        auto_ptr<REPARSE_DATA_BUFFER> reparseBuffer((REPARSE_DATA_BUFFER*) new unsigned char[size]);
+
+        //Fill the reparse buffer
+        reparseBuffer->ReparseTag = IO_REPARSE_TAG_MOUNT_POINT;
+        reparseBuffer->Reserved = NULL;
+
+        reparseBuffer->MountPointReparseBuffer.SubstituteNameOffset = 0;
+        reparseBuffer->MountPointReparseBuffer.SubstituteNameLength = nativeTarget.GetLength() * (int) sizeof(TCHAR);
+
+        //No substitute name, point it outside the bounds of the string
+        reparseBuffer->MountPointReparseBuffer.PrintNameOffset = reparseBuffer->MountPointReparseBuffer.SubstituteNameLength + (int) sizeof(TCHAR);
+        reparseBuffer->MountPointReparseBuffer.PrintNameLength = 0;
+
+        //Copy the actual string
+        //_tcscpy(reparseBuffer->MountPointReparseBuffer.PathBuffer, nativeTarget);
+        memcpy(reparseBuffer->MountPointReparseBuffer.PathBuffer, (LPCTSTR) nativeTarget, reparseBuffer->MountPointReparseBuffer.SubstituteNameLength);
+
+        //Set ReparseDataLength to the size of the MountPointReparseBuffer
+        //Kind in mind that with the padding for the union (given that SymbolicLinkReparseBuffer is larger),
+        //this is NOT equal to sizeof(MountPointReparseBuffer)
+        reparseBuffer->ReparseDataLength = sizeof(REPARSE_DATA_BUFFER) - REPARSE_DATA_BUFFER_HEADER_SIZE - sizeof(TCHAR) + reparseBuffer->MountPointReparseBuffer.SubstituteNameLength;
+
+        //Create the junction directory
+        CreateDirectory(junction, NULL);
+
+        //Set the reparse point
+        SafeHandle hDir;
+        hDir.Handle = CreateFile(junction, GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS, NULL);
+
+        DeviceIoControl(hDir.Handle, FSCTL_SET_REPARSE_POINT, reparseBuffer.get(), (unsigned int) size, NULL, 0, &bytesReturned, NULL))
+       */
+ SAPI::NtClose(hFileObj);
+ return res;
+} 
+//------------------------------------------------------------------------------------
+// NOTE: Untested
+//
+static NT::NTSTATUS CreateFileObjectHLink(const achar* LnkFile, const achar* TgtFile, NT::HANDLE LnkRootDir=0, NT::HANDLE TgtRootDir=0, bool Replace=false, bool LnkFollow=false, bool CaseSens=false, bool KeepDots=false)
+{
+ NT::OBJECT_ATTRIBUTES oattr;  // = {};
+ NT::IO_STATUS_BLOCK iosb = {}; 
+ NT::HANDLE hFileObj = 0; 
+ NT::NTSTATUS res = 0;
+                        
+ uint32 CreateOptions  = NT::FILE_SYNCHRONOUS_IO_NONALERT;     // Opens any file object (files/directories)   
+ uint32 ShareAccess    = NT::FILE_SHARE_VALID_FLAGS;   // NT::FILE_SHARE_READ | NT::FILE_SHARE_WRITE | NT::FILE_SHARE_DELETE
+ uint32 DesiredAccess  = +NT::FILE_WRITE_ATTRIBUTES | NT::SYNCHRONIZE;    // DELETE access is required for renaming    
+ uint32 ObjAttributes  = 0;  // NT::OBJ_INHERIT;
+ if(!KeepDots)ObjAttributes |= NT::OBJ_PATH_PARSE_DOTS;
+ if(!CaseSens)ObjAttributes |= NT::OBJ_CASE_INSENSITIVE; 
+ if(!LnkFollow)CreateOptions |= NT::FILE_OPEN_REPARSE_POINT;
+                  
+ res = OpenFileObject(&hFileObj, TgtFile, DesiredAccess, ObjAttributes, NT::FILE_ATTRIBUTE_NORMAL, ShareAccess, NT::FILE_OPEN, CreateOptions, &iosb, TgtRootDir);
+ if(!NT::NT_SUCCESS(res))return res;
+
+ bool  ForceRel = !IsSepOnPath(LnkFile);
+ AllocaObjectAttrs(LnkFile, LnkRootDir, ObjAttributes|NT::OBJ_PATH_GLOBAL_NS, &oattr, ForceRel);
+ usize  PathLen = oattr.ObjectName->Length;   // In bytes
+ wchar* PathPtr = oattr.ObjectName->Buffer;
+
+ for(;;){       // Use loop break instead of GOTO                      // Should not report STATUS_OBJECT_NAME_NOT_FOUND because the DstFile does not contain s path
+ usize InfoSize = PathLen + sizeof(NT::FILE_LINK_INFORMATION);  //  AlignFrwdP2(DstBLen+sizeof(NT::FILE_LINK_INFORMATION),16);       
+ NT::FILE_LINK_INFORMATION* HLinkInfo = (NT::FILE_LINK_INFORMATION*)((uint8*)PathPtr - (sizeof(NT::FILE_LINK_INFORMATION)-4));     //    StkAlloc(InfoSize);
+ HLinkInfo->Flags          = NT::FILE_LINK_POSIX_SEMANTICS | NT::FILE_LINK_IGNORE_READONLY_ATTRIBUTE;
+ HLinkInfo->RootDirectory  = LnkRootDir;    // Relative paths like 'xxx/222/v.7z' are accepted (Tested Win10)
+ HLinkInfo->FileNameLength = PathLen;
+ if(Replace)HLinkInfo->Flags |= NT::FILE_LINK_REPLACE_IF_EXISTS;
+ res = SAPI::NtSetInformationFile(hFileObj, &iosb, HLinkInfo, InfoSize, NT::FileLinkInformationEx);
+ if(NT::NT_SUCCESS(res))break;          // TODO: Break only on a specific error code when the FilLinkInformationEx is not supported. // NOTE: FS driver decides how to respond if it does not support FileRenameInformationEx
+ if((res = NT::STATUS_OBJECT_PATH_NOT_FOUND) && (IsGlobalObjectNS(HLinkInfo->FileName) > 0))
+  {
+   ONSGlobalToLocalPtr(PathPtr, PathLen);
+   continue;
+  }      
+ if(res != NT::STATUS_INVALID_PARAMETER)break;       // On a network mapped drive (SMB does not support FileLinkInformationEx?)  (Or if DstRootDir is not 0 and DstFile starts with a slash)               
+ HLinkInfo->ReplaceIfExists &= NT::FILE_LINK_REPLACE_IF_EXISTS;    // Replace ? true : false;
+ res = SAPI::NtSetInformationFile(hFileObj, &iosb, HLinkInfo, InfoSize, NT::FileLinkInformation);       
+
+ break;}   // End the loop
+
+ SAPI::NtClose(hFileObj);
+ return res;
+} 
+//------------------------------------------------------------------------------------
+// NOTE: Objects are not files but files accessed through them
+/*static NT::NTSTATUS DeleteSymbolicLinkObject(const achar* Path)     // Delete a symlink in objects directory
+{
+if (NtOpenSymbolicLinkObject( &handle, DELETE, &objectAttributes) == STATUS_SUCCESS)
 {
     NtMakeTemporaryObject( handle);
     NtClose( handle);
-} */
+} 
  return 0;
-}
+}  */
 //------------------------------------------------------------------------------------
 /*static NTSTATUS CreateNtObjDirectory(PWSTR ObjDirName, PHANDLE phDirObj)   // Create objects directory with NULL security
 {
@@ -562,7 +1304,7 @@ static NT::NTSTATUS NativeCreateThread(PNT_THREAD_PROC ThreadRoutine, NT::PVOID 
 
  if(!*StackBase)
   {
-   if(*StackSize)*StackSize = AlignP2Frwd(*StackSize + PAGE_SIZE, MEMGRANSIZE);    // Must allocate by 64k to avoid address space wasting
+   if(*StackSize)*StackSize = AlignFrwdP2(*StackSize + PAGE_SIZE, MEMGRANSIZE);    // Must allocate by 64k to avoid address space wasting
     else *StackSize = PAGE_SIZE * 256;   // 1Mb as default stack size (Including a guard page)
    Status = SAPI::NtAllocateVirtualMemory(ProcessHandle, StackBase, 0, StackSize, NT::MEM_RESERVE, NT::PAGE_READWRITE);   // Reserve the memory first
    if(!NT::NT_SUCCESS(Status)){DBGMSG("AVM Failed 1"); return Status;}
@@ -579,7 +1321,7 @@ static NT::NTSTATUS NativeCreateThread(PNT_THREAD_PROC ThreadRoutine, NT::PVOID 
   }
    else    // Assume that there may be some data on the stack already
     {
-     UserStack.ExpandableStackBase   = &((uint8*)*StackBase)[AlignP2Frwd(*StackSize, MEMGRANSIZE)];  // Arbitrary - StackSize may specify offset to some data already on the stack
+     UserStack.ExpandableStackBase   = &((uint8*)*StackBase)[AlignFrwdP2(*StackSize, MEMGRANSIZE)];  // Arbitrary - StackSize may specify offset to some data already on the stack
      UserStack.ExpandableStackLimit  = &((uint8*)*StackBase)[PAGE_SIZE];
      UserStack.ExpandableStackBottom = *StackBase;
     }
@@ -1059,6 +1801,169 @@ static NT::NTSTATUS _scall NativeCreateUserProcess(NT::PHANDLE ProcessHandle, NT
  return 0;
 }
 //------------------------------------------------------------------------------------
+static NT::NTSTATUS OpenProcess(NT::PHANDLE ProcessHandle, NT::ACCESS_MASK DesiredAccess, uint32 ProcID)
+{
+ NT::CLIENT_ID pid = {ProcID, 0};
+ NT::OBJECT_ATTRIBUTES oattr = { sizeof(NT::OBJECT_ATTRIBUTES) };
+ return SAPI::NtOpenProcess(ProcessHandle, DesiredAccess, &oattr, &pid);
+}
+//------------------------------------------------------------------------------------
+static NT::NTSTATUS OpenThread(NT::PHANDLE ThreadHandle, NT::ACCESS_MASK DesiredAccess, uint32 ThreadID)
+{
+ NT::CLIENT_ID tid = {0, ThreadID};
+ NT::OBJECT_ATTRIBUTES oattr = { sizeof(NT::OBJECT_ATTRIBUTES) };
+ return SAPI::NtOpenThread(ThreadHandle, DesiredAccess, &oattr, &tid);
+}
+//------------------------------------------------------------------------------------
+static NT::NTSTATUS GetMappedFilePath(NT::HANDLE ProcH, usize Addr, achar* Buf, usize* Len=nullptr)
+{
+ uint8  buf[2048];
+ uint8* PathBuf = buf;
+ usize  RetLen  = sizeof(buf);
+ NT::NTSTATUS res = SAPI::NtQueryVirtualMemory(ProcH, (vptr)Addr, NT::MemoryMappedFilenameInformation, PathBuf, RetLen, &RetLen);   // sizeof buf
+ if((res == NT::STATUS_BUFFER_OVERFLOW) || (res == NT::STATUS_BUFFER_TOO_SMALL))    // Allocate on the stack as much as needed then     // STATUS_BUFFER_TOO_SMALL is just in case
+  {
+   usize blen = AlignFrwdP2(RetLen, 16);
+   PathBuf = (uint8*)StkAlloc(blen);   //uint8 FullPath[blen];    // NOTE: VLA
+   res = SAPI::NtQueryVirtualMemory(ProcH, (vptr)Addr, NT::MemoryMappedFilenameInformation, PathBuf, blen, &RetLen);  
+   if(!NT::NT_SUCCESS(res))return res;
+  }
+   else if(!NT::NT_SUCCESS(res))return res;
+
+ NT::UNICODE_STRING* str = (NT::UNICODE_STRING*)PathBuf;
+ usize SrcLen = str->Length >> 1;     // In chars
+// if(Len && ((SrcLen+1) > *Len)){*Len = NUTF::Len16To8(str->Buffer, SrcLen); return NT::STATUS_BUFFER_TOO_SMALL;}  // No data copied  // Number of WIDE chars is greater than number of DST bytes
+ usize DstLen = Len ? (*Len - 1) : usize(-1); 
+ uint  DstIdx = 0; 
+ uint  SrcIdx = 0;                            
+ usize DstRes = NUTF::Utf16To8(Buf, str->Buffer, DstLen, SrcLen, DstIdx, SrcIdx);  // NOTE: No POSIX slash conversion (getdents implementation doesn't do that too)
+ Buf[DstIdx]  = 0;
+ if(Len)*Len  = ++DstIdx;  // Include a term zero? 
+ return (SrcIdx != SrcLen) ? NT::STATUS_BUFFER_TOO_SMALL : NT::STATUS_SUCCESS;    // NT::STATUS_BUFFER_OVERFLOW    // *Len = DstIdx + NUTF::Len16To8(str->Buffer, SrcLen, SrcIdx);
+}
+//------------------------------------------------------------------------------------
+static sint FindMappedRangeByAddr(NT::HANDLE ProcH, usize Addr, SMemRange* Range)
+{                                        
+ Range->FMOffs = Range->INode = Range->DevH = Range->DevL = 0;
+ NT::MEMORY_BASIC_INFORMATION mbi;
+ NT::NTSTATUS res = SAPI::NtQueryVirtualMemory(ProcH, (vptr)Addr, NT::MemoryBasicInformation, &mbi, sizeof mbi, 0);
+ if(!NT::NT_SUCCESS(res))return -9;
+ if(!(mbi.State & NT::MEM_COMMIT))return -1;  // Not present
+ Range->RangeBeg = (usize)mbi.BaseAddress;
+ Range->RangeEnd = Range->RangeBeg + mbi.RegionSize; 
+ Range->Mode     = MemProtNTtoPX(mbi.Protect);
+ if(!(mbi.Type & NT::MEM_PRIVATE))Range->Mode |= mmShared;
+ if((mbi.Type & (NT::MEM_IMAGE|NT::MEM_MAPPED)) && Range->FPathLen && Range->FPath)
+  {
+   usize Len = Range->FPathLen;
+   res = GetMappedFilePath(ProcH, (usize)mbi.BaseAddress, Range->FPath, &Len);
+   if(NT::NT_SUCCESS(res) || (res == NT::STATUS_BUFFER_OVERFLOW))Range->FPathLen = Len-1;
+     else Range->FPathLen = 0;
+   return Range->FPathLen + sizeof(SMemRange) + (bool)Range->FPathLen; 
+  }
+ return sizeof(SMemRange);
+}
+//------------------------------------------------------------------------------------
+static sint FindMappedRangeByAddr(sint32 ProcId, usize Addr, SMemRange* Range)
+{
+ NT::HANDLE PrHndl = NT::NtCurrentProcess;
+ if(ProcId > 0)
+  {                                                         
+   NT::NTSTATUS res = OpenProcess(&PrHndl, NT::PROCESS_QUERY_INFORMATION, (uint32)ProcId);
+   if(!NT::NT_SUCCESS(res))return -1;
+  }
+ sint res = FindMappedRangeByAddr(PrHndl, Addr, Range);
+ if(ProcId > 0)SAPI::NtClose(PrHndl);
+ return res;
+}
+//------------------------------------------------------------------------------------
+static sint FindMappedRangesByPath(NT::HANDLE ProcH, usize Addr, const achar* ModPath, SMemMap* MappedRanges, usize BufSize)
+{
+ return 0;
+}
+//------------------------------------------------------------------------------------
+static sint FindMappedRangesByPath(sint32 ProcId, usize Addr, const achar* ModPath, SMemMap* MappedRanges, usize BufSize)
+{
+ NT::HANDLE PrHndl = NT::NtCurrentProcess;
+ if(ProcId > 0)
+  {                                                         
+   NT::NTSTATUS res = OpenProcess(&PrHndl, NT::PROCESS_QUERY_INFORMATION, (uint32)ProcId);
+   if(!NT::NT_SUCCESS(res))return -1;
+  }
+ sint res = FindMappedRangesByPath(PrHndl, Addr, ModPath, MappedRanges, BufSize);
+ if(ProcId > 0)SAPI::NtClose(PrHndl);
+ return res;
+}
+//------------------------------------------------------------------------------------
+static sint ReadMappedRanges(NT::HANDLE ProcH, usize AddrFrom, usize AddrTo, SMemMap* MappedRanges, usize BufSize)  // Windows: QueryVirtualMemory; Linux: ProcFS; BSD:?; MacOS:?
+{
+ size_t stroffs = BufSize;
+ vptr CurBaseAddr = nullptr;
+ sint res = -1000;
+ sint Total = 0;
+ SMemRange* Range = MappedRanges->Ranges;
+ MappedRanges->NextAddr  = 0;
+ MappedRanges->RangesCnt = 0;  // To avoid the path copy skipping
+ BufSize -= sizeof(SMemMap);
+ for(;;)
+  {
+   NT::MEMORY_BASIC_INFORMATION mbi;
+   NT::NTSTATUS res = SAPI::NtQueryVirtualMemory(ProcH, (vptr)AddrFrom, NT::MemoryBasicInformation, &mbi, sizeof mbi, 0);
+   if(!NT::NT_SUCCESS(res))return -9;
+   if((usize)mbi.BaseAddress >= AddrTo)break;
+   if(!(mbi.State & NT::MEM_COMMIT))continue;  // Not present
+   Range->RangeBeg = (usize)mbi.BaseAddress;
+   Range->RangeEnd = Range->RangeBeg + mbi.RegionSize; 
+   Range->Mode     = MemProtNTtoPX(mbi.Protect);
+   if(mbi.Type & (NT::MEM_IMAGE|NT::MEM_MAPPED))  // The range belongs to a mapped file
+    {
+     if(mbi.AllocationBase != CurBaseAddr)  // Need to add a new path
+      {
+       // TODO: Request the path
+       usize Len = MappedRanges->TmpBufLen;
+       res = GetMappedFilePath(ProcH, (usize)mbi.BaseAddress, (achar*)MappedRanges->TmpBufPtr, &Len);
+       if(NT::NT_SUCCESS(res))       // Check if Len < TmpBufLen ?
+        {
+         uint len = Range->FPathLen + 1;
+         if((len + sizeof(SMemRange)) > BufSize){MappedRanges->NextAddr = Range->RangeBeg; break;}  // No space left
+         CurBaseAddr = mbi.AllocationBase;
+         achar* srcstr = Range->FPath;   // In the line buffer
+         Range->FPath  = (achar*)MappedRanges + (stroffs - len);      // Put the path at the end of the buffer
+         NSTR::StrCopy(Range->FPath, srcstr, len);
+         stroffs -= len;
+         BufSize -= len;
+         Total   += len;
+        }
+      }
+       else   // Same path
+        {
+         Range->FPath    = Range[-1].FPath;
+         Range->FPathLen = Range[-1].FPathLen;
+        }
+    }
+   if(sizeof(SMemRange) > BufSize){MappedRanges->NextAddr = Range->RangeBeg; break;}  // No space
+   MappedRanges->RangesCnt++;
+   BufSize -= sizeof(SMemRange);
+   Total   += sizeof(SMemRange);
+   Range++;
+  }
+ if(res >= 0)return (MappedRanges->RangesCnt)?(Total+sizeof(SMemMap)):(Total);    // For statistics: there will be gap between records and strings
+ return res;   // Not found
+}
+//------------------------------------------------------------------------------------
+static sint ReadMappedRanges(sint32 ProcId, usize AddrFrom, usize AddrTo, SMemMap* MappedRanges, usize BufSize)
+{
+ NT::HANDLE PrHndl = NT::NtCurrentProcess;
+ if(ProcId > 0)
+  {                                                         
+   NT::NTSTATUS res = OpenProcess(&PrHndl, NT::PROCESS_QUERY_INFORMATION, (uint32)ProcId);
+   if(!NT::NT_SUCCESS(res))return -1;
+  }
+ sint res = ReadMappedRanges(PrHndl, AddrFrom, AddrTo, MappedRanges, BufSize);
+ if(ProcId > 0)SAPI::NtClose(PrHndl);
+ return res;
+}
+//------------------------------------------------------------------------------------
 // On some hardware architectures (e.g., i386), PROT_WRITE implies PROT_READ.
 // It is architecture dependent whether PROT_READ implies PROT_EXEC or not.
 // Portable programs should always set PROT_EXEC if they intend to execute code in the new mapping.
@@ -1091,8 +1996,36 @@ static uint32 MemProtPXtoNT(uint32 prot)
    else
     {
      if(prot & PX::PROT_READ)PageProt |= NT::PAGE_READONLY;
-       else PageProt |= NT::PAGE_NOACCESS;
+       else PageProt |= NT::PAGE_NOACCESS;           // PAGE_GUARD ?  // PROT_NONE 
     }
+  }
+ return PageProt;
+}
+/*
+   if(prot & PX::PROT_EXEC)
+    {
+     if(prot & PX::PROT_WRITE)PageProt = NT::PAGE_EXECUTE_READWRITE;
+       else if(prot & PX::PROT_READ)PageProt = NT::PAGE_EXECUTE_READ;
+         else PageProt = NT::PAGE_EXECUTE;
+    }
+     else
+      {
+       if(prot & PX::PROT_WRITE)PageProt = NT::PAGE_READWRITE;
+         else PageProt = NT::PAGE_READONLY;
+      }
+*/
+//------------------------------------------------------------------------------------
+static uint32 MemProtNTtoPX(uint32 prot)
+{
+ uint32 PageProt = PX::PROT_NONE;
+ if(!(prot & NT::PAGE_NOACCESS))
+  {
+   if(prot & NT::PAGE_EXECUTE_READWRITE)PageProt = PX::PROT_EXEC|PX::PROT_READ|PX::PROT_WRITE;
+   else if(prot & NT::PAGE_EXECUTE_READ)PageProt = PX::PROT_EXEC|PX::PROT_READ;
+   else if(prot & NT::PAGE_EXECUTE)PageProt = PX::PROT_EXEC;
+   else if(prot & NT::PAGE_WRITECOPY)PageProt = PX::PROT_WRITE;    // |PX::PROT_READ;     // ???
+   else if(prot & NT::PAGE_READWRITE)PageProt = PX::PROT_WRITE|PX::PROT_READ;
+   else if(prot & NT::PAGE_READONLY)PageProt = PX::PROT_READ;                
   }
  return PageProt;
 }
@@ -1308,6 +2241,9 @@ static uint NTStatusToLinuxErr(NT::NTSTATUS err, uint Default=PX::EPERM)
   case NT::STATUS_TOO_MANY_PAGING_FILES:
     return PX::ENOMEM;
 
+  case NT::STATUS_FILE_IS_A_DIRECTORY:
+    return PX::EISDIR;                    
+
   case NT::STATUS_INVALID_LOCK_SEQUENCE:
   case NT::STATUS_INVALID_VIEW_SIZE:
   case NT::STATUS_ALREADY_COMMITTED:
@@ -1315,7 +2251,6 @@ static uint NTStatusToLinuxErr(NT::NTSTATUS err, uint Default=PX::EPERM)
   case NT::STATUS_PORT_CONNECTION_REFUSED:
   case NT::STATUS_THREAD_IS_TERMINATING:
   case NT::STATUS_DELETE_PENDING:
-  case NT::STATUS_FILE_IS_A_DIRECTORY:
   case NT::STATUS_FILE_RENAMED:
   case NT::STATUS_PROCESS_IS_TERMINATING:
   case NT::STATUS_CANNOT_DELETE:

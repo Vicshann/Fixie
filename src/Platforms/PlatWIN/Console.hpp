@@ -321,7 +321,8 @@ enum ECreationFlags: uint32
 
 
 using PTHREAD_START_ROUTINE = NT::DWORD (_scall *)(NT::PVOID lpThreadParameter);
-                                                                  
+             
+static inline NT::BOOL (_scall *pAllocConsole)(void);                                                     
 static inline NT::BOOL (_scall *pSetConsoleCP)(uint32 wCodePageID);
 static inline NT::BOOL (_scall *pSetConsoleOutputCP)(uint32 wCodePageID);
 static inline NT::BOOL (_scall *pSetConsoleMode)(NT::HANDLE hConsoleHandle, uint32 dwMode);
@@ -356,7 +357,7 @@ static vptr ResolveKProc(vptr* Addr, uint32 NameHash)
  *Addr = ptr;
  return ptr;
 }
-//--------------------------------------------------
+//--------------------------------------------------     
 static void Init(void)
 {
  pDllNtDll    = NTX::LdrGetModuleBase(ConstEval(NCRYPT::CRC32("ntdll.dll")));        // Low Case only   // Is it too expensive to convert to UTF-8 at compile time?
@@ -364,6 +365,7 @@ static void Init(void)
  pDllKrnlBase = NTX::LdrGetModuleBase(ConstEval(NCRYPT::CRC32("kernelbase.dll"))); 
 
  if(pDllNtDll && NPE::GetProcAddr(vptr(size_t(pDllNtDll)|1), (achar*)size_t(ConstEval(NCRYPT::CRC32("NtWaitForAlertByThreadId")))))Flags |= flNewWinVer;    // Beware of the CRC32 collisions (Especially in SAPI)
+ ResolveKProc((vptr*)&pAllocConsole, ConstEval(NCRYPT::CRC32("AllocConsole")));
  ResolveKProc((vptr*)&pSetConsoleCP, ConstEval(NCRYPT::CRC32("SetConsoleCP"))); 
  ResolveKProc((vptr*)&pSetConsoleOutputCP, ConstEval(NCRYPT::CRC32("SetConsoleOutputCP")));
  ResolveKProc((vptr*)&pSetConsoleMode, ConstEval(NCRYPT::CRC32("SetConsoleMode")));
@@ -436,10 +438,11 @@ static NT::HANDLE CreateThread(NT::DWORD dwCreationFlags, SConCtx::PTHREAD_START
 //------------------------------------------------------------------------------------------------------------
 };
 //============================================================================================================
-static int InitConsole(void)
+static int InitConsole(bool CrtIfMissing)
 {
  if(NCON::SConCtx::Flags & NCON::SConCtx::flInitialized)return 0;
  NCON::SConCtx::Init();
+ if(NCON::SConCtx::pAllocConsole && CrtIfMissing && (!NPTM::GetStdErr() || !NPTM::GetStdErr()))NCON::SConCtx::pAllocConsole();
 
 // UTF-8 code page  // SetConsoleOutputCP: Not full UTF-8 and no always works on old Windows 
  if(NCON::SConCtx::pSetConsoleCP)NCON::SConCtx::pSetConsoleCP(65001);

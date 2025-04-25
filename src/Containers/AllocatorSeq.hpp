@@ -36,9 +36,9 @@ inline vptr  GetBlockPtr(void)
 };
 
 // Is this the most appropriate alignment strategy?  
-SCVR size_t AlUnitLen  = (Flg & afObjAlign)?((Flg & afAlignPow2)?(AlignToP2Up(sizeof(Ty))):(AlignP2Frwd(sizeof(Ty), sizeof(size_t)))):(sizeof(Ty));   // May align to nearest Pow@ or by pointer size, depending what is the best for the current strategy
-SCVR size_t AlFHdrLen  = CtxInFBlk ? ((!(Flg & afLimitHdrAl) || (AlUnitLen <= MaxAlign))?(AlignFrwd(sizeof(SFHdr),AlUnitLen)):(AlignP2Frwd(sizeof(SFHdr),MaxAlign))) : 0;
-SCVR size_t AlPageSize = AlignP2Frwd(Max(AlUnitLen+AlFHdrLen, MinLen), NPTM::MEMPAGESIZE);  
+SCVR size_t AlUnitLen  = (Flg & afObjAlign)?((Flg & afAlignPow2)?(AlignToP2Up(sizeof(Ty))):(AlignFrwdP2(sizeof(Ty), sizeof(size_t)))):(sizeof(Ty));   // May align to nearest Pow@ or by pointer size, depending what is the best for the current strategy
+SCVR size_t AlFHdrLen  = CtxInFBlk ? ((!(Flg & afLimitHdrAl) || (AlUnitLen <= MaxAlign))?(AlignFrwd(sizeof(SFHdr),AlUnitLen)):(AlignFrwdP2(sizeof(SFHdr),MaxAlign))) : 0;
+SCVR size_t AlPageSize = AlignFrwdP2(Max(AlUnitLen+AlFHdrLen, MinLen), NPTM::MEMPAGESIZE);  
 
 TSW<(CtxInFBlk), SFHdr*, SFHdr >::T Context;
 //-------------------------------------------------------------

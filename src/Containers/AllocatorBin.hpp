@@ -1,4 +1,5 @@
 
+// MinObj, MaxObj; - Single free list if same size, Table of number of unith otherwise
 
 //============================================================================================================
 /*
@@ -117,7 +118,7 @@ TSW<(CtxInFBlk), SFHdr*, SFHdr >::T Context;
 //--------------------------------------------------------
 static size_t SizeBytesToUnits(size_t Size)  // Size in bytes to size in units    // Aligns to unit size
 {
- return AlignP2Frwd(Size, UnitSize) / UnitSize;  // TODO: Make sure that shift is used instead DIV
+ return AlignFrwdP2(Size, UnitSize) / UnitSize;  // TODO: Make sure that shift is used instead DIV
 }
 //--------------------------------------------------------
 SVvlNode* SizeUnitsToNode(uint32 Units)     // Alignment is always same as the size?????????????     !!!! TODO: AllocatorBlk - Optionally store BlkCtx in index table

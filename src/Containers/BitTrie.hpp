@@ -16,6 +16,7 @@
 // TODO: Callback to compare accumulated units at their boundaries (sliding matcher)  // Useful for fuzzy matching
 // TODO: Content enumeration (iteration)
 // TODO: Deletion (On unshared branches and the data cell itself(even on shared nodes)) (Need diffeent memory manager, with free slot chain list)
+// TODO: Optimize for ReadOnly(lock) by removing reserved offsets in TERM nodes
 // NOTE: Sliding matcher will not produce unique word end points (a small and big word which include small one as its end will have same endpoint)
 // 
 // Str Hash (16 bytes, uint128):          // https://www.reddit.com/r/hardware/comments/1gfjyqg/why_are_arm_cpu_cores_stuck_at_128_bit_simd/
@@ -29,6 +30,12 @@
 //  Need a table of 256x4 for each free slot group
 //  Should slot groups be contigous blocks or indexed as items of uint32?
 //  Sequences of free uint32 should be preserved in separate free groups or we will have to enumerate all of them to find required number of free slots
+// 
+// Loaded (400526089 bytes): T:/enwiki-latest-all-titles-in-ns0/enwiki-latest-all-titles-in-ns0
+// Storing 19783081 words took 27.29508 seconds
+// Memory used: 4854947840
+// Duplication took 1.114000 seconds
+// Matching 19783081 words took 28.982009 seconds
 // 
 //------------------------------------------------------------------------------------------------------------
 // UnitLen: A tag will be stored per each UnitLen (Like per char if UnitLen is 8). Leave it Zero if no tags is needed.
@@ -441,7 +448,7 @@ static void DoTest(const achar* SrcFile=nullptr, STRM::CStrmBase* Strm=nullptr)
  CArr<achar> arr;      // TODO: Make some decent allocator!
  arr.FromFile(SrcFile);
  if(arr.Size() < 1){LOGMSG("Empty or failed to load: %s",SrcFile); return;}
- LOGMSG("Loaded: %s",SrcFile);
+ LOGMSG("Loaded (%llu bytes): %s",arr.Size(),SrcFile);
  achar* WrdList = arr.Data();
  achar* WBeg = WrdList;
  uint WrdIdx = 0;

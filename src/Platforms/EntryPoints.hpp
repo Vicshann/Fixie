@@ -2,6 +2,10 @@
 #pragma once
 
 // Definitions for AppMain.cpp
+// WINDOWS: 
+//   FileHdr: UnSet IMAGE_FILE_RELOCS_STRIPPED 
+//   FileHdr: Set   IMAGE_FILE_DLL     (Or EP won't be called) (This makes the file unrunnable as EXE)
+//   OptHdr:  Set   IMAGE_DLL_CHARACTERISTICS_DYNAMIC_BASE
 //------------------------------------------------------------------------------------------------------------
 #ifdef _APPENTRYPT    // Defined in AppMain.cpp if AppMain.hpp is present in a project that uses the Framework
 
@@ -22,7 +26,8 @@ _SYSENTRY MODERN_INIT sint _scall Mod_Enter_Proc_Main(vptr ArgA, vptr ArgB, vptr
    app.Finalize();
   }
  DBGMSG("Exiting");
- if(!NPTM::IsDynamicLib() && !NPTM::IsLoadedByLdr())NPTM::NAPI::exit_group((int)stat);  // Never do this for DLLs, only for main executable?
+ if(!NPTM::IsDynamicLib() && !NPTM::IsLoadedByLdr()){DBGMSG("Terminating the process!"); NPTM::NAPI::exit_group((int)stat);}  // Never do this for DLLs, only for main executable?
+ if constexpr (IsSysWindows)stat = (stat >= 0)?(1):(0); // 0 forces the DLL to unload
  return stat;
 }
 //--------------------------
@@ -44,7 +49,8 @@ _SYSENTRY MODERN_INIT sint _scall Mod_Enter_Proc_Main(vptr ArgA, vptr ArgB, vptr
  DBGMSG("Framework initialized");
  sint stat = ModuleMain(ArgA, ArgB, ArgC); // Call 'Main' which should be somewhere above
  DBGMSG("Exiting");
- if(!NPTM::IsDynamicLib() && !NPTM::IsLoadedByLdr())NPTM::NAPI::exit_group((int)stat);  // Never do this for DLLs, only for main executable?
+ if(!NPTM::IsDynamicLib() && !NPTM::IsLoadedByLdr()){DBGMSG("Terminating the process!"); NPTM::NAPI::exit_group((int)stat);}  // Never do this for DLLs, only for main executable?
+ if constexpr (IsSysWindows)stat = (stat >= 0)?(1):(0); // 0 forces the DLL to unload
  return stat;
 }
 //--------------------------

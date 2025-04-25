@@ -1,6 +1,7 @@
 
 #pragma once
 
+// https://github.com/libyal/libexe/blob/main/documentation/Executable%20(EXE)%20file%20format.asciidoc
 //============================================================================================================
 template<typename PHT, bool RawPE=false> struct NFMTPE
 { 
@@ -66,6 +67,81 @@ enum EImgRelBased: uint32
  REL_IA64_IMM64     = 9,
  REL_DIR64          = 10,
 };
+
+enum EImgFlags: uint32
+{
+ IMAGE_FILE_RELOCS_STRIPPED         = 0x0001,  // Does not contain base relocations
+ IMAGE_FILE_EXECUTABLE_IMAGE        = 0x0002,  // Is an executable (image file)
+ IMAGE_FILE_LINE_NUMS_STRIPPED      = 0x0004,  // Line numbers have been removed
+ IMAGE_FILE_LOCAL_SYMS_STRIPPED     = 0x0008,  // Symbol table entries for local symbols have been removed
+ IMAGE_FILE_AGGRESSIVE_WS_TRIM      = 0x0010,  // Aggressively trim working set
+ IMAGE_FILE_LARGE_ADDRESS_AWARE     = 0x0020,  // Application can handle > 2 GiB addresses
+ IMAGE_FILE_16BIT_MACHINE           = 0x0040,  // Unknown (reserved for future use)
+ IMAGE_FILE_BYTES_REVERSED_LO       = 0x0080,  // Little-endian
+ IMAGE_FILE_32BIT_MACHINE           = 0x0100,  // 32-bit architecture
+ IMAGE_FILE_DEBUG_STRIPPED          = 0x0200,  // Debugging information removed from file
+ IMAGE_FILE_REMOVABLE_RUN_FROM_SWAP = 0x0400,  // If the file is on removable media, copy and run from swap file
+ IMAGE_FILE_SYSTEM                  = 0x1000,  // Is a system file, not a user program
+ IMAGE_FILE_DLL                     = 0x2000,  // Is a dynamic-link library (DLL)
+ IMAGE_FILE_UP_SYSTEM_ONLY          = 0x4000,  // File should be run only on a UP machine
+ IMAGE_FILE_BYTES_REVERSED_HI       = 0x8000,  // Big-endian
+};
+
+enum EImgDllChars: uint32
+{
+ IMAGE_DLL_CHARACTERISTICS_RESERVED1             = 0x0001,  // Reserved.
+ IMAGE_DLL_CHARACTERISTICS_RESERVED2             = 0x0002,  // Reserved.
+ IMAGE_DLL_CHARACTERISTICS_RESERVED3             = 0x0004,  // Reserved.
+ IMAGE_DLL_CHARACTERISTICS_RESERVED4             = 0x0008,  // Reserved.
+ IMAGE_DLL_CHARACTERISTICS_HIGH_ENTROPY_VA       = 0x0020,  // ASLR with 64 bit address space.
+ IMAGE_DLL_CHARACTERISTICS_DYNAMIC_BASE          = 0x0040,  // The DLL can be relocated at load time.
+ IMAGE_DLL_CHARACTERISTICS_FORCE_INTEGRITY       = 0x0080,  // Code integrity checks are forced. If you set this flag and a section contains only uninitialized data, set the PointerToRawData member of IMAGE_SECTION_HEADER for that section to zero; otherwise, the image will fail to load because the digital signature cannot be verified.
+ IMAGE_DLL_CHARACTERISTICS_NX_COMPAT             = 0x0100,  // The image is compatible with data execution prevention (DEP).
+ IMAGE_DLL_CHARACTERISTICS_NO_ISOLATION          = 0x0200,  // The image is isolation aware, but should not be isolated.
+ IMAGE_DLL_CHARACTERISTICS_NO_SEH                = 0x0400,  // The image does not use structured exception handling (SEH). No handlers can be called in this image.
+ IMAGE_DLL_CHARACTERISTICS_NO_BIND               = 0x0800,  // Do not bind the image.
+ IMAGE_DLL_CHARACTERISTICS_APPCONTAINER          = 0x1000,  // Image should execute in an AppContainer.
+ IMAGE_DLL_CHARACTERISTICS_WDM_DRIVER            = 0x2000,  // A WDM driver.
+ IMAGE_DLL_CHARACTERISTICS_GUARD_CF              = 0x4000,  // Image supports Control Flow Guard.
+ IMAGE_DLL_CHARACTERISTICS_TERMINAL_SERVER_AWARE = 0x8000,  // The image is terminal server aware.
+};
+
+enum EImgDirEntry: uint32 
+{
+ IMAGE_DIRECTORY_ENTRY_EXPORT         = 0,   // Export directory
+ IMAGE_DIRECTORY_ENTRY_IMPORT         = 1,   // Import directory
+ IMAGE_DIRECTORY_ENTRY_RESOURCE       = 2,   // Resource directory
+ IMAGE_DIRECTORY_ENTRY_EXCEPTION      = 3,   // Exception directory
+ IMAGE_DIRECTORY_ENTRY_SECURITY       = 4,   // Security directory
+ IMAGE_DIRECTORY_ENTRY_BASERELOC      = 5,   // Base relocation table
+ IMAGE_DIRECTORY_ENTRY_DEBUG          = 6,   // Debug directory
+ IMAGE_DIRECTORY_ENTRY_ARCHITECTURE   = 7,   // Architecture-specific data
+ IMAGE_DIRECTORY_ENTRY_GLOBALPTR      = 8,   // The relative virtual address of global pointer
+ IMAGE_DIRECTORY_ENTRY_TLS            = 9,   // Thread local storage directory
+ IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG    = 10,  // Load configuration directory
+ IMAGE_DIRECTORY_ENTRY_BOUND_IMPORT   = 11,  // Bound import directory
+ IMAGE_DIRECTORY_ENTRY_IAT            = 12,  // Import address table
+ IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT   = 13,  // Delay import table
+ IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR = 14,  // COM descriptor table
+};
+
+enum EImgSubSys: uint32
+{
+ IMAGE_SUBSYSTEM_UNKNOWN                  = 0,   // Unknown subsystem.
+ IMAGE_SUBSYSTEM_NATIVE                   = 1,   // No subsystem required (device drivers and native system processes).
+ IMAGE_SUBSYSTEM_WINDOWS_GUI              = 2,   // Windows graphical user interface (GUI) subsystem.
+ IMAGE_SUBSYSTEM_WINDOWS_CUI              = 3,   // Windows character-mode user interface (CUI) subsystem.
+ IMAGE_SUBSYSTEM_OS2_CUI                  = 5,   // OS/2 CUI subsystem.
+ IMAGE_SUBSYSTEM_POSIX_CUI                = 7,   // POSIX CUI subsystem.
+ IMAGE_SUBSYSTEM_WINDOWS_CE_GUI           = 9,   // Windows CE system.
+ IMAGE_SUBSYSTEM_EFI_APPLICATION          = 10,  // Extensible Firmware Interface (EFI) application.
+ IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER  = 11,  // EFI driver with boot services.
+ IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER       = 12,  // EFI driver with run-time services.
+ IMAGE_SUBSYSTEM_EFI_ROM                  = 13,  // EFI ROM image.
+ IMAGE_SUBSYSTEM_XBOX                     = 14,  // Xbox system.
+ IMAGE_SUBSYSTEM_WINDOWS_BOOT_APPLICATION = 16,  // Boot application.
+};
+
 //------------------------------------------------------------------------------------------------------------
 #pragma pack( push, 1 )     // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Check alignment! <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
@@ -731,7 +807,7 @@ static const achar* GetProcInfo(vptr ModuleBase, vptr ProcAddrOrRva, uint16* Ord
 static vptr GetProcAddr(vptr ModuleBase, const achar* ProcName, achar** Forwarder=nullptr, vptr* ProcEntry=nullptr)  // No forwarding support
 {
  uint8* DllBase  = (uint8*)((size_t)ModuleBase & ~(size_t)1);
- bool   UseNHash = (size_t)ModuleBase & 1;   // Secret flag 
+ bool   UseNHash = (size_t)ModuleBase & 1;   // Secret flag  // TODO: Check - it is probably already used by handles for something secret too
  auto WinHdr = GetWinHdr(DllBase);
  SDataDir* ExportDir  = &WinHdr->OptionalHeader.DataDirectories.ExportTable;
  if(!ExportDir->DirectoryRVA || !ExportDir->DirectorySize)return nullptr;		 // No export directory!

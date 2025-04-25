@@ -68,7 +68,7 @@ public:
 // Size = Size   // Uniform allocation (Every block size is the same)
 // NOTE: Do not use pages of MEMPAGESIZE on Windows or the entire address space will be full of unreclaimable holes of 60k in size!
 //
-template<size_t UnitLen, size_t PageLen=NPTM::MEMGRANSIZE, size_t FHdrLen=0, size_t NHdrLen=0, size_t LBlkMin=0> class SBASUni: public SBASBase<AlignP2Frwd(((PageLen - Max(FHdrLen, NHdrLen)) < UnitLen)?(UnitLen+Max(FHdrLen, NHdrLen)):(PageLen),NPTM::MEMGRANSIZE), UnitLen, FHdrLen, NHdrLen, (LBlkMin?LBlkMin:14), (size_t)-1, SBASUni<UnitLen,PageLen,FHdrLen,NHdrLen> >
+template<size_t UnitLen, size_t PageLen=NPTM::MEMGRANSIZE, size_t FHdrLen=0, size_t NHdrLen=0, size_t LBlkMin=0> class SBASUni: public SBASBase<AlignFrwdP2(((PageLen - Max(FHdrLen, NHdrLen)) < UnitLen)?(UnitLen+Max(FHdrLen, NHdrLen)):(PageLen),NPTM::MEMGRANSIZE), UnitLen, FHdrLen, NHdrLen, (LBlkMin?LBlkMin:14), (size_t)-1, SBASUni<UnitLen,PageLen,FHdrLen,NHdrLen> >
 {
  DEFINE_SELF   // To fix dependent name lookup - not going to repeat that looong base class template type!
 
@@ -125,7 +125,7 @@ static uint BruteForIndex(size_t ObjIdx, size_t& Idx)  // For testing
 // Size = Size + BaseSize    // Linear allocation growth   // BlkSize=PageSize*(BlkIdx+1)
 // NOTE: Do not use pages of MEMPAGESIZE on Windows or the entire address space will be full of unreclaimable holes of 4-60k in size!
 //
-template<size_t UnitLen, size_t PageLen=NPTM::MEMGRANSIZE, size_t FHdrLen=0, size_t NHdrLen=0, size_t LBlkMin=0> class SBASLin: public SBASBase<AlignP2Frwd(((PageLen - Max(FHdrLen, NHdrLen)) < UnitLen)?(UnitLen+Max(FHdrLen, NHdrLen)):(PageLen),NPTM::MEMGRANSIZE), UnitLen, FHdrLen, NHdrLen, (LBlkMin?LBlkMin:6), (size_t)-1, SBASLin<UnitLen,PageLen,FHdrLen,NHdrLen> >
+template<size_t UnitLen, size_t PageLen=NPTM::MEMGRANSIZE, size_t FHdrLen=0, size_t NHdrLen=0, size_t LBlkMin=0> class SBASLin: public SBASBase<AlignFrwdP2(((PageLen - Max(FHdrLen, NHdrLen)) < UnitLen)?(UnitLen+Max(FHdrLen, NHdrLen)):(PageLen),NPTM::MEMGRANSIZE), UnitLen, FHdrLen, NHdrLen, (LBlkMin?LBlkMin:6), (size_t)-1, SBASLin<UnitLen,PageLen,FHdrLen,NHdrLen> >
 {
  DEFINE_SELF   // To fix dependent name lookup - not going to repeat that looong base class template type!
 
@@ -324,8 +324,8 @@ template<uint32 StratType, size_t LBlkMin=0, size_t UnitLen=0x100, size_t PageLe
 {
  STASRT(StratType <= afGrowExp, "Wrong grow strategy!");
  using T = TSW<LBlkMin,
-               TSW<StratType==afGrowExp, SBASExp<UnitLen,PageLen,FHdrLen,NHdrLen,LBlkMin>, typename TSW<StratType==afGrowLin, SBASLin<UnitLen,PageLen,FHdrLen,NHdrLen,LBlkMin>, SBASUni<UnitLen,PageLen,FHdrLen,NHdrLen,LBlkMin> >::T>::T,
-               TSW<StratType==afGrowExp, SBASExp<UnitLen,PageLen,FHdrLen,NHdrLen>, typename TSW<StratType==afGrowLin, SBASLin<UnitLen,PageLen,FHdrLen,NHdrLen>, SBASUni<UnitLen,PageLen,FHdrLen,NHdrLen> >::T>::T
+               typename TSW<StratType==afGrowExp, SBASExp<UnitLen,PageLen,FHdrLen,NHdrLen,LBlkMin>, typename TSW<StratType==afGrowLin, SBASLin<UnitLen,PageLen,FHdrLen,NHdrLen,LBlkMin>, SBASUni<UnitLen,PageLen,FHdrLen,NHdrLen,LBlkMin> >::T>::T,
+               typename TSW<StratType==afGrowExp, SBASExp<UnitLen,PageLen,FHdrLen,NHdrLen>, typename TSW<StratType==afGrowLin, SBASLin<UnitLen,PageLen,FHdrLen,NHdrLen>, SBASUni<UnitLen,PageLen,FHdrLen,NHdrLen> >::T>::T
               >::T;
 };
 //============================================================================================================
@@ -435,9 +435,9 @@ static_assert(sizeof(SSerBlk) == 16);
 static_assert(sizeof(SSerHdr) == 32);
 
 // Is this the most appropriate alignment strategy?
-SCVR size_t AlUnitLen = (Flg & afObjAlign)  ? ( (Flg & afAlignPow2)?(AlignToP2Up(sizeof(Ty))):(AlignP2Frwd(sizeof(Ty), sizeof(size_t))) ):(sizeof(Ty));   // May align to nearest Pow@ or by pointer size, depending what is the best for the current strategy
-SCVR size_t AlNHdrLen = (sizeof(SNHdr) > 1) ? ( (!(Flg & afLimitHdrAl) || (AlUnitLen <= MaxAlign))?(AlignFrwd(sizeof(SNHdr),AlUnitLen)):(AlignP2Frwd(sizeof(SNHdr),MaxAlign)) ):0;              // May align to UnitSize
-SCVR size_t AlFHdrLen = CtxInFBlk ? ( (!(Flg & afLimitHdrAl) || (AlUnitLen <= MaxAlign))?(AlignFrwd(sizeof(SFHdrEx),AlUnitLen)):(AlignP2Frwd(sizeof(SFHdrEx),MaxAlign)) ): AlNHdrLen;
+SCVR size_t AlUnitLen = (Flg & afObjAlign)  ? ( (Flg & afAlignPow2)?(AlignToP2Up(sizeof(Ty))):(AlignFrwdP2(sizeof(Ty), sizeof(size_t))) ):(sizeof(Ty));   // May align to nearest Pow@ or by pointer size, depending what is the best for the current strategy
+SCVR size_t AlNHdrLen = (sizeof(SNHdr) > 1) ? ( (!(Flg & afLimitHdrAl) || (AlUnitLen <= MaxAlign))?(AlignFrwd(sizeof(SNHdr),AlUnitLen)):(AlignFrwdP2(sizeof(SNHdr),MaxAlign)) ):0;              // May align to UnitSize
+SCVR size_t AlFHdrLen = CtxInFBlk ? ( (!(Flg & afLimitHdrAl) || (AlUnitLen <= MaxAlign))?(AlignFrwd(sizeof(SFHdrEx),AlUnitLen)):(AlignFrwdP2(sizeof(SFHdrEx),MaxAlign)) ): AlNHdrLen;
 
 using Strat = SSel<StratType, LBlkMin, AlUnitLen, PageLen, AlFHdrLen, AlNHdrLen>::T;
 //static_assert(size_t(Strat::UnitSize) != size_t(0), "UnitSize is zero!");
@@ -497,7 +497,7 @@ vptr AllocBlock(size_t BlkIdx)
    if(!ablk->BlkArr){ablk->BlkArr = ablk->Local; ablk->BlkLen = TBStrat::RangeMin;}
    if(BlkIdx >= ablk->GetArrMax())
     {
-     uint NMax = AlignP2Frwd(BlkIdx+1, NPTM::MEMPAGESIZE/sizeof(vptr));
+     uint NMax = AlignFrwdP2(BlkIdx+1, NPTM::MEMPAGESIZE/sizeof(vptr));
      vptr IPtr = (vptr)NPTM::NAPI::mmap(nullptr, NMax*sizeof(vptr), PX::PROT_READ|PX::PROT_WRITE, PX::MAP_PRIVATE|PX::MAP_ANONYMOUS, -1, 0);    // TODO: afObjAlign ???????????????   // TODO: Alloc/Free holder class as an argument (Assume that we wat allocation on GPU or from some pool)
      if(NPTM::GetMMapErrFromPtr(IPtr)){ this->GetMP()->Free(BPtr, BSize); return nullptr; }    // Tolal failure, especially on the first block
 
@@ -656,7 +656,7 @@ vptr FindBlkBase(Ty* ElmAddrInBlk)   // NOTE: More grown the block - Slower this
 {
  if constexpr(MetaInBlk)   // Can't iterate if there is no metadata at beginning of each block
   {
-   for(size_t pbase=AlignP2Bkwd((size_t)ElmAddrInBlk, NPTM::MEMGRANSIZE);;pbase -= NPTM::MEMGRANSIZE)   // Cannot step by Strat::PageSize because allocation address is NPTM::MEMGRANSIZE aligned
+   for(size_t pbase=AlignBkwdP2((size_t)ElmAddrInBlk, NPTM::MEMGRANSIZE);;pbase -= NPTM::MEMGRANSIZE)   // Cannot step by Strat::PageSize because allocation address is NPTM::MEMGRANSIZE aligned
     {
      SMFHdr* hdr = (SMFHdr*)pbase;
      if(((size_t)hdr->Self & Strat::PtrMask) == pbase)return (vptr)pbase;     // Nothing else to check here
@@ -873,7 +873,7 @@ size_t MemoryUsed(void)
    auto   BAPtr  = ctx->GetBlkArr();   // May be in a separate block
    if(BAPtr && (BASize > Strat::RangeMin))
     {
-     size_t ilen = AlignP2Frwd((BASize * sizeof(vptr)), NPTM::MEMPAGESIZE);
+     size_t ilen = AlignFrwdP2((BASize * sizeof(vptr)), NPTM::MEMPAGESIZE);
      len += ilen;
 //     DBGMSG("Index block Size: %u",ilen);
     }

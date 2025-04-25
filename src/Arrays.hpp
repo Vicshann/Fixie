@@ -21,7 +21,7 @@ static bool DeAllocate(vptr Ptr)      // TODO: Use allocator
 //----------------------------------------------------------
 static vptr Allocate(uint Len)
 {
- uint  flen = AlignP2Frwd(Len + DescLen, NPTM::MEMPAGESIZE);
+ uint  flen = AlignFrwdP2(Len + DescLen, NPTM::MEMPAGESIZE);
  void* fdat = (void*)NPTM::NAPI::mmap(nullptr, flen, PX::PROT_READ|PX::PROT_WRITE, PX::MAP_PRIVATE|PX::MAP_ANONYMOUS, -1, 0);    // NOTE: No attempts to grow inplace!!!
  if(NPTM::GetMMapErrFromPtr(fdat)){ DBGERR("Error: Failed to allocate!"); return nullptr; }
  uint* Ptr  = &((uint*)fdat)[BeginIdx];
@@ -33,7 +33,7 @@ static vptr Allocate(uint Len)
 static vptr ReAllocate(uint Len, vptr OldPtr)  // TODO: Use allocator   // TODO: use mremap    
 {
  if(!OldPtr)return Allocate(Len);
- uint flen = AlignP2Frwd(Len + DescLen, NPTM::MEMPAGESIZE);
+ uint flen = AlignFrwdP2(Len + DescLen, NPTM::MEMPAGESIZE);
  if(flen <= ((uint*)OldPtr)[ASizeIdx])   // Fits in last allocation
   {
    ((uint*)OldPtr)[SizeIdx] = Len;
