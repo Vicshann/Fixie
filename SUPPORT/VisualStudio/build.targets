@@ -1,0 +1,146 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!--https://devblogs.microsoft.com/cppblog/configuring-c-intellisense-and-browsing/ -->
+  <ItemGroup>
+    <PropertyPageSchema Include="$(FwkVSPath)/ui.rules" />
+    <AvailableItemName Include="BuildByCFG">
+      <Targets>_BuildByCFG</Targets>
+    </AvailableItemName>
+  </ItemGroup>
+  
+  <PropertyGroup>  
+    <TargetExt>.</TargetExt>
+    <TargetExt Condition="'$(AppTargetOS)' == 'WIN' AND $(AppSharedModule) == True">.dll</TargetExt> 
+    <TargetExt Condition="'$(AppTargetOS)' == 'WIN' AND $(AppSharedModule) == False">.exe</TargetExt> 
+
+    <OutBinPath>$(OutDir)$(TargetName)$(TargetExt)</OutBinPath>
+    
+    <ExtraOpts>$(CCmdLine)</ExtraOpts>
+    <!--  -flto ; -ffunction-sections ; -fno-asynchronous-unwind-tables  those will cause PDB files to be incomplete and break stack-trace and single-stepping -->
+    <ExtraOpts Condition="'$(AppTargetOS)' == 'WIN' and '$(Configuration)'=='Debug'"> -fno-lto -fasynchronous-unwind-tables -fno-function-sections -O0 -g0 -g -gcodeview -Wl,/DEBUG:FULL -Wl,/PDB:"$(IntDir)$(TargetName).pdb" $(ExtraOpts)</ExtraOpts>
+       
+    <BinaryDir>$(OutDir)</BinaryDir>
+    <BinaryExt>$(TargetExt)</BinaryExt>
+  </PropertyGroup> 
+
+  <PropertyGroup Condition="$(AppLnkVerbose) == True"> <ExtraOpts> -Wl,/VERBOSE $(ExtraOpts)</ExtraOpts> </PropertyGroup>  
+  <PropertyGroup Condition="$(AppTimeTrace) == True"> <ExtraOpts> -ftime-trace="$(IntDir)$(TargetName).json" $(ExtraOpts)</ExtraOpts> </PropertyGroup>  
+  
+  <PropertyGroup>
+    <ValSubSys></ValSubSys> 
+    <ValSubSys Condition="$(AppLnkSubsys) == Windows">WINDOWS</ValSubSys> 
+    <ValSubSys Condition="$(AppLnkSubsys) == Console">CONSOLE</ValSubSys>
+    <ValSubSys Condition="$(AppLnkSubsys) == Native" >NATIVE</ValSubSys>  <!-- Kernel drivers? -->
+    <ValSubSys Condition="$(AppLnkSubsys) == EFI_App">EFI_APPLICATION</ValSubSys>
+    <ExtraOpts Condition="'$(ValSubSys)' != ''"> -Wl,-subsystem,$(ValSubSys):5.1 $(ExtraOpts)</ExtraOpts> 
+  </PropertyGroup>
+  
+  <!-- Compile to OBJ ('.o' if not for Windows?) -->
+  <PropertyGroup Condition="'$(AppLnkMode)' != 'Combined'">  
+    <BinaryDir>$(IntDir)</BinaryDir>
+    <BinaryExt>.obj</BinaryExt>
+    <ExtraOpts>-c $(ExtraOpts)</ExtraOpts>
+  </PropertyGroup> 
+  
+  <Target Name="Build">
+    <Message Text="NOTE: Building $(AppBuildType) -> $(OutBinPath)" Importance="high" />
+    <Message Text="PreprocessorDefinitions: $(NMakePreprocessorDefinitions)" />
+    <Exec Command="&quot;$(FwkDirPath)COMPILE\BUILD_BY_CFG.bat&quot; $(AppBuildType) $(TargetName) $(BinaryExt) $(AppMainFile) $(BinaryDir) $(ProjectDir) $(ExtraOpts)" ContinueOnError="false" EnvironmentVariables="VS_LLVMPATH=$(ClangTidyLLVMInstallDir)"> 
+      <Output TaskParameter="ExitCode" PropertyName="BuildExitCode" />  <!-- Condition="'$(BuildExitCode)' == '0'"  -->
+    </Exec>   
+    <OnError ExecuteTargets="UpdateDefs" />  <!-- ContinueOnError -->
+  </Target>
+  
+  <Target Name="Rebuild">
+    <Message Text="NOTE: ReBuilding $(AppBuildType) -> $(OutBinPath)" Importance="high" />
+    <Message Text="PreprocessorDefinitions: $(NMakePreprocessorDefinitions)" />
+    <Exec Command="&quot;$(FwkDirPath)COMPILE\BUILD_BY_CFG.bat&quot; $(AppBuildType) $(TargetName) $(BinaryExt) $(AppMainFile) $(BinaryDir) $(ProjectDir) $(ExtraOpts)" ContinueOnError="false" EnvironmentVariables="VS_LLVMPATH=$(ClangTidyLLVMInstallDir)"> 
+      <Output TaskParameter="ExitCode" PropertyName="BuildExitCode" />  <!-- Condition="'$(BuildExitCode)' == '0'"  -->
+    </Exec>   
+    <OnError ExecuteTargets="UpdateDefs" />  <!-- ContinueOnError -->
+  </Target>
+
+  <Target Name="Clean">  <!--  DependsOnTargets="DeleteBinaries"  -->
+    <Message Text="NOTE: Cleaning" Importance="high" />
+    <!-- <ItemGroup>    : The log is busy
+       <FilesToDelete Include="$(IntDir)/$(TargetName).log"/> 
+    </ItemGroup>
+    <Delete Files="@(FilesToDelete)">
+      <Output TaskParameter="DeletedFiles" ItemName="FilesDeleted" />
+    </Delete>  -->
+    <!--<RemoveDir Directories="$(BuildDir)" /> -->
+  </Target>  
+  
+  <Target Name="DeleteBinaries" BeforeTargets="Build;Rebuild" AfterTargets="Clean">
+   <!-- <Message Text="OutDir: $(OutDir)" />
+    <Message Text="IntDir: $(IntDir)" />
+    <Message Text="OutputPath: $(OutputPath)" />
+    <Message Text="BaseOutputPath: $(BaseOutputPath)" />  -->
+    <ItemGroup>
+      <FilesToDelete Include="$(OutDir)$(TargetName)$(TargetExt)"/>
+      <FilesToDelete Include="$(IntDir)$(TargetName).json"/>
+      <FilesToDelete Include="$(IntDir)$(TargetName).obj"/>
+      <FilesToDelete Include="$(IntDir)$(TargetName).pdb"/>
+      <FilesToDelete Include="$(IntDir)$(TargetName).lib"/>
+      <FilesToDelete Include="$(IntDir)$(TargetName).map"/>
+    </ItemGroup>
+    <Delete Files="@(FilesToDelete)">
+      <Output TaskParameter="DeletedFiles" ItemName="FilesDeleted" />
+    </Delete>
+    <!--<Message Text="Files deleted: @(FilesDeleted)" />  -->
+  </Target>
+  
+  <Target Name="DeleteConfigs" BeforeTargets="Rebuild" AfterTargets="Clean">
+    <Message Text="PrevBuildDefs: $(BuildDefs)" />
+    <ItemGroup>
+       <FilesToDelete Include="$(IntDir)/compile_commands.json"/>
+       <FilesToDelete Include="$(IntDir)/configuration.cfg"/>
+       <FilesToDelete Include="$(IntDir)/definitions.props"/>
+    </ItemGroup>
+    <Delete Files="@(FilesToDelete)">
+      <Output TaskParameter="DeletedFiles" ItemName="FilesDeleted" />
+    </Delete>
+    <!--<Message Text="Files deleted: @(FilesDeleted)" />  -->
+  </Target>  
+  
+  <Target Name="MakePdbFromDwarf" AfterTargets="Build;Rebuild" Condition="'$(AppTargetOS)' == 'WIN' and '$(Configuration)'=='Debug' and $(AppLnkMode) == Combined and !Exists('$(IntDir)$(TargetName).pdb')">
+    <Message Text="Converting DWARF to PDB: $(IntDir)$(TargetName).pdb" Importance="high" />
+    <Exec Command="&quot;$(FwkVSPath)cv2pdb.exe&quot; $(OutBinPath)" /> 
+  </Target> 
+  
+  <Target Name="LinkForWindows" AfterTargets="Build;Rebuild" Condition="'$(AppTargetOS)' == 'WIN' and $(AppLnkMode) == Separate and Exists('$(IntDir)$(TargetName).obj')">
+    <Message Text="Linking: $(IntDir)$(TargetName).obj" Importance="high" />
+    <PropertyGroup>   
+      <LnkOpts Condition="$(AppLnkVerbose) == True"> /VERBOSE $(LnkOpts)</LnkOpts>
+      <LnkOpts Condition="'$(ValSubSys)' != ''"> $(LnkOpts) /SUBSYSTEM:$(ValSubSys),5.1</LnkOpts>
+      <LnkOpts Condition="$(AppSharedModule) == True"> $(LnkOpts) /DLL</LnkOpts>
+      <LnkOpts> $(LnkOpts) /MACHINE:$(Platform) /ENTRY:Mod_Enter_Proc_Main</LnkOpts> 
+      <LnkOpts> $(LnkOpts) /NODEFAULTLIB /INCREMENTAL:NO /DYNAMICBASE /LARGEADDRESSAWARE /NXCOMPAT:NO /SAFESEH:NO /OPT:REF /OPT:ICF /RELEASE</LnkOpts>
+      <LnkOpts Condition="'$(Configuration)'=='Debug'"> $(LnkOpts) /DEBUG:FULL /MAP:"$(IntDir)$(TargetName).map" /PDB:"$(IntDir)$(TargetName).pdb" </LnkOpts>  
+      <LnkOpts>$(LnkOpts) /OUT:"$(OutDir)$(TargetName)$(TargetExt)" "$(IntDir)$(TargetName).obj"</LnkOpts>
+      <!-- /DEF:"Exports.def" /FIXED:NO /FORCE:UNRESOLVED   -->
+      <LnkerPath>$(CMPLRGDIR)</LnkerPath>
+      <LnkerPath Condition="!Exists('$(LnkerPath)\bin\lld-link.exe')">$(ClangTidyLLVMInstallDir)</LnkerPath>
+    </PropertyGroup>
+    <Message Text="CmdLine: $(LnkOpts)" Importance="high" />
+    <Exec Command="&quot;$(LnkerPath)\bin\lld-link.exe&quot; $(LnkOpts)" /> 
+  </Target>   
+  
+  <!--   no-undefined no-seh no-insert-timestamp pic-executable dynamicbase large-address-aware  -->
+  <Target Name="LinkForELF" AfterTargets="Build;Rebuild" Condition="'$(AppTargetOS)' != 'WIN' and $(AppLnkMode) == Separate and Exists('$(IntDir)$(TargetName).obj')">
+    <Message Text="Linking: TODO" Importance="high" />
+  </Target>   
+  
+  <Target Name="UpdateDefs" AfterTargets="Build;Rebuild" Condition="!Exists('$(IntDir)/definitions.props')">
+    <Message Text="Updating preprocessor definitions for IntelliSense" />
+    <Exec Command="&quot;$(FwkDirPath)\COMPILE\EXTRACT_DEFS.bat&quot; &quot;$(IntDir)/configuration.cfg&quot; &quot;$(IntDir)/definitions.props&quot;"> 
+        <Output TaskParameter="ExitCode" PropertyName="BuildExitCode" />  
+    </Exec>
+    <!--  <Message Text="BuildExitCode: $(BuildExitCode)" />
+    <Message Text="ProjectPath: $(ProjectPath)" />
+    <Message Text="SolutionPath: $(SolutionPath)" />  -->
+    <Exec Command="copy /b &quot;$(SolutionPath)&quot;+,," Condition="'$(BuildExitCode)' == '0' and Exists('$(SolutionPath)')"/> 
+    <Exec Command="copy /b &quot;$(ProjectPath)&quot;+,," Condition="'$(BuildExitCode)' == '0' and !Exists('$(SolutionPath)')"/>
+  </Target>  
+  
+</Project>

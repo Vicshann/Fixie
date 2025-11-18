@@ -69,3 +69,20 @@ PIE
 https://patchwork.ozlabs.org/project/glibc/patch/20190312130235.8E82C89CE49C@oldenburg2.str.redhat.com/
 Check for DF_1_PIE and fail when called from dlopen.
 ----------------------------
+API groups:
+ LIBC   (Minimal: malloc, Some console functions)   
+ POSIX
+ Threading
+ Debugging
+ Networking
+ 
+ Windowing
+ Input
+ Audio
+----------------------------
+The COMPILE_BY_CFG script actually uses full target config file name as its build type. 
+And those types are encoded as DBG_LIN_USR_ARM_X32 or REL_BSD_USR_X86_X64 which means: 
+1) Debug/Release 
+2) Platform (LIN,WIN,...) 
+3) User, kernel or raw mode (USR/KRN/RAW) 
+4) Architecture (X32 or X64)

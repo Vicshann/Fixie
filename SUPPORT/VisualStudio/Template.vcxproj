@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="Globals">
+    <RootNamespace>$(MSBuildThisFileName)</RootNamespace>
+    <ApplicationType>Linux</ApplicationType>
+    <FwkDirPath>$(SolutionDir)FRAMEWORK/</FwkDirPath>
+    <FwkDirPath Condition="!Exists('$(FwkDirPath)SUPPORT/VisualStudio/cfg.props')" >$(FWKSRCDIR)/</FwkDirPath>
+    <FwkVSPath>$(FwkDirPath)SUPPORT/VisualStudio/</FwkVSPath>    
+  </PropertyGroup>
+  <Import Project="$(FwkVSPath)/cfg.props" />
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+    <Import Project="$(FwkVSPath)/ui.props" />
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <ItemDefinitionGroup>
+  </ItemDefinitionGroup>
+  <ImportGroup Label="ExtensionSettings">
+    <Import Project="$(FwkVSPath)/dir.props" />
+  </ImportGroup>
+  <ItemGroup>
+    <ClCompile Include="$(FwkSrcPath)AppMain.cpp" />
+    <ClInclude Condition="$(AppMainHppPath) != ''" Include="$(AppMainHppPath)" />
+    <ClCompile Condition="$(AppMainCppPath) != ''" Include="$(AppMainCppPath)" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+    <Import Project="$(FwkVSPath)/build.targets" />
+  </ImportGroup>
+</Project>

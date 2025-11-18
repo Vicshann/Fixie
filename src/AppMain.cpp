@@ -1,43 +1,24 @@
 
 // Use this as Main C++ file for an app
 
+#if !__has_include ("Framework.hpp")  // May be already included by a compilation script
 #include "Framework.hpp"
+#endif
 
 //using namespace NCMN;
 //using namespace NFWK::NGenericTypes;
 using namespace NFWK;   // TODO: Configurable
 
+
+// NOTE: CD is set to $PRJROOT which may have all of its sources under SRC
+// NOTE: Handling of '../' with directory junctions is not reliable across all platforms (May be resolved to an actual parent directory, not where it is linked to. - Clang's implementation decision)
+// No several projects in a folder - Dumb '__has_include' implementation is not affected by macro substitution! 
+     
 #if __has_include ("AppMain.hpp")
 #define _APPENTRYPT
-#include "AppMain.hpp"         // The app implementation (When fs link is to this file)
-/*#elif __has_include ("src/AppMain.hpp")
-#define _APPENTRYPT
-#include "src/AppMain.hpp"      // The app implementation (When fs link is to /COMMON/FRAMEWORK)
-#elif __has_include ("../AppMain.hpp")
-#define _APPENTRYPT
-#include "../AppMain.hpp"      // The app implementation (When fs link is to /COMMON/FRAMEWORK)
-#elif __has_include ("../src/AppMain.hpp")
-#define _APPENTRYPT
-#include "../src/AppMain.hpp"      // The app implementation (When fs link is to /COMMON/FRAMEWORK)
-#elif __has_include ("../../AppMain.hpp")
-#define _APPENTRYPT
-#include "../../AppMain.hpp"   // The app implementation (When fs link is to /COMMON)
-#elif __has_include ("../../src/AppMain.hpp")
-#define _APPENTRYPT
-#include "../../src/AppMain.hpp"   // The app implementation (When fs link is to /COMMON)
-#elif __has_include ("../../../AppMain.hpp")
-#define _APPENTRYPT
-#include "../../../AppMain.hpp"   // The app implementation (When fs link is to /COMMON)
-#elif __has_include ("../../../src/AppMain.hpp")
-#define _APPENTRYPT
-#include "../../../src/AppMain.hpp"   // The app implementation (When fs link is to /COMMON)
-#elif __has_include ("../../../../AppMain.hpp")
-#define _APPENTRYPT
-#include "../../../../AppMain.hpp"   // The app implementation (When fs link is to /COMMON)
-#elif __has_include ("../../../../src/AppMain.hpp")
-#define _APPENTRYPT
-#include "../../../../src/AppMain.hpp"   // The app implementation (When fs link is to /COMMON)    */  // The Compilation Script will respect links in the path and will add the correct path to Includes
+#include "AppMain.hpp"     
 #else
-#pragma message(">>> No AppMain.hpp is found - expecting ModuleMain as entry point!")
+#pragma message(">>> No AppMain.hpp is found - expecting ModuleMain as entry point!")  // ModuleMain must be globally visible 
 #endif
-#include "Platforms/EntryPoints.hpp"     // Specify 'AppEntryPoint' to the linker
+
+#include "Platform/EntryPoints.hpp"     // Specify 'AppEntryPoint' to the linker

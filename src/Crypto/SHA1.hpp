@@ -30,22 +30,20 @@ static inline uint32 ROL32(uint32 p_val32, int p_nBits){return _rotl(p_val32,p_n
 static inline uint32 ROL32(uint32 p_val32, int p_nBits){return ((p_val32)<<(p_nBits))|((p_val32)>>(32-(p_nBits)));}
 #endif */
 
-#define ROL32 RotL<uint32>
-
 #ifdef SHA1_LITTLE_ENDIAN
-template<typename T> uint32 SHABLK0(T i) {return m_block.l[i] = (ROL32(m_block.l[i],24) & 0xFF00FF00) | (ROL32(m_block.l[i],8) & 0x00FF00FF);}
+template<typename T> uint32 SHABLK0(T i) {return m_block.l[i] = (RotL<uint32>(m_block.l[i],24) & 0xFF00FF00) | (RotL<uint32>(m_block.l[i],8) & 0x00FF00FF);}
 #else
 template<typename T> uint32 SHABLK0(T i) {return m_block.l[i];}
 #endif
 
-template<typename T> uint32 SHABLK(T i) {return m_block.l[i&15] = ROL32(m_block.l[(i+13)&15] ^ m_block.l[(i+8)&15] ^ m_block.l[(i+2)&15] ^ m_block.l[i&15],1);}
+template<typename T> uint32 SHABLK(T i) {return m_block.l[i&15] = RotL<uint32>(m_block.l[(i+13)&15] ^ m_block.l[(i+8)&15] ^ m_block.l[(i+2)&15] ^ m_block.l[i&15],1);}
 
 // SHA-1 rounds
-template<typename T> void S_R0(T& v,T& w,T& x,T& y,T& z,int i) {z+=((w&(x^y))^y)+SHABLK0(i)+0x5A827999+ROL32(v,5);w=ROL32(w,30);}
-template<typename T> void S_R1(T& v,T& w,T& x,T& y,T& z,int i) {z+=((w&(x^y))^y)+SHABLK(i)+0x5A827999+ROL32(v,5);w=ROL32(w,30);}
-template<typename T> void S_R2(T& v,T& w,T& x,T& y,T& z,int i) {z+=(w^x^y)+SHABLK(i)+0x6ED9EBA1+ROL32(v,5);w=ROL32(w,30);}
-template<typename T> void S_R3(T& v,T& w,T& x,T& y,T& z,int i) {z+=(((w|x)&y)|(w&x))+SHABLK(i)+0x8F1BBCDC+ROL32(v,5);w=ROL32(w,30);}
-template<typename T> void S_R4(T& v,T& w,T& x,T& y,T& z,int i) {z+=(w^x^y)+SHABLK(i)+0xCA62C1D6+ROL32(v,5);w=ROL32(w,30);}
+template<typename T> void S_R0(T& v,T& w,T& x,T& y,T& z,int i) {z+=((w&(x^y))^y)+SHABLK0(i)+0x5A827999+RotL<uint32>(v,5);w=RotL<uint32>(w,30);}
+template<typename T> void S_R1(T& v,T& w,T& x,T& y,T& z,int i) {z+=((w&(x^y))^y)+SHABLK(i)+0x5A827999+RotL<uint32>(v,5);w=RotL<uint32>(w,30);}
+template<typename T> void S_R2(T& v,T& w,T& x,T& y,T& z,int i) {z+=(w^x^y)+SHABLK(i)+0x6ED9EBA1+RotL<uint32>(v,5);w=RotL<uint32>(w,30);}
+template<typename T> void S_R3(T& v,T& w,T& x,T& y,T& z,int i) {z+=(((w|x)&y)|(w&x))+SHABLK(i)+0x8F1BBCDC+RotL<uint32>(v,5);w=RotL<uint32>(w,30);}
+template<typename T> void S_R4(T& v,T& w,T& x,T& y,T& z,int i) {z+=(w^x^y)+SHABLK(i)+0xCA62C1D6+RotL<uint32>(v,5);w=RotL<uint32>(w,30);}
 //------------------------------------------------------------------------------
 static achar HalfToHex(uint8 Half, bool UpCase)
 {
@@ -153,7 +151,7 @@ void GetHashStr(achar* str, bool UpCase) // str size must be >= 65 bytes!
 
 //==============================================================================
 //_finline __attribute__ ((optnone))
-template<typename T=uint8> static constexpr void FWICALL Digest_SHA1(uint8 *digest, const T *data, size_t databytes)     // _finline  // TODO: optional _finline
+template<typename T=uint8> static constexpr void FWINLINE Digest_SHA1(uint8* digest, const T* data, size_t databytes)     // _finline  // TODO: optional _finline
 {
   uint32 H[]  = {0x67452301, 0xEFCDAB89, 0x98BADCFE, 0x10325476, 0xC3D2E1F0};
   uint32 didx = 0;

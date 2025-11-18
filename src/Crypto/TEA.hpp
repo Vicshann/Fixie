@@ -14,42 +14,44 @@ template<uint32 Delta=0x9E3779B9, unsigned int Rounds=32, unsigned int ShL=4, un
 // Returns 64 bits of encrypted data in Data[0] and Data[1].
 // Takes 128 bits of key in Key[0] - Key[3]. (16 bytes)
 
-_finline static void EncryptBlock(uint32* _RST Data, const uint32* _RST Key, const uint32 Dlt=Delta)
+_finline static void EncryptBlock(uint32* _RST Src, uint32* _RST Dst, const uint32* _RST Key, const uint32 Dlt=Delta)
 {
- uint32 Val0=Data[0], Val1=Data[1];
+ uint32 Val0=Src[0], Val1=Src[1];
  for(uint32 sum=0,rnd=Rounds;rnd;rnd--)
   {
    Val0 += ((Val1<<ShL ^ Val1>>ShR) + Val1) ^ (sum + Key[sum & 3]);
    sum  += Dlt;
    Val1 += ((Val0<<ShL ^ Val0>>ShR) + Val0) ^ (sum + Key[(sum>>11) & 3]);
   }
- Data[0]=Val0; Data[1]=Val1;
+ Dst[0]=Val0; Dst[1]=Val1;
 }
 //------------------------------------------------------------------------------------------------------------
-_finline static void DecryptBlock(uint32* _RST Data, const uint32* _RST Key, const uint32 Dlt=Delta)
+_finline static void DecryptBlock(uint32* _RST Src, uint32* _RST Dst, const uint32* _RST Key, const uint32 Dlt=Delta)
 {
- uint32 Val0=Data[0], Val1=Data[1];
+ uint32 Val0=Src[0], Val1=Src[1];
  for(uint32 sum=Dlt*Rounds,rnd=Rounds;rnd;rnd--)
   {
    Val1 -= ((Val0<<ShL ^ Val0>>ShR) + Val0) ^ (sum + Key[(sum>>11) & 3]);
    sum  -= Dlt;
    Val0 -= ((Val1<<ShL ^ Val1>>ShR) + Val1) ^ (sum + Key[sum & 3]);
   }
- Data[0]=Val0; Data[1]=Val1;
+ Dst[0]=Val0; Dst[1]=Val1;
 }
 //------------------------------------------------------------------------------------------------------------
-_finline static void Encrypt(void* Data, const void* Key, const size_t DataSize, const uint32 Dlt=Delta)
+_finline static void Encrypt(void* DataSrc, void* DataDst, const void* Key, const size_t DataSize, const uint32 Dlt=Delta)  // TODO: Compile-time support
 {
- const uint64* Pointer = (uint64*)Data;    // 64bit block
- const uint64* EndPtr  = (uint64*)((uint8*)Data + (DataSize & (size_t)~7));   // Skip unaligned bytes at the end (Aligned to 8)
- for(;Pointer < EndPtr;Pointer++)EncryptBlock((uint32*)Pointer, (uint32*)Key, Dlt);
+ const uint64* SrcPtr = (uint64*)DataSrc;    // 64bit block
+ const uint64* DstPtr = (uint64*)DataDst;
+ const uint64* EndPtr = (uint64*)((uint8*)DataSrc + (DataSize & (size_t)~7));   // Skip unaligned bytes at the end (Aligned to 8)
+ for(;SrcPtr < EndPtr;SrcPtr++,DstPtr++)EncryptBlock((uint32*)SrcPtr, (uint32*)DstPtr, (uint32*)Key, Dlt);
 }
 //------------------------------------------------------------------------------------------------------------
-_finline static void Decrypt(void* Data, const void* Key, const size_t DataSize, const uint32 Dlt=Delta)
+_finline static void Decrypt(void* DataSrc, void* DataDst, const void* Key, const size_t DataSize, const uint32 Dlt=Delta)
 {
- const uint64* Pointer = (uint64*)Data;    // 64bit block
- const uint64* EndPtr  = (uint64*)((uint8*)Data + (DataSize & (size_t)~7));   // Skip unaligned bytes at the end (Aligned to 8)
- for(;Pointer < EndPtr;Pointer++)DecryptBlock((uint32*)Pointer, (uint32*)Key, Dlt);
+ const uint64* SrcPtr = (uint64*)DataSrc;    // 64bit block
+ const uint64* DstPtr = (uint64*)DataDst;
+ const uint64* EndPtr = (uint64*)((uint8*)DataSrc + (DataSize & (size_t)~7));   // Skip unaligned bytes at the end (Aligned to 8)
+ for(;SrcPtr < EndPtr;SrcPtr++,DstPtr++)DecryptBlock((uint32*)SrcPtr, (uint32*)DstPtr, (uint32*)Key, Dlt);
 }
 //------------------------------------------------------------------------------------------------------------
 

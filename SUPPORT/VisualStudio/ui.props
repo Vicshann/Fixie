@@ -1,0 +1,82 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!-- This file is used to set UI defaults which can be overridden by vcxproj -->
+  <!-- https://developercommunity.visualstudio.com/t/Intellisense-Fails-For-Non-Windows-Platf/10113961?q=%5BFixed+In%3A+Visual+Studio+2022+version+17.4+Preview+2%5D -->
+  <!-- C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\IDE\VC\vcpackages\vcpkg.dll
+         /ClangMode
+         /Clangstd                    -std
+         /Clangfconstexprdepth        -fconstexpr-depth
+         /Clangfsignedbitfields       -fsigned-bitfields
+         /Clangfshortenums            -fshort-enums
+         /Clangfnounsignedbitfields   -fno-unsigned-bitfields
+         /Clangffriendinjection       -ffriend-injection
+         /Clangfunsignedbitfields     -funsigned-bitfields
+         /Clangfnosignedbitfields     -fno-signed-bitfields
+         /Clangfinputcharset          -finput-charset
+         /Clangfmsextensions          -fms-extensions
+         /Clangfnognukeywords         -fno-gnu-keywords
+         /Clangfdollarsinidentifiers  -fdollars-in-identifiers
+         /Clangfnomscompatibility     -fno-ms-compatibility
+         /Clangfnomsextensions        -fno-ms-extensions
+         /Clangfmscompatibility       -fms-compatibility
+     
+     Check that the right "C-C++ Compiler Driver" is loaded into vcpkgsrv.exe process (cpfecl.Linux.x64.dll) 
+   -->
+  <!-- Ensure that our configs are not empty -->
+  <PropertyGroup Condition="'$(AppTargetOS)' == ''"> <AppTargetOS>WIN</AppTargetOS> </PropertyGroup> 
+  <PropertyGroup Condition="'$(AppTargetMode)' == ''"> <AppTargetMode>USR</AppTargetMode> </PropertyGroup> 
+  <PropertyGroup Condition="'$(AppTargetCPU)' == ''"> <AppTargetCPU>Default</AppTargetCPU> </PropertyGroup> 
+  <PropertyGroup Condition="'$(AppTargetBitness)' == ''"> <AppTargetBitness>Default</AppTargetBitness> </PropertyGroup> 
+  <PropertyGroup Condition="'$(AppHeaderType)' == ''"> <AppHeaderType>Normal</AppHeaderType> </PropertyGroup> 
+  <PropertyGroup Condition="'$(AppSharedModule)' == ''"> <AppSharedModule>false</AppSharedModule> </PropertyGroup>
+  <PropertyGroup Condition="'$(AppLnkVerbose)' == ''"> <AppLnkVerbose>false</AppLnkVerbose> </PropertyGroup>
+  <PropertyGroup Condition="'$(AppTimeTrace)' == ''"> <AppTimeTrace>false</AppTimeTrace> </PropertyGroup>
+  <PropertyGroup Condition="'$(AppLnkSubsys)' == ''"> <AppLnkSubsys>Console</AppLnkSubsys> </PropertyGroup>
+  <PropertyGroup Condition="'$(AppLnkMode)' == ''"> <AppLnkMode>Combined</AppLnkMode> </PropertyGroup>
+  
+  <!-- Target filename is used by remote deploy commands too -->
+  <PropertyGroup Condition="'$(TargetName)' == ''"> <TargetName>$(ProjectName)</TargetName> </PropertyGroup>
+  <PropertyGroup Condition="'$(AppMainFile)' == ''"> <AppMainFile>.</AppMainFile> </PropertyGroup>
+  
+  <!-- Defined here for UI to display this string exactly (Not expanded, AppBuildType is not defined yet) -->
+  <PropertyGroup> <OutDir>$(SolutionDir)BUILD\$(ProjectName)\$(AppBuildType)</OutDir> </PropertyGroup>
+  <PropertyGroup> <IntDir>$(SolutionDir)BUILD\$(ProjectName)\$(AppBuildType)</IntDir> </PropertyGroup>
+ 
+  <PropertyGroup> <FwkSrcPath>$(FwkDirPath)src/</FwkSrcPath> </PropertyGroup>
+  <PropertyGroup> <FwkISIncludes>$(FwkSrcPath)Framework.hpp</FwkISIncludes> </PropertyGroup>
+  <!-- <PropertyGroup> <FwkISIncludes>$(FwkISIncludes);$(FwkSrcPath)Platforms/Common.hpp</FwkISIncludes> </PropertyGroup>  -->
+   
+  <!-- Collect all .hpp files from a specific directory: Does not fix the IntelliSense -->
+  <!-- <ItemGroup>
+    <FrameworkFiles Include="$(FwkSrcPath)\**\*.hpp" />
+  </ItemGroup> --> <!-- c++2a is max for VS 2022 IntelliSense -->
+  <PropertyGroup Condition="'$(NMakeIncludeSearchPath)' == ''"> <NMakeIncludeSearchPath>$(FwkSrcPath);$(SolutionDir);$(SolutionDir)$(ProjectName)/;$(ProjectDir);$(ProjectDir)src/</NMakeIncludeSearchPath> </PropertyGroup>
+  <PropertyGroup Condition="'$(NMakeForcedIncludes)' == ''"> <NMakeForcedIncludes>$(FwkISIncludes)</NMakeForcedIncludes> </PropertyGroup>  <!-- @(FrameworkFiles) -->
+  <PropertyGroup Condition="'$(AdditionalOptions)' == ''"> <AdditionalOptions>/TP /std:c++latest /ClangMode /Clangstdc99 /Clangstdgnu++2a /Clangfnomsextensions /Clangfnomscompatibility </AdditionalOptions> </PropertyGroup> <!-- /std:c++latest  --> 
+
+  <!-- For some platforms those are not empty and inherit some defaults. Should they be removed? -->
+  <!-- 
+  <PropertyGroup>
+    <ExcludePath></ExcludePath>
+    <ExecutablePath></ExecutablePath>
+    <IncludePath></IncludePath>
+    <ExternalIncludePath></ExternalIncludePath>
+    <ReferencePath></ReferencePath>
+    <LibraryPath></LibraryPath>
+    <LibraryWPath></LibraryWPath>
+    <SourcePath></SourcePath>
+  </PropertyGroup>   -->
+   
+  <PropertyGroup>
+    <AppMainHppPath Condition="Exists('$(ProjectDir)/AppMain.hpp')" >$(ProjectDir)/AppMain.hpp</AppMainHppPath> 
+    <AppMainHppPath Condition="Exists('$(ProjectDir)/src/AppMain.hpp')" >$(ProjectDir)/src/AppMain.hpp</AppMainHppPath>
+  </PropertyGroup>  
+  <PropertyGroup Condition="'$(ProjectDir)' != '$(SolutionDir)'">
+    <AppMainHppPath Condition="Exists('$(SolutionDir)/AppMain.hpp')" >$(SolutionDir)/AppMain.hpp</AppMainHppPath>
+    <AppMainHppPath Condition="Exists('$(SolutionDir)/src/AppMain.hpp')" >$(SolutionDir)/src/AppMain.hpp</AppMainHppPath>  
+    <AppMainHppPath Condition="Exists('$(SolutionDir)/$(ProjectName)/AppMain.hpp')" >$(SolutionDir)/$(ProjectName)/AppMain.hpp</AppMainHppPath>
+    <AppMainHppPath Condition="Exists('$(SolutionDir)/$(ProjectName)/src/AppMain.hpp')" >$(SolutionDir)/$(ProjectName)/src/AppMain.hpp</AppMainHppPath>
+  </PropertyGroup>  
+  <PropertyGroup Condition="$(AppMainHppPath) == ''"> <AppMainCppPath>$(FwkSrcPath)AppMain.cpp</AppMainCppPath> </PropertyGroup>
+  
+</Project>

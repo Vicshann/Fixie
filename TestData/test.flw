@@ -1,0 +1,47 @@
+
+// $ - string macro variables (error if not exist)
+// # - numberic macro variables  (error if not exist)
+// @ - explicit override (error if not exist)
+// : - scope access
+// Macros are first looked up in the current scope, then in the Root
+// Variables:
+//  By default are I64 for integers and F64 for floating point, assigned as '"myvar": val'
+//  You can set specific type as "myvar": {"U32", val}
+//  When overriding, you don't need to set the type again 
+//  String and variables are assigned as is, encoding is UTF-8
+//  The system tracks a variable type incompatibilities when binding as arguments 
+//  Users can register their own types, which is opaque and should have methods for data Get/Set
+//
+// Functions:
+//  status MyFunction(context, arg0,...,argN)
+//  'status' have meaning only for the execution engine itself, actual results are returned in arguments (all of them are refs, constants are copied (with safety settings))
+//  context is a registered user-defined value (pointer-sized)
+//  Arg declaration defines IN/OUT/IN_OUT and constness.
+//  You call finctions by "do" object:
+//   A string is a function name and array is an array of bound args
+//   Args can be referred by name or by index. 
+//   Unnamed arg will be passed in order: "do": {"my_func", [{123},{"hello"}]}
+//  Unbound args reintroduce themselves in the parent scope. You cannot left input-only args unbound if they have no default values 
+// Functions whose name is starts with '.' are methods, and will refer to first arg as 'this'
+// You call functions as "do": {"my_func", [{name_or_index, binding}]}
+// You can call a macro from a collection as ":MyMacro". But you must bind arguments to names which the macro uses (no indexes)
+
+"$Enemies\BlobM":{
+ "template": "$Templates\enemy"
+ "@vars": {
+  "@velocity": 3.8,
+  "@scale": 1.5,
+  "blobbiness": {"U32", 2},
+ }
+ "anim":
+  {
+   "do": {"get_scale", [{"name":"res", "bind":":vars:scale"}]}
+   "frames": [
+    {
+     "var": {"name":"res", "type":"I64"},
+     "if": { ":vars:scale", ">=", 5, {"go": ":frames:8"} }
+    }
+   ]
+ }
+
+}

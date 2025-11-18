@@ -10,6 +10,17 @@
    https://graphics.stanford.edu/~seander/bithacks.html
 
 */
+
+#define _HIDENT(x) x
+#define _HXSTR(x) #x
+#define _HSTR(x) _HXSTR(x)
+#define _JOIN_PATH(x,y) _HSTR(_HIDENT(x)_HIDENT(y))
+
+#ifdef _APPNAME
+#pragma message(">>> Building " _HSTR(_APPNAME))
+#endif
+
+
 #if !defined(_MSC_VER) && !__has_include (<source_location>)
 namespace std
 {
@@ -26,28 +37,6 @@ namespace std
 }
 #endif
 
-#define _HIDENT(x) x
-#define _HXSTR(x) #x
-#define _HSTR(x) _HXSTR(x)
-#define _JOIN_PATH(x,y) _HSTR(_HIDENT(x)_HIDENT(y))
-
-#if __has_include ("./COMPILER/include/intrin.h")      
-#define _INC_PATH ./COMPILER/include/
-#elif __has_include ("../COMPILER/include/intrin.h")
-#define _INC_PATH ../COMPILER/include/
-#elif __has_include ("../../COMPILER/include/intrin.h")
-#define _INC_PATH ../../COMPILER/include/
-#elif __has_include ("../../../COMPILER/include/intrin.h")
-#define _INC_PATH ../../../COMPILER/include/
-#elif __has_include ("../../../../COMPILER/include/intrin.h")
-#define _INC_PATH ../../../../COMPILER/include/
-#else
-//#pragma message(">>> No compiler`s include path is found!")
-#endif
-
-#ifdef _INC_PATH
-#pragma message(">>> Compiler`s include path is " _HSTR(_INC_PATH))
-#endif
 
 // ******* ARE  THOSE ACTUALLY USABLE ? *******
 //#include _JOIN_PATH(_INC_PATH,intrin.h)   // Works but intrin.h includes some files too which is not found
@@ -58,10 +47,14 @@ namespace std
 //#include <emmintrin.h>      // for _mm_storeu_si128
 //#include <immintrin.h>
 //#include <xmmintrin.h>
+
+// Move to build script:
+// clang -x c++-header intrin.h -o intrin.pch
+// clang -include-pch intrin.pch your_source.cpp -o your_source
 //------------------------------------------------------------------------------------------------------------
 // Some STD stuff
 #if !__has_include (<initializer_list>)
-#include "Platforms/InitList.hpp"
+#include "Platform/InitList.hpp"
 #endif
 
 //extern "C" void*  __cdecl memmove(void* _Dst, const void* _Src, size_t _Size);
@@ -72,43 +65,30 @@ namespace std
 namespace NFWK      // Must be a namespace because we are adding some namespaces and configs in it
 {
 // NOTE: Keep it consistent with AppMain.cpp
-// NOTE: On Linux, Clang will not respect links on the path and will resolve them!
+// NOTE: On Linux, Clang will not respect links (../) on the path and will resolve them to the actual path!
+// NOTE: CD is set to $PRJROOT which may have all of its sources under SRC
+// No several projects in a folder - Dumb '__has_include' implementation is not affected by macro substitution! 
+
 #if __has_include ("AppCfg.hpp")
 #include "AppCfg.hpp"
-/*#elif __has_include ("src/AppCfg.hpp")
-#include "src/AppCfg.hpp"
-#elif __has_include ("../AppCfg.hpp")
-#include "../AppCfg.hpp"
-#elif __has_include ("../src/AppCfg.hpp")
-#include "../src/AppCfg.hpp"
-#elif __has_include ("../../AppCfg.hpp")
-#include "../../AppCfg.hpp"
-#elif __has_include ("../../src/AppCfg.hpp")
-#include "../../src/AppCfg.hpp"
-#elif __has_include ("../../../AppCfg.hpp")
-#include "../../../AppCfg.hpp"
-#elif __has_include ("../../../src/AppCfg.hpp")
-#include "../../../src/AppCfg.hpp"
-#elif __has_include ("../../../../AppCfg.hpp")
-#include "../../../../AppCfg.hpp"
-#elif __has_include ("../../../../src/AppCfg.hpp")
-#include "../../../../src/AppCfg.hpp"   */   // The Compilation Script will respect links in the path and will add the correct path to Includes
 #else
-#include "Platforms/DefaultCfg.hpp"
+#include "Platform/DefaultCfg.hpp"
 #pragma message(">>> No AppCfg.hpp is found - using default config!")
 #endif
 
-#include "Platforms/Common.hpp"       // Contains type definitions, must be in namespace to allow their inclusion with 'using namespace'
-#include "Platforms/Intrin.hpp"       // Must be included after definition of NGenericTypes
-#include "Platforms/BitOps.hpp"
-#include "Platforms/MemOps.hpp"
+#undef _APPNAMECFG
+
+#include "Platform/Common.hpp"       // Contains type definitions, must be in namespace to allow their inclusion with 'using namespace'
+#include "Platform/Intrin.hpp"       // Must be included after definition of NGenericTypes
+#include "Platform/BitOps.hpp"
+#include "Platform/MemOps.hpp"
 namespace NCRYPT
 {
 #include "Crypto/Crc32.hpp"
 #include "Crypto/Random.hpp"
 }
-#include "Platforms/CompileTime.hpp"  // Have access only to Common.hpp, everything else is 'invisible'
-#include "Platforms/ArbiNum.hpp"
+#include "Platform/CompileTime.hpp"  // Have access only to Common.hpp, everything else is 'invisible'
+#include "Platform/ArbiNum.hpp"
 
 #include "Math.hpp"
 #include "UTF.hpp"
@@ -119,7 +99,7 @@ namespace NCRYPT
 #if defined(CPU_X86)
 #include "RCE/HDE.hpp"
 #endif
-#include "Platforms/Platform.hpp"     // All API is defined here and inaccessible before!
+#include "Platform/Platform.hpp"     // All API is defined here and inaccessible before!
 
 using PX   = NPTM::PX;
 using PX64 = NPTM::PX64;
@@ -162,6 +142,7 @@ namespace NCRYPT     // https://github.com/abbbaf/Compile-time-hash-functions
 
 #endif
 //---
+#include "BinCrypt.hpp"
 
 #include "AppDef.hpp"
 
@@ -170,7 +151,7 @@ namespace NCRYPT     // https://github.com/abbbaf/Compile-time-hash-functions
 using NFWK::NCTM::operator""_ps;
 using NFWK::NCTM::operator""_es;
 
-#include "Platforms/RTL.hpp"    // Must be in global namespace for the compiler to find it // Comment this out if you linking with a default Run Time Library
+#include "Platform/RTL.hpp"    // Must be in global namespace for the compiler to find it // Comment this out if you linking with a default Run Time Library
 
 #endif
 

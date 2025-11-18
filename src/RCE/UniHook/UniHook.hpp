@@ -1,6 +1,11 @@
 
 //============================================================================================================
 // https://github.com/gnot17/statichook/tree/main/statikhook
+// https://erfur.dev/blog/dev/code-injection-without-ptrace
+// https://github.com/namazso/linux_injector
+// https://github.com/kubo/funchook/blob/master/src/arch_x86.c
+// https://github.com/TsudaKageyu/minhook/blob/master/src/trampoline.c
+// https://github.com/stevemk14ebr/PolyHook_2_0
 //
 namespace NUHK
 {

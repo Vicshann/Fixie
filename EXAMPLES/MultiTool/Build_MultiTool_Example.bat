@@ -1,0 +1,4 @@
+set SRCPATH=%~dp0
+call "%SRCPATH%\FRAMEWORK\COMPILE\COMPILE_BY_CFG.bat" REL_LIN_USR_X86_X64 multitool . "%SRCPATH%\FRAMEWORK\EXAMPLES\MultiTool\MultiTool.cpp" . -D_RELEASE 
+
+pause

@@ -1,0 +1,127 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ProjectSchemaDefinitions xmlns="clr-namespace:Microsoft.Build.Framework.XamlTypes;assembly=Microsoft.Build.Framework" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:sys="clr-namespace:System;assembly=mscorlib" xmlns:transformCallback="Microsoft.Cpp.Dev10.ConvertPropertyCallback">
+  <!-- PageTemplate="tool" will create tree of groups -->
+  <Rule Name="BuildByCFG" PageTemplate="generic" DisplayName="Build by CFG" Order="200"  Description="Custom compiler configuration page">
+    <Rule.DataSource>
+      <DataSource Persistence="ProjectFile" />
+    </Rule.DataSource>
+    
+    <!-- Sorting is done aplhabetically by DisplayName -->
+    <Rule.Categories>
+      <Category Name="General" DisplayName="General" Description="Configure target platform and architecture" />
+      <Category Name="Advanced" DisplayName="Miscellaneous" Description="Advanced build settings" />
+    </Rule.Categories>
+      
+    <EnumProperty Name="AppTargetOS" DisplayName="Target Platform" Category="General" Visible="True" IncludeInCommandLine="False" >
+      <EnumValue Name="WIN" DisplayName="Windows" />
+      <EnumValue Name="LIN" DisplayName="Linux" />
+      <EnumValue Name="BSD" DisplayName="FreeBSD" />
+      <EnumValue Name="MAC" DisplayName="MacOS" />
+      <EnumValue Name="WSM" DisplayName="WebAssembly" />
+      <EnumValue Name="EFI" DisplayName="UEFI Module" />
+      <EnumValue Name="UBT" DisplayName="U-Boot App" />
+        <EnumProperty.DataSource>
+          <DataSource Persistence="ProjectFile" />
+        </EnumProperty.DataSource>
+    </EnumProperty> 
+
+    <EnumProperty Name="AppTargetMode" DisplayName="Execution Mode" Category="General" Visible="True" IncludeInCommandLine="False" >
+      <EnumValue Name="USR" DisplayName="User Mode" />
+      <EnumValue Name="KRN" DisplayName="Kernel Mode" />
+      <EnumValue Name="SDL" DisplayName="SDL3 Abstraction" />
+         <EnumProperty.DataSource>
+          <DataSource Persistence="ProjectFile" />
+        </EnumProperty.DataSource>     
+    </EnumProperty>
+   
+    <EnumProperty Name="AppTargetCPU" DisplayName="CPU Architecture" Category="General" Visible="True" IncludeInCommandLine="False" >
+      <EnumValue Name="Default" DisplayName="Default" />
+      <EnumValue Name="X86" DisplayName="x86" />
+      <EnumValue Name="ARM" DisplayName="ARM" />
+        <EnumProperty.DataSource>
+          <DataSource Persistence="ProjectFile" />
+        </EnumProperty.DataSource>      
+    </EnumProperty>
+    
+    <EnumProperty Name="AppTargetBitness" DisplayName="Bitness (Word size)" Category="General" Visible="True" IncludeInCommandLine="False" >
+      <EnumValue Name="Default" DisplayName="Default" />
+      <EnumValue Name="X32" DisplayName="32-bit" />
+      <EnumValue Name="X64" DisplayName="64-bit" />
+        <EnumProperty.DataSource>
+          <DataSource Persistence="ProjectFile" />
+        </EnumProperty.DataSource>      
+    </EnumProperty>  
+    
+    <EnumProperty Name="AppHeaderType" DisplayName="Header Format" Category="General" Visible="True" IncludeInCommandLine="False" >
+      <EnumValue Name="Normal" DisplayName="Normal Header" />
+      <EnumValue Name="RAW" DisplayName="Raw Header" />
+      <EnumValue Name="BIN" DisplayName="No Header" />
+         <EnumProperty.DataSource>
+          <DataSource Persistence="ProjectFile" />
+        </EnumProperty.DataSource>     
+    </EnumProperty>    
+    
+    <BoolProperty Name="AppSharedModule" DisplayName="Shared module" Description="Build as shared module (if applicable for target format)" Default="false" Category="General" Visible="True" IncludeInCommandLine="False" />
+
+    <BoolProperty Name="AppLnkVerbose" DisplayName="Verbose linking" Description="Complete log of linking process " Default="false" Category="Advanced" Visible="True" IncludeInCommandLine="False" />
+    <BoolProperty Name="AppTimeTrace" DisplayName="Time Trace" Description="Compilation profiling (Open 'chrome://tracing' to view it)" Default="false" Category="Advanced" Visible="True" IncludeInCommandLine="False" />
+    
+    <EnumProperty Name="AppLnkSubsys" DisplayName="Subsystem" Category="Advanced" Visible="True" IncludeInCommandLine="False" >
+      <EnumValue Name="Windows" DisplayName="GUI" />
+      <EnumValue Name="Console" DisplayName="Console" />
+      <EnumValue Name="Native" DisplayName="Native" />
+      <EnumValue Name="EFI_App" DisplayName="EFI App" />
+         <EnumProperty.DataSource>
+          <DataSource Persistence="ProjectFile" />
+        </EnumProperty.DataSource>     
+    </EnumProperty>   
+
+    <EnumProperty Name="AppLnkMode" DisplayName="Linking mode" Category="Advanced" Visible="True" IncludeInCommandLine="False" >
+      <EnumValue Name="Combined" DisplayName="Combined" />
+      <EnumValue Name="Separate" DisplayName="Separate" />
+      <EnumValue Name="ObjOnly" DisplayName="No Linking" />
+         <EnumProperty.DataSource>
+          <DataSource Persistence="ProjectFile" />
+        </EnumProperty.DataSource>     
+    </EnumProperty>     
+    
+    <StringListProperty
+      Name="AppDefines"
+      DisplayName="Preprocessor Definitions"
+      Description="Defines preprocessor macros"
+      Category="Advanced" 
+      Visible="True" 
+      IncludeInCommandLine="True"
+      Switch="/D"
+      SwitchPrefix=""
+      CommandLineValueSeparator=";">
+        <StringListProperty.DataSource>
+          <DataSource Persistence="ProjectFile" />
+        </StringListProperty.DataSource>
+    </StringListProperty>   
+
+    <StringProperty
+      Name="AppMainFile"
+      DisplayName="Main File"
+      Category="Advanced"
+      Visible="True" 
+      IncludeInCommandLine="False">
+        <StringProperty.DataSource>
+          <DataSource Persistence="ProjectFile" />
+        </StringProperty.DataSource>
+    </StringProperty>    
+     
+    <StringListProperty
+      Name="AppCmdLine"
+      DisplayName="Command Line"
+      Category="Advanced"
+      Visible="True"
+      IncludeInCommandLine="True"
+      Switch=" ">
+      <StringListProperty.DataSource>
+        <DataSource Persistence="ProjectFile" SourceType="Property" />
+      </StringListProperty.DataSource>
+    </StringListProperty> 
+  
+  </Rule>  
+</ProjectSchemaDefinitions>

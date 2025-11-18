@@ -1,0 +1,44 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!-- This file is used to set UI paths overridden by vcxproj -->
+  
+  <PropertyGroup> <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>  </PropertyGroup>
+  
+  <!-- Build-type prefix -->
+  <PropertyGroup> <BuildTypePrefix Condition="'$(Configuration)'=='Debug'">DBG</BuildTypePrefix>  </PropertyGroup>
+  <PropertyGroup> <BuildTypePrefix Condition="'$(Configuration)'=='Release'">REL</BuildTypePrefix>  </PropertyGroup>
+  
+  <PropertyGroup>
+     <FinAppTargetCPU>$(AppTargetCPU)</FinAppTargetCPU>
+     <FinAppTargetBitness>$(AppTargetBitness)</FinAppTargetBitness>
+  </PropertyGroup>  
+  
+  <PropertyGroup Condition="'$(FinAppTargetCPU)'=='Default'">
+     <FinAppTargetCPU Condition="'$(Platform)'=='x86' or '$(Platform)'=='x64'">X86</FinAppTargetCPU>
+     <FinAppTargetCPU Condition="'$(Platform)'=='ARM' or '$(Platform)'=='ARM64'">ARM</FinAppTargetCPU>
+  </PropertyGroup> 
+  
+  <PropertyGroup Condition="'$(FinAppTargetBitness)'=='Default'">
+     <FinAppTargetBitness Condition="'$(Platform)'=='x86' or '$(Platform)'=='ARM'">X32</FinAppTargetBitness>
+     <FinAppTargetBitness Condition="'$(Platform)'=='x64' or '$(Platform)'=='ARM64'">X64</FinAppTargetBitness>
+  </PropertyGroup>
+  
+  <!-- Compose the exactly encoded string the build script expects --> 
+  <PropertyGroup> <AppBuildType>$(BuildTypePrefix)_$(AppTargetOS)_$(AppTargetMode)_$(FinAppTargetCPU)_$(FinAppTargetBitness)</AppBuildType>  </PropertyGroup>
+  <PropertyGroup Condition="'$(AppHeaderType)'!='Normal'"> <AppBuildType>$(AppBuildType)_$(AppHeaderType)</AppBuildType>  </PropertyGroup>
+  <!-- Reevaluate with the actual value of AppBuildType, skip if customized -->
+  <PropertyGroup Condition="'$(OutDir)'=='$(SolutionDir)BUILD\$(ProjectName)\'"> <OutDir>$(SolutionDir)BUILD\$(ProjectName)\$(AppBuildType)</OutDir> </PropertyGroup>
+  <PropertyGroup Condition="'$(IntDir)'=='$(SolutionDir)BUILD\$(ProjectName)\'"> <IntDir>$(SolutionDir)BUILD\$(ProjectName)\$(AppBuildType)</IntDir> </PropertyGroup>
+   
+  <!-- Required by MSBuild -->  
+  <PropertyGroup> <OutputPath>$(OutDir)</OutputPath> </PropertyGroup>
+  <PropertyGroup> <BaseOutputPath>$(OutDir)</BaseOutputPath> </PropertyGroup> 
+  
+  <!-- Compose definitions for IntelliSense -->  
+  <PropertyGroup> <BaseDefs></BaseDefs>  </PropertyGroup>
+  <PropertyGroup> <BuildDefs>$(BaseDefs)</BuildDefs>  </PropertyGroup>
+  <!-- Import dynamically generated definitions from a last ReBuild (No need to display BuildDefs in UI) -->
+  <Import Project="$(IntDir)/definitions.props" Condition="Exists('$(IntDir)/definitions.props')" />
+  <PropertyGroup> <NMakePreprocessorDefinitions>$(NMakePreprocessorDefinitions);$(BuildDefs)</NMakePreprocessorDefinitions> </PropertyGroup>  
+  
+</Project>
