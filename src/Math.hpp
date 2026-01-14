@@ -113,8 +113,8 @@ template<typename T> constexpr _finline static T ModDivS(T num, T den, auto&& di
 }
 //----------------------------------------------------------------------------------------------------------------------
 // extract hi and lo 32-bit words from 64-bit value
-static _finline uint32 Arith64lo(uint64& v) {return ((uint32*)&v)[(bool)NCFG::IsBigEnd];}
-static _finline uint32 Arith64hi(uint64& v) {return ((uint32*)&v)[(bool)!NCFG::IsBigEnd];}    // BIG_ENDIAN: hi,lo
+static _finline uint32 Arith64lo(uint64& v) {return ((uint32*)&v)[(bool)IsBigEndian];}
+static _finline uint32 Arith64hi(uint64& v) {return ((uint32*)&v)[(bool)!IsBigEndian];}    // BIG_ENDIAN: hi,lo
 
 // Negate a if b is negative, via invert and increment.
 static _finline sint64 ArithNeg64(uint64 a, sint64 b)   // ((a ^ ((sint64(b) >= 0) - 1)) + (sint64(b) < 0))  // TODO: Test it
@@ -150,7 +150,7 @@ static inline uint64 DivModQU(uint64 num, uint64 den, auto&& mod)   // __divmodd
  }
 
  // let's do long division
- sint8 bits = clz<uint64>(den) - clz<uint64>(num) + 1;  // number of bits to iterate (a and b are non-zero)
+ sint8 bits = clz(uint64(den)) - clz(uint64(num)) + 1;  // number of bits to iterate (a and b are non-zero)
  uint64 rem = num >> bits;                              // init remainder
  num <<= 64 - bits;                                     // shift numerator to the high bit
  uint64 wrap = 0;                                       // start with wrap = 0
@@ -215,9 +215,9 @@ template<typename T> constexpr static T gcd(T u, T v)
 //----------------------------------------------------------------------------------------------------------------------
 template<typename T> constexpr _finline static T sqrt(T v)
 {
- if constexpr (sizeof(T) <= sizeof(float))return __builtin_sqrtf(v);
-   else if constexpr (sizeof(T) > sizeof(double))return __builtin_sqrtl(v);
- return __builtin_sqrt((double)v);    // NOTE: Clang`s optimizer may have troubles recognizing end of a function without explicit return if other branches are in 'if constexpr'.
+ if constexpr (sizeof(T) <= sizeof(float))return (T)__builtin_sqrtf(float(v));
+   else if constexpr (sizeof(T) > sizeof(double))return (T)__builtin_sqrtl(double(v));
+ return (T)__builtin_sqrt((double)v);    // NOTE: Clang`s optimizer may have troubles recognizing end of a function without explicit return if other branches are in 'if constexpr'.
 }
 //----------------------------------------------------------------------------------------------------------------------
 };

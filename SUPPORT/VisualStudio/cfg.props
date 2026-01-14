@@ -39,6 +39,61 @@
       <Configuration>Release</Configuration>
       <Platform>ARM</Platform>
     </ProjectConfiguration>
-   
+    
+<!-- For remote Linux deployment and debugging -->   
+
+    <ProjectConfiguration Include="DebugRM|x64">
+      <Configuration>DebugRM</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="ReleaseRM|x64">
+      <Configuration>ReleaseRM</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    
+    <ProjectConfiguration Include="DebugRM|ARM64">
+      <Configuration>DebugRM</Configuration>
+      <Platform>ARM64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="ReleaseRM|ARM64">
+      <Configuration>ReleaseRM</Configuration>
+      <Platform>ARM64</Platform>
+    </ProjectConfiguration>
+    
+    <ProjectConfiguration Include="DebugRM|x86">
+      <Configuration>DebugRM</Configuration>
+      <Platform>x86</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="ReleaseRM|x86">
+      <Configuration>ReleaseRM</Configuration>
+      <Platform>x86</Platform>
+    </ProjectConfiguration>
+    
+    <ProjectConfiguration Include="DebugRM|ARM">
+      <Configuration>DebugRM</Configuration>
+      <Platform>ARM</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="ReleaseRM|ARM">
+      <Configuration>ReleaseRM</Configuration>
+      <Platform>ARM</Platform>
+    </ProjectConfiguration>
+    
   </ItemGroup>
+  
+  <PropertyGroup Label="Globals">
+    <ApplicationType>Linux</ApplicationType>
+    <AppConfigType>$(Configuration)</AppConfigType>
+  </PropertyGroup> 
+  
+  <PropertyGroup Label="Globals" Condition="'$(Configuration)'=='DebugRM' or '$(Configuration)'=='ReleaseRM'">
+    <AppConfigType Condition="'$(Configuration)'=='DebugRM'">Debug</AppConfigType>
+    <AppConfigType Condition="'$(Configuration)'=='ReleaseRM'">Release</AppConfigType>
+    <ApplicationTypeRevision>1.0</ApplicationTypeRevision>
+    <TargetLinuxPlatform>Generic</TargetLinuxPlatform>  
+  </PropertyGroup>
+  
+  <PropertyGroup Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>  
+  </PropertyGroup> 
+  
 </Project>

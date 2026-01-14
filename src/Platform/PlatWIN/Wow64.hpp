@@ -5,10 +5,11 @@
 //============================================================================================================
 struct WOW64
 {
+#include "Wow64Structs.hpp"
 //using wowu64 = uint64 alignas(uint64);
 
 static uint64 _finline HndlExp(NT::HANDLE Handle){return uint64(sint64((sint32)Handle));}  // Some special handles are negative and must be correctly expanded with sign
-static uint64 _finline FromPtrU64(auto ptr){return uint64(ptr?*ptr:0);}
+static uint64 _finline FromPtrU64(auto ptr){return uint64(ptr?usize(*ptr):0);}
 static void   _finline ToPtrU64(auto ptr, uint64 val){if(ptr)*ptr = (decltype(*ptr))val;}  // No setting SIZE_T to -1 of more than 0xFFFFFFFF (unlike actual WOW64 does)
 // NOTE: Order of these functions is not have to be in sync with SAPI
 // NOTE: Watch that PULONG usage weren't actually PSIZE_T
@@ -31,19 +32,34 @@ static NT::NTSTATUS _fcall NtProtectVirtualMemory(uint32 sci, uint32 hint, NT::H
  return res;
 }
 //------------------------------------------------------------------------------------------------------------
+// Untested!
 static NT::NTSTATUS _fcall NtAllocateVirtualMemory(uint32 sci, uint32 hint, NT::HANDLE ProcessHandle, NT::PPVOID BaseAddress, NT::ULONG_PTR ZeroBits, NT::PSIZE_T RegionSize, NT::ULONG AllocationType, NT::ULONG Protect)
 {
- return 0;
+ uint64 exBaseAddr  = FromPtrU64(BaseAddress);
+ uint64 exRegionSz  = FromPtrU64(RegionSize);
+ uint64 exZeroBits  = ZeroBits;   // fits in uint64 without trouble
+ NT::NTSTATUS res   = (NT::NTSTATUS)WOW64E::X64SysCall(sci, 6, HndlExp(ProcessHandle), (uint64)&exBaseAddr, (uint64)exZeroBits, (uint64)&exRegionSz, (uint64)AllocationType, (uint64)Protect);
+ ToPtrU64(BaseAddress, exBaseAddr);
+ ToPtrU64(RegionSize, exRegionSz);
+ return res;
 }
 //------------------------------------------------------------------------------------------------------------
 static NT::NTSTATUS _fcall NtFreeVirtualMemory(uint32 sci, uint32 hint, NT::HANDLE ProcessHandle, NT::PPVOID BaseAddress, NT::PSIZE_T RegionSize, NT::ULONG FreeType)
 {
- return 0;
+ uint64 exBaseAddress = FromPtrU64(BaseAddress);
+ uint64 exRegionSize  = FromPtrU64(RegionSize);
+ NT::NTSTATUS res     = (NT::NTSTATUS)WOW64E::X64SysCall(sci, 4, HndlExp(ProcessHandle), (uint64)&exBaseAddress, (uint64)&exRegionSize, (uint64)FreeType);
+ ToPtrU64(BaseAddress, exBaseAddress);
+ ToPtrU64(RegionSize,  exRegionSize);
+ return res;
 }
 //------------------------------------------------------------------------------------------------------------
 static NT::NTSTATUS _fcall NtReadVirtualMemory(uint32 sci, uint32 hint, NT::HANDLE ProcessHandle, NT::PVOID BaseAddress, NT::PVOID Buffer, NT::SIZE_T BufferSize, NT::PSIZE_T NumberOfBytesRead)
-{
- return 0;
+{   
+ uint64 exNumberRead = 0;
+ NT::NTSTATUS res    = (NT::NTSTATUS)WOW64E::X64SysCall(sci, 5, HndlExp(ProcessHandle), (uint64)BaseAddress, (uint64)Buffer, (uint64)BufferSize, (uint64)&exNumberRead);
+ ToPtrU64(NumberOfBytesRead, exNumberRead);
+ return res;
 }
 //------------------------------------------------------------------------------------------------------------
 static NT::NTSTATUS _fcall NtWriteVirtualMemory(uint32 sci, uint32 hint, NT::HANDLE ProcessHandle, NT::PVOID BaseAddress, NT::PVOID Buffer, NT::SIZE_T BufferSize, NT::PSIZE_T NumberOfBytesWritten)
@@ -272,5 +288,34 @@ static NT::NTSTATUS _fcall NtDeviceIoControlFile(uint32 sci, uint32 hint, NT::HA
  return 0;
 }
 //------------------------------------------------------------------------------------------------------------
+static NT::NTSTATUS _fcall NtQueryObject(NT::HANDLE Handle, NT::OBJECT_INFORMATION_CLASS ObjectInformationClass, NT::PVOID ObjectInformation, NT::ULONG ObjectInformationLength, NT::PULONG ReturnLength)
+{
+ return 0;
+}
+//------------------------------------------------------------------------------------------------------------
+static NT::NTSTATUS _fcall NtOpenThread(NT::PHANDLE ThreadHandle, NT::ACCESS_MASK DesiredAccess, NT::POBJECT_ATTRIBUTES ObjectAttributes, NT::PCLIENT_ID ClientId)
+{
+ return 0;
+}
+//------------------------------------------------------------------------------------------------------------
+static NT::NTSTATUS _fcall NtOpenProcess(NT::PHANDLE ProcessHandle, NT::ACCESS_MASK DesiredAccess, NT::POBJECT_ATTRIBUTES ObjectAttributes, NT::PCLIENT_ID ClientId)
+{
+ return 0;
+}
+//------------------------------------------------------------------------------------------------------------
+static NT::NTSTATUS _fcall NtQueryVolumeInformationFile(NT::HANDLE FileHandle, NT::PIO_STATUS_BLOCK IoStatusBlock, NT::PVOID FsInformation, NT::ULONG Length, NT::FS_INFORMATION_CLASS FsInformationClass)
+{
+ return 0;
+}
+//------------------------------------------------------------------------------------------------------------
+static NT::NTSTATUS _fcall NtOpenDirectoryObject(NT::PHANDLE DirectoryHandle, NT::ACCESS_MASK DesiredAccess, NT::POBJECT_ATTRIBUTES ObjectAttributes)
+{
+ return 0;
+}
+//------------------------------------------------------------------------------------------------------------
+static NT::NTSTATUS _fcall NtQueryDirectoryObject(NT::HANDLE DirectoryHandle, NT::PVOID Buffer, NT::ULONG BufferLength, NT::BOOLEAN ReturnSingleEntry, NT::BOOLEAN RestartScan, NT::PULONG Context, NT::PULONG ReturnLength)
+{
+ return 0;
+}
 //------------------------------------------------------------------------------------------------------------
 };

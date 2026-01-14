@@ -11,7 +11,7 @@ _codesec struct SAPI  // All required syscall stubs    // Name 'NTAPI' causes co
 private:
 SCVR uint32 HashNtDll = NCRYPT::CRC32("ntdll.dll");    // Low Case
 public:
-static const inline uint8* pKiUserSharedData = reinterpret_cast<uint8*>(0x7FFE0000);
+static const inline uint8* pKiUserSharedData = reinterpret_cast<const uint8*>(0x7FFE0000);
 // By putting these in a separate section and then merging with .text allows to preseve declared orded and avoid mixing in of some global variables
 DECL_WSYSCALL(WPROCID(HashNtDll,"NtProtectVirtualMemory"),       NtProtectVirtualMemory       )   // Should be first
 DECL_WSYSCALL(WPROCID(HashNtDll,"NtAllocateVirtualMemory"),      NtAllocateVirtualMemory      )
@@ -107,10 +107,10 @@ FUNC_WRAPPERFI(PX::gettime,  gettime  )
  uint32 clkid = GetParFromPk<1>(args...) & PX::CLK_LOWMSK;
  uint64 tval  = clkid ? NTX::GetInterruptTime() : NTX::GetSystemTime();    // CLOCK_MONOTONIC if not 0 (CLOCK_REALTIME)
  ts->sec  = tval / 10000000;                        // 1000000000 nanosecs in a second;  10000000 100-ns intervals in a second
- ts->nsec = (tval % 10000000) * 100;
+ ts->frac = (tval % 10000000) * 100;
  return PX::NOERROR;
 }
-
+//------------------------------------------------------------------------------------------------------------
 FUNC_WRAPPERFI(PX::clocksleep,  clocksleep  )  
 {
  PX::timespec* dur = GetParFromPk<0>(args...);
@@ -124,7 +124,7 @@ FUNC_WRAPPERFI(PX::clocksleep,  clocksleep  )
  if(dur->sec != (PX::time_t)-1)
   {
    inf   = false;
-   val   = ((dur->sec * 10000000LL) + (dur->nsec / 100LL)); 
+   val   = ((dur->sec * 10000000LL) + (dur->frac / 100LL)); 
    delay = (type & PX::CLKFG_ABSOLUTE)?val:-val;  // Mul to -1 to be branchless? - Probably bad on x32
   }
    else
@@ -142,19 +142,19 @@ FUNC_WRAPPERFI(PX::clocksleep,  clocksleep  )
     {
      val -= tdelta;
      rem->sec  = val / 10000000;                        // 1000000000 nanosecs in a second;  10000000 100-ns intervals in a second
-     rem->nsec = (val % 10000000) * 100;
+     rem->frac = (val % 10000000) * 100;
     }
-     else {rem->sec = 0; rem->nsec = 0;}
+     else {rem->sec = 0; rem->frac = 0;}
   }
    else 
     {
      status = SAPI::NtDelayExecution(true, &delay);
-     if(!(type & PX::CLKFG_ABSOLUTE) && rem && inf){rem->sec = -1; rem->nsec = -1;}
+     if(!(type & PX::CLKFG_ABSOLUTE) && rem && inf){rem->sec = -1; rem->frac = -1;}
     }
  if((NT::STATUS_ALERTED == status)||(NT::STATUS_USER_APC == status))return PXERR(EINTR);
  return -NTX::NTStatusToLinuxErr(status);
 }
-
+//------------------------------------------------------------------------------------------------------------
 FUNC_WRAPPERFI(PX::nanosleep,  nanosleep  )  // Always alertable  // EFAULT, EINTR      // ZwSetTimerResolution   // STATUS_ALERTED  // STATUS_USER_APC ?
 {  
  PX::timespec* dur = GetParFromPk<0>(args...);   
@@ -375,7 +375,7 @@ FUNC_WRAPPERNI(PX::mremap,     mremap     )   // LINUX specific  // Impossible t
    if(res)return (vptr)-NTX::NTStatusToLinuxErr(res);
   }
 
- NMOPS::MemCopy(nptr, (vptr)old_address, old_size);
+ MOPR::MemCopy(nptr, (vptr)old_address, old_size);
  res = NAPI::munmap((vptr)old_address, old_size);    // If release fails, tries decommit    // TODO: Check for address space leaks
  //if(res)  ?????????
  return nptr;
@@ -792,9 +792,9 @@ FUNC_WRAPPERNI(PX::fstat,      fstat      )
  if(inf.StandardInformation.Directory)sti->mode |= PX::S_IFDIR;
    else sti->mode |= PX::S_IFREG;   // Anything else?    // How to get rwe flags of a file?
 
- sti->atime.sec = NDT::FileTimeToUnixTime((uint64)inf.BasicInformation.LastAccessTime, &sti->atime.nsec);
- sti->mtime.sec = NDT::FileTimeToUnixTime((uint64)inf.BasicInformation.LastWriteTime, &sti->mtime.nsec);
- sti->ctime.sec = NDT::FileTimeToUnixTime((uint64)inf.BasicInformation.CreationTime, &sti->ctime.nsec);  // On Unix creation time is not stored (only: access, modification and change) // Last inode change time is close enough    // xstat ?
+ sti->atime.sec = NDT::FileTimeToUnixTime((uint64)inf.BasicInformation.LastAccessTime, &sti->atime.frac);
+ sti->mtime.sec = NDT::FileTimeToUnixTime((uint64)inf.BasicInformation.LastWriteTime, &sti->mtime.frac);
+ sti->ctime.sec = NDT::FileTimeToUnixTime((uint64)inf.BasicInformation.CreationTime, &sti->ctime.frac);  // On Unix creation time is not stored (only: access, modification and change) // Last inode change time is close enough    // xstat ?
 
  return PX::NOERROR;
 }
@@ -1453,7 +1453,7 @@ FUNC_WRAPPERNI(PX::gettimeofday,  gettimeofday  )
   {
    tv->sec   = ut / NDT::SECS_TO_FT_MULT;
    uint64 rm = ut % NDT::SECS_TO_FT_MULT;     //   uint64 rm = ut - (tv->sec * NDT::SECS_TO_FT_MULT);
-   tv->usec  = rm / (NDT::SECS_TO_FT_MULT/NDT::MICSEC_IN_SEC);
+   tv->frac  = rm / (NDT::SECS_TO_FT_MULT/NDT::MICSEC_IN_SEC);
   }
  if(tz)
   {

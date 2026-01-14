@@ -322,8 +322,8 @@ FUNC_WRAPPERFI(PX::pollGD,     poll       )
   {
    if(timeout != -1)
     {
-     if(timeout < -1){ts.sec  = -timeout / 1000000; ts.nsec = (-timeout % 1000000) * 1000;}     // Microseconds
-       else {ts.sec = timeout / 1000; ts.nsec = (timeout % 1000) * 1000000;}              // Milliseconds 
+     if(timeout < -1){ts.sec  = -timeout / 1000000; ts.frac = (-timeout % 1000000) * 1000;}     // Microseconds
+       else {ts.sec = timeout / 1000; ts.frac = (timeout % 1000) * 1000000;}              // Milliseconds 
     }
      else pts = nullptr;
   }
@@ -334,8 +334,8 @@ FUNC_WRAPPERFI(PX::pollGD,     poll       )
     {
      if(timeout ==  0){*time_rem = 0; return res;}   // No wait
      if(timeout == -1){*time_rem = -1; return res;}  // Infinity
-     if(timeout <  -1){*time_rem = (ts.sec * 1000000) + (ts.nsec / 1000); return res;}    // Microseconds
-       else {*time_rem = (ts.sec * 1000) + (ts.nsec / 1000000); return res;}    // Milliseconds     
+     if(timeout <  -1){*time_rem = (ts.sec * 1000000) + (ts.frac / 1000); return res;}    // Microseconds
+       else {*time_rem = (ts.sec * 1000) + (ts.frac / 1000000); return res;}    // Milliseconds     
     }
      else if((res != PXERR(EINTR)) && (res != PXERR(EAGAIN)))return res;
   }
@@ -741,7 +741,7 @@ FUNC_WRAPPERNI(NTHD::thread_sleep,      thread_sleep     )     // Sleep self  (U
  if(wait_us != (uint64)-1)
   {
    ts.sec  = wait_us / 1000000;    // 1000000 Microseconds in one Second
-   ts.nsec = (wait_us % 1000000) * 1000;      // 1000 nanoseconds in one Microsecond
+   ts.frac = (wait_us % 1000000) * 1000;      // 1000 nanoseconds in one Microsecond
    tsp = &ts;
   }
  sint32 res = NAPI::futex((uint32*)&tinf->ThreadID, PX::FUTEX_WAIT|PX::FUTEX_PRIVATE_FLAG, tinf->ThreadID, tsp);  // FUTEX_WAIT or FUTEX_WAIT_BITSET operation can be interrupted by a signal
@@ -763,7 +763,7 @@ FUNC_WRAPPERNI(NTHD::thread_wait,       thread_wait      )
  if(wait_ms != (uint64)-1)
   {
    ts.sec  = wait_ms / 1000;
-   ts.nsec = (wait_ms % 1000) * 1000000;   // 1000000 nanoseconds in one millisecond
+   ts.frac = (wait_ms % 1000) * 1000000;   // 1000000 nanoseconds in one millisecond
    tsp = &ts;
   }
  DBGMSG("Waiting for: %u",tinf->ThreadID);

@@ -21,7 +21,7 @@ static sint GetEnvVar(const achar* Name, achar* DstBuf, uint DstCCnt=uint(-1))  
   {
    sint spos = NSTR::ChrOffset(evar, '=');
    if(spos < 0)continue;  // No separator!
-   if((!spos && Unnamed) || NSTR::IsStrEqualCS(Name, evar, (size_t)spos))
+   if((!spos && Unnamed) || (spos && NSTR::IsStrEqualCS(Name, evar, (size_t)spos)))
     {
      uint offs = uint(spos+1);
      Size -= offs;
@@ -54,7 +54,7 @@ static const syschar* GetEnvVar(const achar* Name, uint* Size=nullptr)          
   {
    sint spos = NSTR::ChrOffset(evar, '=');
    if(spos < 0)continue;  // No separator!
-   if((!spos && Unnamed) || NSTR::IsStrEqualCS(Name, evar, (size_t)spos))
+   if((!spos && Unnamed) || (spos && NSTR::IsStrEqualCS(Name, evar, (size_t)spos)))
     {
      if(Size)*Size -= uint(spos+1);
      return &evar[spos+1];
@@ -85,7 +85,7 @@ static _ninline sint GetEnvVar(const achar* Name, achar* DstBuf, uint DstCCnt=ui
   {
    sint spos = NSTR::ChrOffset(evar, '=');
    if(spos < 0)continue;  // No separator!
-   if((!spos && Unnamed) || NSTR::IsStrEqualCS(Name, evar, (uint)spos))return (sint)NSTR::StrCopy(DstBuf, &evar[spos+1], DstCCnt);
+   if((!spos && Unnamed) || (spos && NSTR::IsStrEqualCS(Name, evar, (uint)spos)))return (sint)NSTR::StrCopy(DstBuf, &evar[spos+1], DstCCnt);
   }
  return -1;
 }
@@ -110,7 +110,7 @@ static const syschar* GetEnvVar(const achar* Name, uint* Size=nullptr)          
   {
    sint spos = NSTR::ChrOffset(evar, '=');
    if(spos < 0)continue;  // No separator!
-   if((!spos && Unnamed) || NSTR::IsStrEqualCS(Name, evar, (uint)spos))
+   if((!spos && Unnamed) || (spos && NSTR::IsStrEqualCS(Name, evar, (uint)spos)))
     {
      if(Size)*Size = NSTR::StrLen(&evar[spos+1]);
      return &evar[spos+1];

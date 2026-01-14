@@ -136,8 +136,8 @@ bool Next(void)       // Bit order: BYTE0{D0-D7}, BYTE1{D0-D7}, ...
 // afGrowUni should have fastest access by index, but does more memory alloc syscalls. 
 // afGrowExp have a bit slower access by index, much less alloc syscalls but may waste more memory in last block if it is partially used.
 
- NALC::SBlkAlloc<BlkLen, ((MemMode == 2)?NALC::afGrowExp:((MemMode == 1)?NALC::afGrowLin:NALC::afGrowUni)), uint32> Chain;        // NOTE: BlkLen=0x100000,MemMode=0 is the best for large dictionaries
- NALC::SBlkAlloc<BlkLen, NALC::afGrowUni, uint32> ChainEx;  // BlkLen ????     // High bit is the bit to which this offset extension belongs 
+ MRGN::CSegArena<BlkLen, ((MemMode == 2)?MRGN::afGrowExp:((MemMode == 1)?MRGN::afGrowLin:MRGN::afGrowUni)), uint32> Chain;        // NOTE: BlkLen=0x100000,MemMode=0 is the best for large dictionaries
+ MRGN::CSegArena<BlkLen, MRGN::afGrowUni, uint32> ChainEx;  // BlkLen ????     // High bit is the bit to which this offset extension belongs 
  uint32 ElmCount;
  uint32 ExtCount;
 
@@ -263,7 +263,7 @@ static sint8 MatchWordAt(auto& Iter, auto& ItEx, SBits& Word, SBitNode* Bitn, SB
    bv = &Bitn->Bit[val];
    WBits--;           // Counting the bits is faster 
    if(!WBits)break;   // This bit is last in the word
-   if(bv->IsTerm()){*LastBit = bv; return 1;}     // This bit is last on the path  // The word is longer than the path  
+   if(bv->IsTerm()){*LastBit = bv; return 1;}     // This bit is last on the path  // The word is longer than the path (The path ends but word continues) 
    Iter += size_t(bv->Offs); 
   }
  *LastBit = bv;
@@ -273,6 +273,7 @@ static sint8 MatchWordAt(auto& Iter, auto& ItEx, SBits& Word, SBitNode* Bitn, SB
 //------------------------------------------------------------------------------------------------------------
 // NOTE: Terminal bit record index is same for both bits so we need to add the actual bit value (0 or 1) to discriminate them and use thes position as ID
 // Pointing to AFTER the terminal bit allows access tags easier (No need to check any flags)
+// Returns: 0 = success (already present); 1 = success (updated with new end bits); 2 = success (new bits for the entire word added); negative = error
 //
 sint8 StoreWordAt(auto& Iter, auto& ItEx, SBits& Word, SBitNode* Bitn, SBit** LastBit)    // Just returns same offset if the word was already stored   
 {
@@ -305,7 +306,7 @@ sint8 StoreWordAt(auto& Iter, auto& ItEx, SBits& Word, SBitNode* Bitn, SBit** La
 //   bitn.UnitTag[1] = bitn.UnitTag[0] = 0;
    WBEx += ((WBits / UnitLen) + bool(WBits % UnitLen)) << 1;  // Add number of tags required (2 slots per tag)
   }
- this->ElmCount += WBits + WBEx;        // MULTITHREADING??????????????????????????????????????
+ this->ElmCount += WBits + WBEx;        // MULTITHREADING??????????????????????????????????????     // NOTE: ElmCount may overflow, but you will run out of memory sooner:)
  this->Chain.Expand(this->ElmCount-1);  //ElmAdd(WBits+WBEx);   // TODO: Thread safety    // Iterators are not corrupted by this   // The actual block will contain more records
 
  Iter = size_t(NewAt);       // Reinit the iterator
@@ -330,11 +331,11 @@ sint8 StoreWordAt(auto& Iter, auto& ItEx, SBits& Word, SBitNode* Bitn, SBit** La
 public:
 CBitTrie(void): ElmCount(0),ExtCount(0) {}
 //------------------------------------------------------------------------------------------------------------
-void   Clear(void){this->ElmCount = this->ExtCount = 0; this->Chain.Release();}
-bool   Duplicate(CBitTrie& jam){jam.Clear(); jam.ElmCount = this->ElmCount; jam.ExtCount = this->ExtCount; this->ChainEx.Duplicate(jam.ChainEx); return this->Chain.Duplicate(jam.Chain);}
-size_t MemoryUsed(void){return this->Chain.MemoryUsed();}
+void  Clear(void){this->ElmCount = this->ExtCount = 0; this->Chain.Release();}
+bool  Duplicate(CBitTrie& jam){jam.Clear(); jam.ElmCount = this->ElmCount; jam.ExtCount = this->ExtCount; this->ChainEx.Duplicate(jam.ChainEx); return this->Chain.Duplicate(jam.Chain);}
+usize MemoryUsed(void){return this->Chain.MemoryUsed();}
 //------------------------------------------------------------------------------------------------------------
-size_t Save(auto& Strm)  //TODO: Optional LZ4 stream before target stream
+usize Save(auto& Strm)  //TODO: Optional LZ4 stream before target stream
 {
 // Strm.Reset();       // Prevents composition!
  if(!this->ElmCount)return 0;   // Nothing to save
@@ -344,26 +345,26 @@ size_t Save(auto& Strm)  //TODO: Optional LZ4 stream before target stream
  hdr.Vers   = 0;
  hdr.ElmCnt = this->ElmCount;
  hdr.ExtCnt = this->ExtCount;
- size_t res = Strm.Write(&hdr, sizeof(hdr));
+ usize res = Strm.Write(&hdr, sizeof(hdr));
  if(Strm.IsFail(res))return res;
  res = this->Chain.Save(Strm, this->ElmCount);
- if(res < 0)return res;
+ if(Strm.IsFail(res))return res;
  return this->ChainEx.Save(Strm, this->ExtCount);
 }
 //------------------------------------------------------------------------------------------------------------
-size_t Load(auto& Strm)
+usize Load(auto& Strm)
 {
 // Strm.Rewind();    // Prevents composition!
  this->Clear();
  SSerHdr hdr;
- size_t res = Strm.Read(&hdr, sizeof(hdr));
+ usize res = Strm.Read(&hdr, sizeof(hdr));
  if(Strm.IsFail(res))return res;
  uint8 sig[] = {'B','I','T','R'};
- if(hdr.Sign != *(uint32*)&sig)return -2;
+ if(hdr.Sign != *(uint32*)&sig)return -2;     
  this->ElmCount = hdr.ElmCnt;
  this->ExtCount = hdr.ExtCnt;
  res = this->Chain.Load(Strm);
- if(res < 0)return res;
+ if(Strm.IsFail(res))return res;
  return this->ChainEx.Load(Strm);
 }
 //------------------------------------------------------------------------------------------------------------
@@ -477,30 +478,30 @@ static void DoTest(const achar* SrcFile=nullptr, STRM::CStrmBase* Strm=nullptr)
  PX::timeval  tv_after;
  NPTM::NAPI::gettimeofday(&tv_after, nullptr);
  PX::timeval  tv_diff;
- NDT::timeval_diff(&tv_diff, &tv_after, &tv_before);
- LOGMSG("Storing %u words took %lu.%lu seconds", WrdIdx, tv_diff.sec, tv_diff.usec);
+ NPTM::NDT::TimeDiff(&tv_diff, &tv_before, &tv_after);
+ LOGMSG("Storing %u words took %lu.%lu seconds", WrdIdx, tv_diff.sec, tv_diff.frac);
  LOGMSG("Memory used: %llu", jam1.MemoryUsed());
  if(ress < 0)return;
  NPTM::NAPI::gettimeofday(&tv_before, nullptr);
  jam1.Duplicate(jam2);
  NPTM::NAPI::gettimeofday(&tv_after, nullptr);
- NDT::timeval_diff(&tv_diff, &tv_after, &tv_before);
- LOGMSG("Duplication took %lu.%lu seconds", tv_diff.sec, tv_diff.usec);
+ NPTM::NDT::TimeDiff(&tv_diff, &tv_before, &tv_after);
+ LOGMSG("Duplication took %lu.%lu seconds", tv_diff.sec, tv_diff.frac);
 
  if(Strm)
   {
    NPTM::NAPI::gettimeofday(&tv_before, nullptr);
    size_t sres = jam2.Save(*Strm);
    NPTM::NAPI::gettimeofday(&tv_after, nullptr);
-   NDT::timeval_diff(&tv_diff, &tv_after, &tv_before);
-   LOGMSG("Saving %i took %lu.%lu seconds", sres, tv_diff.sec, tv_diff.usec);
+   NPTM::NDT::TimeDiff(&tv_diff, &tv_before, &tv_after);
+   LOGMSG("Saving %i took %lu.%lu seconds", sres, tv_diff.sec, tv_diff.frac);
    
    NPTM::NAPI::gettimeofday(&tv_before, nullptr);
    Strm->Rewind();
    sres = jam2.Load(*Strm);
    NPTM::NAPI::gettimeofday(&tv_after, nullptr);
-   NDT::timeval_diff(&tv_diff, &tv_after, &tv_before);
-   LOGMSG("Loading %i took %lu.%lu seconds", sres, tv_diff.sec, tv_diff.usec);
+   NPTM::NDT::TimeDiff(&tv_diff, &tv_before, &tv_after);
+   LOGMSG("Loading %i took %lu.%lu seconds", sres, tv_diff.sec, tv_diff.frac);
   }
 
  WrdIdx  = 0;
@@ -526,8 +527,8 @@ static void DoTest(const achar* SrcFile=nullptr, STRM::CStrmBase* Strm=nullptr)
   }
 
  NPTM::NAPI::gettimeofday(&tv_after, nullptr);
- NDT::timeval_diff(&tv_diff, &tv_after, &tv_before);
- LOGMSG("Matching %u words took %lu.%lu seconds", WrdIdx, tv_diff.sec, tv_diff.usec);
+ NPTM::NDT::TimeDiff(&tv_diff, &tv_after, &tv_before);
+ LOGMSG("Matching %u words took %lu.%lu seconds", WrdIdx, tv_diff.sec, tv_diff.frac);
  LOGMSG("Memory used: %llu", jam2.MemoryUsed());
 
  if(SrcFile)

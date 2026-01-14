@@ -578,12 +578,13 @@ SCVR uint SYSCALLMASK = 0;
 #if defined(SYS_WINDOWS)
 #define API_CALL   _scall
 #define API_VACALL _ccall
+
 #else
+
 #define API_CALL   PXCALL
 #define API_VACALL PXCALL
-#endif
 
-static consteval inline uint64 MakeSCID(uint64 sc)
+static consteval inline uint64 MakeSCID(NSYSC::ESysCNum sc)
 {
 #ifdef FWK_CFG_ENCSYSC
  return uint64(sc) ^ uint64(NCTM::DateEKey);
@@ -592,18 +593,19 @@ static consteval inline uint64 MakeSCID(uint64 sc)
 #endif
 }
 
-static constexpr inline uint64 DecryptSCID(uint64 sc)
+static constexpr inline uint64 DecryptSCID(NSYSC::ESysCNum sc)
 {
  return uint64(sc) ^ uint64(NCTM::DateEKey);      // TODO: Move to config??? 
 }
+#endif
 
 #define SYSC_FILL 0xFF      // TODO: Change at compile time
 #define DECL_SYSCALL(id,Func,Name) SC_STUB_DEF NSYSC::SFuncStub<NSYSC::MakeSCID(id),int(0),decltype(Func)> Name alignas(NSYSC::StubAlignment);
 #define DECL_SYSCALLVA(id,Func,Name) SC_STUB_DEF NSYSC::SFuncStubVA<NSYSC::MakeSCID(id),int(0),decltype(Func)> Name alignas(NSYSC::StubAlignment);
 #if defined(SYS_WINDOWS) && defined(ARCH_X32)
-#define DECL_WSYSCALL(id,Name) SC_STUB_DEF NSYSC::SFuncStub<(uint64)id,&WOW64::Name,decltype(NT::Name)> Name alignas(NSYSC::StubAlignment);
+#define DECL_WSYSCALL(id,Name) SC_STUB_DEF NSYSC::SFuncStub<uint64(id),&WOW64::Name,decltype(NT::Name)> Name alignas(NSYSC::StubAlignment);
 #else
-#define DECL_WSYSCALL(id,Name) SC_STUB_DEF NSYSC::SFuncStub<(uint64)id,int(0),decltype(NT::Name)> Name alignas(NSYSC::StubAlignment);
+#define DECL_WSYSCALL(id,Name) SC_STUB_DEF NSYSC::SFuncStub<uint64(id),int(0),decltype(NT::Name)> Name alignas(NSYSC::StubAlignment);
 #endif
 
 // No nesting:(

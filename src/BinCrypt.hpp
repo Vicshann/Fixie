@@ -85,10 +85,10 @@ static auto _finline DecryptPayload(uint8* exptr=nullptr, uint exlen=0)     // N
  uint8 FinHash[NCRYPT::CSHA1::HashSize];
  uint8 ExeHash[NCRYPT::CSHA1::HashSize*3];
 
- uint8* exebeg = (uint8*)UnbindPtr(&___MODULEBEG);
- uint8* exeend = (uint8*)UnbindPtr(&___RODATAEND);
+ uint8* exebeg = (uint8*)UnbindVal(&___MODULEBEG);
+ uint8* exeend = (uint8*)UnbindVal(&___RODATAEND);
 
- uint8* pldbeg = (uint8*)UnbindPtr(&___PAYLOADBEG);   // Should be 16 byte aligned!
+ uint8* pldbeg = (uint8*)UnbindVal(&___PAYLOADBEG);   // Should be 16 byte aligned!
 // uint8* pldend = (uint8*)UnbindPtr(&___PAYLOADEND);  // Why not used?
  cptr   pldlen = 0;
 

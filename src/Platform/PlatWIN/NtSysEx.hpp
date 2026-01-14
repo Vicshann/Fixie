@@ -276,7 +276,7 @@ static vptr LdrLoadLibrary(const achar* LibName, vptr pLdrLoadDll)
  DllName.Buffer = (wchar*)&NamBuf; // the dll path must be the .Buffer -> you can always just do = L"path" instead of passing a param for it
  DllName.Length = (ctr * sizeof(wchar)); // calc the length
  DllName.MaximumLength = (DllName.Length + sizeof(wchar)); // max length calc
- if(((decltype(NT::LdrLoadDll)*)pLdrLoadDll)(nullptr, 0, &DllName, (vptr*)&ModBase))return nullptr;   // Can load EXE but won't call its entry point
+ if(((decltype(NT::LdrLoadDll)*)pLdrLoadDll)(nullptr, nullptr, &DllName, (vptr*)&ModBase))return nullptr;   // Can load EXE but won't call its entry point
  return ModBase;
 }
 //---------------------------------------------------------------------------
@@ -522,7 +522,7 @@ static NT::NTSTATUS SetCurrentDir(const achar* sDir, bool CaseSens=false)
  if(!CaseSens)oattr.Attributes |= NT::OBJ_CASE_INSENSITIVE;
 
  uint plen;
- NTX::EPathType ptype = ptUnknown;;
+ NTX::EPathType ptype = ptUnknown;
  uint PathLen = CalcFilePathBufSize(sDir, plen, ptype);
  wchar FullPath[PathLen+2];    // NOTE: VLA
  InitFileObjectAttributes(sDir, plen, ptype, ObjAttributes, FullPath, &FilePathUS, &oattr);   // Normalizes the path  // Try GLOBAL first (reserves path space for LOCAL)
@@ -671,21 +671,21 @@ static _minline void InitFileObjectAttributes(const achar* Path, uint plen, EPat
 // NT::NTSTATUS stat = SAPI::NtQueryInformationFile(RootDir, &iost, &RootPathBuf, sizeof(RootPathBuf), NT::FileNameInformation);
 // https://stackoverflow.com/questions/24751387/can-i-comment-multi-line-macros
 //
-#define AllocaObjectPath(hObj, Path)   \        
+#define AllocaObjectPath(hObj, Path)   \
 {                                                   \
  uint32 DataLen = AlignFrwdP2(sizeof(NT::UNICODE_STRING)+PATH_MAX,16);   \
  NT::UNICODE_STRING* ObjPathBuf = (NT::UNICODE_STRING*)StkAlloc(DataLen);   /* NOTE: This allocation may be wasted */ \
-  /*ObjPathBuf->Length = ObjPathBuf->MaximumLength = 0;   // Just in case */ \                                                                  
+  /*ObjPathBuf->Length = ObjPathBuf->MaximumLength = 0;   // Just in case */ \
  NT::NTSTATUS stat = SAPI::NtQueryObject(hObj, NT::ObjectNameInformation, ObjPathBuf, DataLen, &DataLen);  /* Format: \Device\HarddiskVolume2\    // STATUS_OBJECT_PATH_INVALID or STATUS_BUFFER_OVERFLOW and required len in RetLen */  \
- if(DataLen && stat)      /* Need more memory (Always STATUS_BUFFER_OVERFLOW ?) */ \  
-  {                    \                                                           
-   DataLen    = AlignFrwdP2(DataLen,16); \                                          
+ if(DataLen && stat)      /* Need more memory (Always STATUS_BUFFER_OVERFLOW ?). DataLen was updated */ \
+  {                    \
+   DataLen    = AlignFrwdP2(DataLen,16); \
    ObjPathBuf = (NT::UNICODE_STRING*)StkAlloc(DataLen); \
-  /*ObjPathBuf->Length = ObjPathBuf->MaximumLength = 0;   // Just in case */ \ 
+  /*ObjPathBuf->Length = ObjPathBuf->MaximumLength = 0;   // Just in case */ \
    stat = SAPI::NtQueryObject(hObj, NT::ObjectNameInformation, ObjPathBuf, DataLen, &DataLen); \
   }  \
  if(DataLen && !stat)Path = ObjPathBuf; \
-}                     
+}
 //------------------------------------------------------------------------------------
 // NOTE: RootDir is nullified for absolute paths
 //
@@ -726,7 +726,7 @@ static NT::NTSTATUS OpenFileObject(NT::PHANDLE FileHandle, const achar* Path, NT
 {
  NT::OBJECT_ATTRIBUTES oattr;  // = {};
  ObjAttributes |= NT::OBJ_PATH_GLOBAL_NS;  // Try the global first
- AllocaObjectAttrs(Path, RootDir, ObjAttributes, &oattr, false);
+ AllocaObjectAttrs(Path, RootDir, ObjAttributes, &oattr, false)
  NT::NTSTATUS res = SAPI::NtCreateFile(FileHandle, DesiredAccess, &oattr, IoStatusBlock, nullptr, FileAttributes, ShareAccess, CreateDisposition, CreateOptions, nullptr, 0);   
  if((res == NT::STATUS_OBJECT_PATH_NOT_FOUND) && (IsGlobalObjectNS(oattr.ObjectName->Buffer) > 0))   // Try to open in local object namespace
   {
@@ -903,7 +903,7 @@ static NT::NTSTATUS DeleteFileObject(const achar* Path, int AsDir=-1, NT::HANDLE
 //
 static NT::NTSTATUS RenameFileObject(const achar* SrcFile, const achar* DstFile, NT::HANDLE SrcRootDir=0, NT::HANDLE DstRootDir=0, bool Replace=false, bool CaseSens=false, bool KeepDots=false) 
 {
- NT::OBJECT_ATTRIBUTES oattr;  // = {};
+ NT::OBJECT_ATTRIBUTES oattr;  // = {  };
  NT::IO_STATUS_BLOCK iosb = {}; 
  NT::HANDLE hFileObj = 0; 
  NT::NTSTATUS res = 0; 
@@ -920,7 +920,7 @@ static NT::NTSTATUS RenameFileObject(const achar* SrcFile, const achar* DstFile,
  res = OpenFileObject(&hFileObj, SrcFile, DesiredAccess, ObjAttributes, NT::FILE_ATTRIBUTE_NORMAL, ShareAccess, NT::FILE_OPEN, CreateOptions, &iosb, SrcRootDir);
  if(!NT::NT_SUCCESS(res))return res;
  bool  ForceRel = !IsSepOnPath(DstFile);
- AllocaObjectAttrs(DstFile, DstRootDir, ObjAttributes|NT::OBJ_PATH_GLOBAL_NS, &oattr, ForceRel);
+ AllocaObjectAttrs(DstFile, DstRootDir, ObjAttributes|NT::OBJ_PATH_GLOBAL_NS, &oattr, ForceRel)
  usize  PathLen = oattr.ObjectName->Length;   // In bytes
  wchar* PathPtr = oattr.ObjectName->Buffer;
 
@@ -1120,7 +1120,7 @@ static NT::NTSTATUS CreateFileObjectHLink(const achar* LnkFile, const achar* Tgt
  if(!NT::NT_SUCCESS(res))return res;
 
  bool  ForceRel = !IsSepOnPath(LnkFile);
- AllocaObjectAttrs(LnkFile, LnkRootDir, ObjAttributes|NT::OBJ_PATH_GLOBAL_NS, &oattr, ForceRel);
+ AllocaObjectAttrs(LnkFile, LnkRootDir, ObjAttributes|NT::OBJ_PATH_GLOBAL_NS, &oattr, ForceRel)
  usize  PathLen = oattr.ObjectName->Length;   // In bytes
  wchar* PathPtr = oattr.ObjectName->Buffer;
 
@@ -1365,7 +1365,7 @@ static NT::NTSTATUS NativeCreateThread(PNT_THREAD_PROC ThreadRoutine, NT::PVOID 
    else  // Creating in a remote process
     {
      NT::PVOID Arr[] = {ParData,(NT::PVOID)ParSize};
-     if(NT::NTSTATUS stat = SAPI::NtWriteVirtualMemory(ProcessHandle, &((NT::PVOID*)Context.Esp)[1], &Arr, sizeof(Arr), 0)){DBGMSG("Write stack args failed with: %08X",stat);}   // It is OK to fail if no PROCESS_VM_WRITE
+     if(NT::NTSTATUS stat = SAPI::NtWriteVirtualMemory(ProcessHandle, &((NT::PVOID*)Context.Esp)[1], &Arr, sizeof(Arr), nullptr)){DBGMSG("Write stack args failed with: %08X",stat);}   // It is OK to fail if no PROCESS_VM_WRITE
     }
 #endif
 
@@ -1804,14 +1804,14 @@ static NT::NTSTATUS _scall NativeCreateUserProcess(NT::PHANDLE ProcessHandle, NT
 static NT::NTSTATUS OpenProcess(NT::PHANDLE ProcessHandle, NT::ACCESS_MASK DesiredAccess, uint32 ProcID)
 {
  NT::CLIENT_ID pid = {ProcID, 0};
- NT::OBJECT_ATTRIBUTES oattr = { sizeof(NT::OBJECT_ATTRIBUTES) };
+ NT::OBJECT_ATTRIBUTES oattr = { .Length=sizeof(NT::OBJECT_ATTRIBUTES) };
  return SAPI::NtOpenProcess(ProcessHandle, DesiredAccess, &oattr, &pid);
 }
 //------------------------------------------------------------------------------------
 static NT::NTSTATUS OpenThread(NT::PHANDLE ThreadHandle, NT::ACCESS_MASK DesiredAccess, uint32 ThreadID)
 {
  NT::CLIENT_ID tid = {0, ThreadID};
- NT::OBJECT_ATTRIBUTES oattr = { sizeof(NT::OBJECT_ATTRIBUTES) };
+ NT::OBJECT_ATTRIBUTES oattr = { .Length=sizeof(NT::OBJECT_ATTRIBUTES) };
  return SAPI::NtOpenThread(ThreadHandle, DesiredAccess, &oattr, &tid);
 }
 //------------------------------------------------------------------------------------
@@ -1846,7 +1846,7 @@ static sint FindMappedRangeByAddr(NT::HANDLE ProcH, usize Addr, SMemRange* Range
 {                                        
  Range->FMOffs = Range->INode = Range->DevH = Range->DevL = 0;
  NT::MEMORY_BASIC_INFORMATION mbi;
- NT::NTSTATUS res = SAPI::NtQueryVirtualMemory(ProcH, (vptr)Addr, NT::MemoryBasicInformation, &mbi, sizeof mbi, 0);  
+ NT::NTSTATUS res = SAPI::NtQueryVirtualMemory(ProcH, (vptr)Addr, NT::MemoryBasicInformation, &mbi, sizeof mbi, nullptr);  
  if(!NT::NT_SUCCESS(res))return -9;
  if(!(mbi.State & NT::MEM_COMMIT))return -1;  // Not present
  Range->RangeBeg = (usize)mbi.BaseAddress;
@@ -1869,8 +1869,8 @@ static sint FindMappedRangeByAddr(sint32 ProcId, usize Addr, SMemRange* Range)
  NT::HANDLE PrHndl = NT::NtCurrentProcess;
  if(ProcId > 0)
   {                                                         
-   NT::NTSTATUS res = OpenProcess(&PrHndl, NT::PROCESS_QUERY_INFORMATION, (uint32)ProcId);
-   if(!NT::NT_SUCCESS(res))return -1;
+   NT::NTSTATUS nres = OpenProcess(&PrHndl, NT::PROCESS_QUERY_INFORMATION, (uint32)ProcId);
+   if(!NT::NT_SUCCESS(nres))return -1;
   }
  sint res = FindMappedRangeByAddr(PrHndl, Addr, Range);
  if(ProcId > 0)SAPI::NtClose(PrHndl);
@@ -1887,8 +1887,8 @@ static sint FindMappedRangesByPath(sint32 ProcId, usize Addr, const achar* ModPa
  NT::HANDLE PrHndl = NT::NtCurrentProcess;
  if(ProcId > 0)
   {                                                         
-   NT::NTSTATUS res = OpenProcess(&PrHndl, NT::PROCESS_QUERY_INFORMATION, (uint32)ProcId);
-   if(!NT::NT_SUCCESS(res))return -1;
+   NT::NTSTATUS nres = OpenProcess(&PrHndl, NT::PROCESS_QUERY_INFORMATION, (uint32)ProcId);
+   if(!NT::NT_SUCCESS(nres))return -1;
   }
  sint res = FindMappedRangesByPath(PrHndl, Addr, ModPath, MappedRanges, BufSize);
  if(ProcId > 0)SAPI::NtClose(PrHndl);
@@ -1908,8 +1908,8 @@ static sint ReadMappedRanges(NT::HANDLE ProcH, usize AddrFrom, usize AddrTo, SMe
  for(;;)
   {
    NT::MEMORY_BASIC_INFORMATION mbi;
-   NT::NTSTATUS res = SAPI::NtQueryVirtualMemory(ProcH, (vptr)AddrFrom, NT::MemoryBasicInformation, &mbi, sizeof mbi, 0);
-   if(!NT::NT_SUCCESS(res))return -9;
+   NT::NTSTATUS nres = SAPI::NtQueryVirtualMemory(ProcH, (vptr)AddrFrom, NT::MemoryBasicInformation, &mbi, sizeof mbi, nullptr);
+   if(!NT::NT_SUCCESS(nres))return -9;
    if((usize)mbi.BaseAddress >= AddrTo)break;
    if(!(mbi.State & NT::MEM_COMMIT))continue;  // Not present
    Range->RangeBeg = (usize)mbi.BaseAddress;
@@ -1921,8 +1921,8 @@ static sint ReadMappedRanges(NT::HANDLE ProcH, usize AddrFrom, usize AddrTo, SMe
       {
        // TODO: Request the path
        usize Len = MappedRanges->TmpBufLen;
-       res = GetMappedFilePath(ProcH, (usize)mbi.BaseAddress, (achar*)MappedRanges->TmpBufPtr, &Len);
-       if(NT::NT_SUCCESS(res))       // Check if Len < TmpBufLen ?
+       nres = GetMappedFilePath(ProcH, (usize)mbi.BaseAddress, (achar*)MappedRanges->TmpBufPtr, &Len);
+       if(NT::NT_SUCCESS(nres))       // Check if Len < TmpBufLen ?
         {
          uint len = Range->FPathLen + 1;
          if((len + sizeof(SMemRange)) > BufSize){MappedRanges->NextAddr = Range->RangeBeg; break;}  // No space left
@@ -1941,7 +1941,7 @@ static sint ReadMappedRanges(NT::HANDLE ProcH, usize AddrFrom, usize AddrTo, SMe
          Range->FPathLen = Range[-1].FPathLen;
         }
     }
-   if(sizeof(SMemRange) > BufSize){MappedRanges->NextAddr = Range->RangeBeg; break;}  // No space
+   if(sizeof(SMemRange) > BufSize){MappedRanges->NextAddr = Range->RangeBeg; break;}  // No space left
    MappedRanges->RangesCnt++;
    BufSize -= sizeof(SMemRange);
    Total   += sizeof(SMemRange);

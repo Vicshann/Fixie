@@ -15,7 +15,7 @@
 template<typename PHT> struct NTSYS  // For members: alignas(sizeof(PHT))
 {
 
-template<typename T, typename H=uint> using MPTR = TSW< (sizeof(PHT)==sizeof(void*)),T*,SPTR<T,H> >::T;   // SPTR is too unstable to be used by default
+template<typename T, typename H=uint> using MPTR = TSW< (sizeof(PHT)==sizeof(void*)), T* ,SPTR<T,H> >::T;   // SPTR is too unstable to be used by default
 
 using SIZE_T    = decltype(TypeToUnsigned<PHT>());  //  MPTR<uint,   PHT>;  // PHT; //TSW<sizeof(PHT) == sizeof(uint64), uint64, uint32>::T;    // Use direct type instead of MPTR<uint, PHT> to avoid unnecessary truncation
 using SSIZE_T   = decltype(TypeToSigned<PHT>());  //  MPTR<sint,   PHT>;
@@ -3115,15 +3115,15 @@ struct PS_CREATE_INFO
       union
       {
           ULONG InitFlags;
-          struct
+          struct       // Fixed, untested
           {
-              UCHAR WriteOutputOnExit : 1;
-              UCHAR DetectManifest : 1;
-              UCHAR IFEOSkipDebugger : 1;
-              UCHAR IFEODoNotPropagateKeyState : 1;
-              UCHAR SpareBits1 : 4;
-              UCHAR SpareBits2 : 8;
-              USHORT ProhibitedImageCharacteristics : 16;
+              ULONG WriteOutputOnExit : 1;
+              ULONG DetectManifest : 1;
+              ULONG IFEOSkipDebugger : 1;
+              ULONG IFEODoNotPropagateKeyState : 1;
+              ULONG SpareBits1 : 4;
+              ULONG SpareBits2 : 8;
+              ULONG ProhibitedImageCharacteristics : 16;
           } s1;
       } u1;
       ACCESS_MASK AdditionalFileAccess;
@@ -3153,16 +3153,16 @@ struct PS_CREATE_INFO
       union
       {
           ULONG OutputFlags;
-          struct
+          struct        // Fixed, untested
           {
-              UCHAR ProtectedProcess : 1;
-              UCHAR AddressSpaceOverride : 1;
-              UCHAR DevOverrideEnabled : 1; // From Image File Execution Options
-              UCHAR ManifestDetected : 1;
-              UCHAR ProtectedProcessLight : 1;
-              UCHAR SpareBits1 : 3;
-              UCHAR SpareBits2 : 8;
-              USHORT SpareBits3 : 16;
+              ULONG ProtectedProcess : 1;
+              ULONG AddressSpaceOverride : 1;
+              ULONG DevOverrideEnabled : 1; // From Image File Execution Options
+              ULONG ManifestDetected : 1;
+              ULONG ProtectedProcessLight : 1;
+              ULONG SpareBits1 : 3;
+              ULONG SpareBits2 : 8;
+              ULONG SpareBits3 : 16;
           } s2;
       } u2;
       HANDLE FileHandle;

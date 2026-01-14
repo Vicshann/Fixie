@@ -1,7 +1,7 @@
 
 //============================================================================================================
 //
-template<size_t MinLen, uint32 Flg, typename Ty=uint8, typename TCIfo=SEmptyType, typename TBIfo=SEmptyType, typename MP=SMemPrvBase, size_t MaxAlign=64> class SSeqAlloc   // Arbitrary memory allocator. Single block. Single linear range.   // Alignment 64 is enough even for AVX512
+template<size_t MinLen, uint32 Flg, typename Ty=uint8, typename TCIfo=SEmptyType, typename TBIfo=SEmptyType, typename MP=SMemProvBase, size_t MaxAlign=64> class CSeqArena   // Arbitrary memory allocator. Single block. Single linear range.   // Alignment 64 is enough even for AVX512
 {
 SCVR bool   EmptyMP   = sizeof(MP) <= 1;    // MP will have 1 size without any data members    // The MP size should be either 0 or > 1
 SCVR bool   CtxInFBlk = Flg & afSinglePtr;  // The context is in the block               
@@ -36,7 +36,7 @@ inline vptr  GetBlockPtr(void)
 };
 
 // Is this the most appropriate alignment strategy?  
-SCVR size_t AlUnitLen  = (Flg & afObjAlign)?((Flg & afAlignPow2)?(AlignToP2Up(sizeof(Ty))):(AlignFrwdP2(sizeof(Ty), sizeof(size_t)))):(sizeof(Ty));   // May align to nearest Pow@ or by pointer size, depending what is the best for the current strategy
+SCVR size_t AlUnitLen  = (Flg & afObjAlign)?((Flg & afAlignPow2)?(BitCeil(sizeof(Ty))):(AlignFrwdP2(sizeof(Ty), sizeof(size_t)))):(sizeof(Ty));   // May align to nearest Pow@ or by pointer size, depending what is the best for the current strategy
 SCVR size_t AlFHdrLen  = CtxInFBlk ? ((!(Flg & afLimitHdrAl) || (AlUnitLen <= MaxAlign))?(AlignFrwd(sizeof(SFHdr),AlUnitLen)):(AlignFrwdP2(sizeof(SFHdr),MaxAlign))) : 0;
 SCVR size_t AlPageSize = AlignFrwdP2(Max(AlUnitLen+AlFHdrLen, MinLen), NPTM::MEMPAGESIZE);  
 
@@ -91,7 +91,7 @@ static size_t CalcBlkSizeForOffset(size_t Offset)
    size_t cbidx = (((size_t)NMATH::sqrt((8 * (Offset / AlPageSize)) + 1) - 1) / 2) + 1;    // Optimize?
    return (AlPageSize * ((cbidx * (cbidx + 1)) / 2));
   }
- else if constexpr (StratType == afGrowExp)return AlignToP2Up(Offset);
+ else if constexpr (StratType == afGrowExp)return BitCeil(Offset);
  return AlignFrwd(Offset, AlPageSize);
 }
 //-------------------------------------------------------------
@@ -104,18 +104,18 @@ static size_t CalcBlkSizeForElmIdx(size_t ElmIdx)
 //-------------------------------------------------------------
 public:
 //------------------------------------------------------------- 
-//SSeqAlloc(void) = delete;
+//CSeqArena(void) = delete;
 
-inline SSeqAlloc(MP* mp=(MP*)nullptr)
+inline CSeqArena(MP* mp=(MP*)nullptr)
 {
- NMOPS::ZeroObj(this);
+ MOPR::ZeroObj(this);
  if constexpr (!EmptyMP)
   {
    if constexpr (CtxInFBlk)this->Context = (SFHdr*)((size_t)mp | 1);     // In most cases MP is zero    // NOTE: This will make the GetCtx to return an invalid context pointer until first call to AllocBlock
      else this->Context.MProv = mp;
   }
 }
-inline ~SSeqAlloc(){this->Release();}
+inline ~CSeqArena(){this->Release();}
 //------------------------------------------------------------- 
 int Release(void)
 {
@@ -210,12 +210,12 @@ public:
 
  inline SIterator(const SIterator& itr)   // Copy constructor
  {
-  NMOPS::CopyObj(this, itr);
+  MOPR::CopyObj(this, itr);
  }
  inline SIterator(SIterator&& itr)  // Move constructor
  {
-  NMOPS::CopyObj(this, itr);
-  NMOPS::ZeroObj(itr);
+  MOPR::CopyObj(this, itr);
+  MOPR::ZeroObj(itr);
  }
  //------------------------------------------------------
  inline SIterator(CtxPtr ctx)       // NULL iterator constructor  
@@ -239,7 +239,7 @@ public:
  //------------------------------------------------------ 
  inline void operator= (const SIterator& itr)
  {
-  NMOPS::CopyObj(this, itr);
+  MOPR::CopyObj(this, itr);
  }
  //------------------------------------------------------ 
  inline void operator= (size_t ElmIdx)    // Set the position in objects      // Fast if in boundaries of the current block

@@ -5,8 +5,8 @@
   <PropertyGroup> <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>  </PropertyGroup>
   
   <!-- Build-type prefix -->
-  <PropertyGroup> <BuildTypePrefix Condition="'$(Configuration)'=='Debug'">DBG</BuildTypePrefix>  </PropertyGroup>
-  <PropertyGroup> <BuildTypePrefix Condition="'$(Configuration)'=='Release'">REL</BuildTypePrefix>  </PropertyGroup>
+  <PropertyGroup> <BuildTypePrefix Condition="'$(AppConfigType)'=='Debug'">DBG</BuildTypePrefix>  </PropertyGroup>
+  <PropertyGroup> <BuildTypePrefix Condition="'$(AppConfigType)'=='Release'">REL</BuildTypePrefix>  </PropertyGroup>
   
   <PropertyGroup>
      <FinAppTargetCPU>$(AppTargetCPU)</FinAppTargetCPU>
@@ -39,6 +39,15 @@
   <PropertyGroup> <BuildDefs>$(BaseDefs)</BuildDefs>  </PropertyGroup>
   <!-- Import dynamically generated definitions from a last ReBuild (No need to display BuildDefs in UI) -->
   <Import Project="$(IntDir)/definitions.props" Condition="Exists('$(IntDir)/definitions.props')" />
-  <PropertyGroup> <NMakePreprocessorDefinitions>$(NMakePreprocessorDefinitions);$(BuildDefs)</NMakePreprocessorDefinitions> </PropertyGroup>  
+  <PropertyGroup> <NMakePreprocessorDefinitions>$(NMakePreprocessorDefinitions);$(BuildDefs)</NMakePreprocessorDefinitions> </PropertyGroup>    
   
+  <!-- Definitions for '.user' - Ignored in ui.props  -->
+  <PropertyGroup> 
+     <DebuggerFlavor Condition="'$(Configuration)'=='DebugRM' or '$(Configuration)'=='ReleaseRM'">LinuxDebugger</DebuggerFlavor>
+     <DebuggerFlavor Condition="'$(Configuration)'!='DebugRM' and '$(Configuration)'!='ReleaseRM' and '$(DebuggerFlavor)'=='LinuxDebugger'">WindowsLocalDebugger</DebuggerFlavor>
+     <LocalDebuggerDebuggerType Condition="'$(LocalDebuggerDebuggerType)' == ''">Auto</LocalDebuggerDebuggerType> 
+     <LocalDebuggerWorkingDirectory Condition="'$(LocalDebuggerWorkingDirectory)' == ''">$(ProjectDir)</LocalDebuggerWorkingDirectory> 
+     <LocalDebuggerCommand Condition="'$(LocalDebuggerCommand)' == ''">$(TargetPath)</LocalDebuggerCommand> 
+  </PropertyGroup>    
+   
 </Project>

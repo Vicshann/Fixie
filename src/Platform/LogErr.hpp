@@ -190,14 +190,14 @@ _ninline static sint _fcall LogProc(const achar* Message, void** ArgList, uint32
     }
    if(LogFlag & lfLogLevel)
     {
-     if(LogLvl==llLogFail)*(uint32*)&TmpBuf[MSize] = 'LIAF';          // FAIL  FAL     // Mind the byte order!    // NOTE: Cannot do that, alignment problem (ARM)
-     else if(LogLvl==llLogError)*(uint32*)&TmpBuf[MSize] = 'RRRE';    // ERRR  ERR     // Mind the byte order!
-     else if(LogLvl==llLogWarning)*(uint32*)&TmpBuf[MSize] = 'NRAW';  // WARN  WRN
-     else if(LogLvl==llLogNote)*(uint32*)&TmpBuf[MSize] = 'ETON';     // NOTE  NTE
-     else if(LogLvl==llLogInfo)*(uint32*)&TmpBuf[MSize] = 'OFNI';     // INFO  INF
-     else if(LogLvl==llLogDebug)*(uint32*)&TmpBuf[MSize] = 'GBED';    // DEBG  DBG
-     else if(LogLvl==llLogTrace)*(uint32*)&TmpBuf[MSize] = 'ECRT';    // TRCE  TRC
-     else *(uint32*)&TmpBuf[MSize] = 'ENON';  // NONE
+     if(LogLvl==llLogFail)*(uint32*)&TmpBuf[MSize] = cc4("FAIL");          // FAIL  FAL     // Mind the byte order!    // NOTE: Cannot do that, alignment problem (ARM)
+     else if(LogLvl==llLogError)*(uint32*)&TmpBuf[MSize] = cc4("ERRR");    // ERRR  ERR     // Mind the byte order!
+     else if(LogLvl==llLogWarning)*(uint32*)&TmpBuf[MSize] = cc4("WARN");  // WARN  WRN
+     else if(LogLvl==llLogNote)*(uint32*)&TmpBuf[MSize] = cc4("NOTE");     // NOTE  NTE
+     else if(LogLvl==llLogInfo)*(uint32*)&TmpBuf[MSize] = cc4("INFO");     // INFO  INF
+     else if(LogLvl==llLogDebug)*(uint32*)&TmpBuf[MSize] = cc4("DEBG");    // DEBG  DBG
+     else if(LogLvl==llLogTrace)*(uint32*)&TmpBuf[MSize] = cc4("TRCE");    // TRCE  TRC
+     else *(uint32*)&TmpBuf[MSize] = cc4("NONE");  // NONE
      MSize += 4;
      TmpBuf[MSize++] = 0x20;
     }

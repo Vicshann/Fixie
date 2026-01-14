@@ -77,7 +77,7 @@ static consteval size_t MakeArgCtrVal(uint ArgNum, uint64 SizeBits)
 static constexpr _finline vptr GetValAddr(auto&& Value)
 {
  using VT = typename RemoveConst<typename RemoveRef<decltype(Value)>::T>::T;  // May be const
- if constexpr (IsPtrType<VT>::V)return (vptr)Value;
+ if constexpr (IsPtr<VT>::V)return (vptr)Value;
  return (vptr)&Value;
 }
 //---------------------------------------------------------------------------
@@ -92,7 +92,7 @@ static _finline vptr* DecodeArgArray(vptr* ArgArr, uint& ArgNum, uint64& SizeBit
 // NOTE: T is type of argument is stored in ArgList, no type of argument to be read into
 template<typename T> static constexpr _finline T GetArgAsType(uint& ArgIdx, void** ArgList, uint64 SizeBits)   // TODO: Make lambda and capture ArgList
 {
- if constexpr (IsPtrType<T>::V)return (T)ArgList[ArgIdx++];  // Read it as a pointer itself, not pointer to a pointer variable
+ if constexpr (IsPtr<T>::V)return (T)ArgList[ArgIdx++];  // Read it as a pointer itself, not pointer to a pointer variable
   else
   {
    int asize = (SizeBits >> (ArgIdx << 1)) & 3;   //ValIdxToSize((SizeBits >> (ArgIdx << 1)) & 3);
@@ -429,8 +429,8 @@ _ninline static sint FormatToBuffer(const achar* format, achar* buffer, uint max
       }
 
       case 's' : {
-        char* cp;
-        wchar_t* wp;
+        char* cp = nullptr;      // Initialized to suppress the warning (all branches are actually handled)
+        wchar_t* wp = nullptr;
         unsigned int l;
         if(flags & FLAGS_LONG)
          {

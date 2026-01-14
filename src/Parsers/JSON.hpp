@@ -4,7 +4,7 @@ https://datatracker.ietf.org/doc/html/rfc6901
 https://github.com/Tencent/rapidjson/blob/v1.1.0/doc/pointer.md
 https://github.com/Tencent/rapidjson/blob/v1.1.0/doc/internals.md
 
-
+https://seriot.ch/software/parsing_json.html
 
 
 */

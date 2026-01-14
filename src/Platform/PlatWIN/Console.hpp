@@ -348,11 +348,11 @@ static inline uint32 Flags = 0;
 static vptr ResolveKProc(vptr* Addr, uint32 NameHash)
 {
  vptr ptr = nullptr;
- if(pDllKrnlBase)ptr = NPE::GetProcAddr(vptr(size_t(pDllKrnlBase)|1), (achar*)NameHash);
+ if(pDllKrnlBase)ptr = NPE::GetProcAddr(vptr(size_t(pDllKrnlBase)|1), (achar*)size_t(NameHash));
  if(!ptr)
   {
-   if(pDllKernel32)ptr = NPE::GetProcAddr(vptr(size_t(pDllKernel32)|1), (achar*)NameHash);
-     else if(pDllNtDll)ptr = NPE::GetProcAddr(vptr(size_t(pDllNtDll)|1), (achar*)NameHash);
+   if(pDllKernel32)ptr = NPE::GetProcAddr(vptr(size_t(pDllKernel32)|1), (achar*)size_t(NameHash));
+     else if(pDllNtDll)ptr = NPE::GetProcAddr(vptr(size_t(pDllNtDll)|1), (achar*)size_t(NameHash));
   }
  *Addr = ptr;
  return ptr;

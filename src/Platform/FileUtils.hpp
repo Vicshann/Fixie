@@ -49,7 +49,7 @@ static sint ReadFileLine(PX::fdsc_t fd, achar* buf, size_t len, ssize_t* offs, a
 }
 //------------------------------------------------------------------------------------------------------------
 // Compare string with pattern supporting '*' and '?' (both UTF-8-aware)
-static bool IsPathsMatch(const achar* path, const achar* pattern, bool cins=false) 
+static bool IsPathMatch(const achar* path, const achar* pattern, bool cins=false) 
 {
  for(;;) 
   {

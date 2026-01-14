@@ -6,20 +6,21 @@
 struct NPTM    // Can`t be 'struct' if we want that stubs go in the real executable '.text'  section instead of a data section with the same name
 {
 // Everything below may require to reference each other and SAPI+NAPI
+#include "NTSYS.hpp"
+#include "POSIX.hpp"
+#include "DateTime.hpp"      // Should it be in Platform? // Unsorted Windows/Linux date and time functions
 #include "Atomics.hpp"
-#include "LogErr.hpp"       // Thish should be visible everywhere
-#include "Utils.hpp"        // Anything that doesn`t have a separate HPP and still doesn`t use any of system API
+#include "LogErr.hpp"        // Thish should be visible everywhere
+#include "Utils.hpp"         // Should it be in Platform? // Anything that doesn`t have a separate HPP and still doesn`t use any of system API
 #include "ModFmtMachO.hpp"
 #include "ModFmtELF.hpp"
 #include "ModFmtPE.hpp"
-#include "NTSYS.hpp"
-#include "POSIX.hpp"
 #include "TZif.hpp"
 #include "CLArgs.hpp"
 #include "EnvVars.hpp"
 #include "Threads.hpp"     // Thread definitions for "StartInfo.hpp"
 #include "MemUtils.hpp" 
-#include "FileUtils.hpp"
+#include "FileUtils.hpp"   // Should it be in Platform?
 #include "Debugging.hpp"
 
 // NOTE: All platform builds should be compatible with 'oformat=binary'. Syscalls and a platform specific ABI should be preserved. 
@@ -38,36 +39,36 @@ struct NPTM    // Can`t be 'struct' if we want that stubs go in the real executa
 #pragma message(">>> Platform is SDL3")
 // TODO
 #elif  defined(PLT_LIN_USR)    // Put BSD support here(similair startup, ELF format)?      // TODO: Optional libc wrapper?
-#pragma message(">>> Platform is Linux USR")
+#pragma message(">>> Platform is Linux (USR)")
 #include "PlatLIN/User/Impl.hpp"
 #include "ProcFS.hpp"
 
 #elif  defined(PLT_LIN_KRN)
-#pragma message(">>> Platform is Linux KRN")
+#pragma message(">>> Platform is Linux (KRN)")
 // TODO
 #elif  defined(PLT_BSD_USR)    // TODO: Try to support as mush BSD variants as possible?   
-#pragma message(">>> Platform is BSD USR")
+#pragma message(">>> Platform is BSD (USR)")
 // TODO
 #elif  defined(PLT_BSD_KRN)
-#pragma message(">>> Platform is BSD KRN")
+#pragma message(">>> Platform is BSD (KRN)")
 // TODO
 #elif  defined(PLT_MAC_USR)    // Put BSD support here(similair syscalls)?    // Share some code with BSD or redeclare everything?
-#pragma message(">>> Platform is MacOS USR")
+#pragma message(">>> Platform is MacOS (USR)")
 #include "PlatMAC/PlatDef.hpp"
 #include "StartInfo.hpp"
 #include "PlatMAC/User/Impl.hpp"
 
 #elif  defined(PLT_MAC_KRN)
-#pragma message(">>> Platform is MacOS KRN")
+#pragma message(">>> Platform is MacOS (KRN)")
 // TODO
 #elif  defined(PLT_WIN_USR)
-#pragma message(">>> Platform is Windows USR")
+#pragma message(">>> Platform is Windows (USR)")
 #include "PlatWIN/User/Impl.hpp"
 #include "PlatWIN/MiscUtils.hpp"
 //#include "ProcFS.hpp"     // <<< DBG
 
 #elif  defined(PLT_WIN_KRN)
-#pragma message(">>> Platform is MacOS KRN")
+#pragma message(">>> Platform is Windows (KRN)")
 // TODO
 #elif  defined(PLT_PLUGIN)  // SystemV ABI with a host app   // -mabi=sysv  // __attribute__((sysv_abi))
 // TODO

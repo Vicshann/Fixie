@@ -2,7 +2,22 @@
 #pragma once
 
 // Why NCFG::VectorizeMemOps makes everything slower?
-struct NMOPS
+//  "https://www.agner.org/optimize/" - Conclusion: Don't check alignment on modern x86
+/*
+Intel's "Fast memcpy for Atom" (2008-2010):
+
+Showed alignment checks were beneficial on Atom (in-order CPU)
+But harmful on Core i7 (out-of-order, good branch prediction)
+Different optimal strategies per microarchitecture
+
+ARM's Cortex Optimization Guides:
+
+ARMv7: Unaligned access is ~2x slower than aligned for NEON
+But alignment checking can be 3x slower if branches mispredict
+Recommendation: Use alignment checks only if alignment is predictable
+
+*/
+struct MOPR
 {
 private:
 //===========================================================================
@@ -12,7 +27,7 @@ private:
 //------------------------------------------------------------------------------------------------------------
 _finline static size_t AlignOfPtr(const void* Ptr)
 {
- return 1 << ctz((size_t)Ptr);
+ return 1 << ctz((size_t)Ptr);   // (Ptr & 0xF) for fast?  - Benchmark it
 }
 //---------------------------------------------------------------------------
 // Unaligned load for basic types
@@ -52,16 +67,16 @@ template<typename T, bool BE=false> constexpr _finline static void* LoadAsBytes(
     }
      else Src = (uint8*)LoadAsBytes(&((uint32*)Dst)[1], Src);   // Second half as uint32     (Src is 8b aligned)
   }
- if constexpr(sizeof(T) > 8)    // v128 (16 bytes) // Process another 8 bytes   (Src is 16b aligned)
+ if constexpr(sizeof(T) > 8)    // u128 (16 bytes) // Process another 8 bytes   (Src is 16b aligned)
   {
    Src = (uint8*)LoadAsBytes(&((uint64*)Dst)[1], Src);
   }
- if constexpr(sizeof(T) > 16)   // v256 (32 bytes) // Process another 16 bytes  (Src is 32b aligned)
+ if constexpr(sizeof(T) > 16)   // u256 (32 bytes) // Process another 16 bytes  (Src is 32b aligned)
   {
    Src = (uint8*)LoadAsBytes(&((uint64*)Dst)[2], Src);
    Src = (uint8*)LoadAsBytes(&((uint64*)Dst)[3], Src);
   }
- if constexpr(sizeof(T) > 32)   // v512 (64 bytes) // Process another 32 bytes  (Src is 64b aligned)
+ if constexpr(sizeof(T) > 32)   // u512 (64 bytes) // Process another 32 bytes  (Src is 64b aligned)
   {
    Src = (uint8*)LoadAsBytes(&((uint64*)Dst)[4], Src);
    Src = (uint8*)LoadAsBytes(&((uint64*)Dst)[5], Src);
@@ -112,16 +127,16 @@ template<typename T, bool BE=false> constexpr _finline static void* StoreAsBytes
     }
      else Dst = (uint8*)StoreAsBytes(&((uint32*)Src)[1], Dst);   // Second half as uint32     (Src is 8b aligned)
   }
- if constexpr(sizeof(T) > 8)    // v128 (16 bytes) // Process another 8 bytes   (Src is 16b aligned)
+ if constexpr(sizeof(T) > 8)    // u128 (16 bytes) // Process another 8 bytes   (Src is 16b aligned)
   {
    Dst = (uint8*)StoreAsBytes(&((uint64*)Src)[1], Dst);
   }
- if constexpr(sizeof(T) > 16)   // v256 (32 bytes) // Process another 16 bytes  (Src is 32b aligned)
+ if constexpr(sizeof(T) > 16)   // u256 (32 bytes) // Process another 16 bytes  (Src is 32b aligned)
   {
    Dst = (uint8*)StoreAsBytes(&((uint64*)Src)[2], Dst);
    Dst = (uint8*)StoreAsBytes(&((uint64*)Src)[3], Dst);
   }
- if constexpr(sizeof(T) > 32)   // v512 (64 bytes) // Process another 32 bytes  (Src is 64b aligned)
+ if constexpr(sizeof(T) > 32)   // u512 (64 bytes) // Process another 32 bytes  (Src is 64b aligned)
   {
    Dst = (uint8*)StoreAsBytes(&((uint64*)Src)[4], Dst);
    Dst = (uint8*)StoreAsBytes(&((uint64*)Src)[5], Dst);
@@ -138,7 +153,7 @@ template<typename T, bool BE=false> constexpr _finline static void* StoreAsBytes
 template<sint DLen> constexpr _finline static void* MemZeroConst(void* _RST pDst)   // Shifts are used to allow in-register optimizations
 {
  uint8* _RST Dst = (uint8*)pDst;
- // TODO: Optional v128-v512 with NCFG::VectorizeMemOps
+ // TODO: Optional u128-u512 with NCFG::VectorizeMemOps
  // TODO: Loop on largest items
  if constexpr(DLen >= sizeof(uint64))       // 8 or more bytes left
   {
@@ -179,11 +194,11 @@ template<typename T> constexpr _finline static T* ZeroObject(T* _RST pDst){retur
 //---------------------------------------------------------------------------
 template<typename T, uint ASize> constexpr _finline static void InitFillPattern(uint32* FillArr, const T& Val)
 {
- if constexpr((sizeof(T) < sizeof(v512)) || !NCFG::VectorizeMemOps)
+ if constexpr((sizeof(T) < sizeof(u512)) || !NCFG::VectorizeMemOps)
   {
-   if constexpr((sizeof(T) < sizeof(v256)) || !NCFG::VectorizeMemOps)
+   if constexpr((sizeof(T) < sizeof(u256)) || !NCFG::VectorizeMemOps)
     {
-     if constexpr((sizeof(T) < sizeof(v128)) || !NCFG::VectorizeMemOps)
+     if constexpr((sizeof(T) < sizeof(u128)) || !NCFG::VectorizeMemOps)
       {
        if constexpr(sizeof(T) < sizeof(uint64))
         {
@@ -201,11 +216,11 @@ template<typename T, uint ASize> constexpr _finline static void InitFillPattern(
         }
         else {for(uint idx=0;idx < (ASize/sizeof(uint64));idx++)((uint64*)FillArr)[idx] = Val;}
       }
-       else {for(uint idx=0;idx < (ASize/sizeof(v128));idx++)((v128*)FillArr)[idx] = Val;}
+       else {for(uint idx=0;idx < (ASize/sizeof(u128));idx++)((u128*)FillArr)[idx] = Val;}
     }
-     else {for(uint idx=0;idx < (ASize/sizeof(v256));idx++)((v256*)FillArr)[idx] = Val;}
+     else {for(uint idx=0;idx < (ASize/sizeof(u256));idx++)((u256*)FillArr)[idx] = Val;}
   }
-  else *(v512*)FillArr = Val;
+  else *(u512*)FillArr = Val;
 }
 //---------------------------------------------------------------------------
 /*template<typename T> constexpr _finline static T* CopyObjects(T* _RST Dst, T* _RST Src, const uint Cnt=1)
@@ -278,19 +293,19 @@ template<bool rev=false> constexpr static size_t MemCopySync(void* _RST* _RST Ds
        if constexpr(NCFG::VectorizeMemOps)  // VECTORIZED
         {
          if(Mask & 0x0F){Size=CopyAs<uint64,rev>(Dst, Src, Size); Mask = ((size_t)*Dst|(size_t)*Src);}   // u64
-         if((Size >= sizeof(v128)) && !(Mask & 0x0F))  // May never sync above 8 but copy by 8 is fast enough (Only if there is no way for fast splitting for vector types)
+         if((Size >= sizeof(u128)) && !(Mask & 0x0F))  // May never sync above 8 but copy by 8 is fast enough (Only if there is no way for fast splitting for vector types)
           {
-           if(Mask & 0x1F){Size=CopyAs<v128,rev>(Dst, Src, Size); Mask = ((size_t)*Dst|(size_t)*Src);}   // v128
-           if((Size >= sizeof(v256)) && !(Mask & 0x1F))   // May never sync above 16 (No fast splitting for vector types?)
+           if(Mask & 0x1F){Size=CopyAs<u128,rev>(Dst, Src, Size); Mask = ((size_t)*Dst|(size_t)*Src);}   // u128
+           if((Size >= sizeof(u256)) && !(Mask & 0x1F))   // May never sync above 16 (No fast splitting for vector types?)
             {
-             if(Mask & 0x3F){Size=CopyAs<v256,rev>(Dst, Src, Size); Mask = ((size_t)*Dst|(size_t)*Src);}   // v256
-             if((Size >= sizeof(v512)) && !(Mask & 0x3F))  // May never sync above 32 (No fast splitting for vector types?) // Requires AVX512 on x86
+             if(Mask & 0x3F){Size=CopyAs<u256,rev>(Dst, Src, Size); Mask = ((size_t)*Dst|(size_t)*Src);}   // u256
+             if((Size >= sizeof(u512)) && !(Mask & 0x3F))  // May never sync above 32 (No fast splitting for vector types?) // Requires AVX512 on x86
               {
-               while(Size >= sizeof(v512))Size=CopyAs<v512,rev>(Dst, Src, Size);    // Emulate if no 64-byte vector instructions present
+               while(Size >= sizeof(u512))Size=CopyAs<u512,rev>(Dst, Src, Size);    // Emulate if no 64-byte vector instructions present
               }
-             while(Size >= sizeof(v256))Size=CopyAs<v256,rev>(Dst, Src, Size);   // Tail as v256
+             while(Size >= sizeof(u256))Size=CopyAs<u256,rev>(Dst, Src, Size);   // Tail as u256
             }
-           while(Size >= sizeof(v128))Size=CopyAs<v128,rev>(Dst, Src, Size);   // Tail as v128
+           while(Size >= sizeof(u128))Size=CopyAs<u128,rev>(Dst, Src, Size);   // Tail as u128
           }
          while(Size >= sizeof(uint64))Size=CopyAs<uint64,rev>(Dst, Src, Size);   // Tail as u64
         }
@@ -305,7 +320,7 @@ template<bool rev=false> constexpr static size_t MemCopySync(void* _RST* _RST Ds
  return Size; // No data left
 }
 //---------------------------------------------------------------------------
-// Uses minimal alignment (like u32 dst when copying from v128 src)
+// Uses minimal alignment (like u32 dst when copying from u128 src)
 template<uint AMin, bool rev=false> constexpr static size_t MemCopyMSync(void* _RST Dst, void* _RST Src, size_t Size)
 {
  if constexpr (AMin > sizeof(uint8))
@@ -319,15 +334,15 @@ template<uint AMin, bool rev=false> constexpr static size_t MemCopyMSync(void* _
 // --- VECTORIZED
          if constexpr(NCFG::VectorizeMemOps)  // VECTORIZED
           {
-           if constexpr (AMin > sizeof(v128))
+           if constexpr (AMin > sizeof(u128))
             {
-             if constexpr (AMin > sizeof(v256))
+             if constexpr (AMin > sizeof(u256))
               {
-               while(Size >= sizeof(v512))Size=CopyAs<v512,rev>(&Dst, &Src, Size);
+               while(Size >= sizeof(u512))Size=CopyAs<u512,rev>(&Dst, &Src, Size);
               }
-               else {while(Size >= sizeof(v256))Size=CopyAs<v256,rev>(&Dst, &Src, Size);}
+               else {while(Size >= sizeof(u256))Size=CopyAs<u256,rev>(&Dst, &Src, Size);}
             }
-             else {while(Size >= sizeof(v128))Size=CopyAs<v128,rev>(&Dst, &Src, Size);}
+             else {while(Size >= sizeof(u128))Size=CopyAs<u128,rev>(&Dst, &Src, Size);}
           }
 // --- VECTORIZED
            else {while(Size >= sizeof(uint64))Size=CopyAs<uint64,rev>(&Dst, &Src, Size);}    // u64 (LOOP)
@@ -357,14 +372,14 @@ template<typename D, typename S, bool rev> constexpr static size_t SplitCopy(voi
     {
      Src--;
      S val = *Src;
-     if constexpr(NCFG::IsBigEnd)val = SwapBytes(val);  // Untested!
+     if constexpr(IsBigEndian)val = SwapBytes(val);  // Untested!
      for(uint ctr=sizeof(S)/sizeof(D);ctr--;){Dst--; *Dst = D(val >> (ctr*(sizeof(D)*8)));}    // Add attr to force it unrolled?
     }
    else
     {
      S val = *Src;
      Src++;
-     if constexpr(NCFG::IsBigEnd)val = SwapBytes(val);  // Untested!
+     if constexpr(IsBigEndian)val = SwapBytes(val);  // Untested!
      for(uint ctr=sizeof(S)/sizeof(D);ctr;ctr--,val >>= (sizeof(D)*8)){*Dst = D(val); Dst++;}    // Add attr to force it unrolled?
     }
    Size -= sizeof(S);
@@ -378,7 +393,7 @@ template<typename D, typename S, bool rev> constexpr static size_t SplitCopy(voi
     {
      D val = 0;
      for(uint ctr=sizeof(D)/sizeof(S);ctr;ctr--){Src--; val |= ((D)*Src << ((ctr-1)*8));}    // Add attr to force it unrolled?
-     if constexpr(NCFG::IsBigEnd)val = SwapBytes(val);   // Untested!
+     if constexpr(IsBigEndian)val = SwapBytes(val);   // Untested!
      Dst--;
      *Dst = val;
     }
@@ -386,7 +401,7 @@ template<typename D, typename S, bool rev> constexpr static size_t SplitCopy(voi
     {
      D val = 0;
      for(uint ctr=sizeof(D)/sizeof(S);ctr;ctr--){val |= ((D)*Src << ((ctr-1)*8)); Src--;}    // Add attr to force it unrolled?
-     if constexpr(NCFG::IsBigEnd)val = SwapBytes(val);   // Untested!
+     if constexpr(IsBigEndian)val = SwapBytes(val);   // Untested!
      *Dst = val;
      Dst++;
     }
@@ -423,7 +438,7 @@ template<typename T, bool rev=false> constexpr static size_t SplitCopy(void* _RS
     }
    else return SplitCopy<uint32,rev>(Dst, Src, Size, SplAlign);   // Process as array of uint32   // Emulate on x32 as u32
   }
- else if constexpr (sizeof(T) >= sizeof(v128))     // No use splitting vector types (No shifts?)
+ else if constexpr (sizeof(T) >= sizeof(u128))     // No use splitting vector types (No shifts?)
   {
    if(SplAlign == sizeof(uint64)){while(Size >= sizeof(uint64))Size=CopyAs<uint64,rev>(Dst, Src, Size);}
    else if(SplAlign == sizeof(uint32)){while(Size >= sizeof(uint32))Size=CopyAs<uint32,rev>(Dst, Src, Size);}
@@ -456,9 +471,9 @@ template<bool rev=false> constexpr _ninline static void* MemCopy(void* _RST Dst,
    if constexpr(NCFG::VectorizeMemOps)
     {
      if(AlMax & sizeof(uint64))Size=SplitCopy<uint64,rev>(&Dst, &Src, Size, AlMin);   // To u64
-     else if(AlMax & sizeof(v128))Size=SplitCopy<v128,rev>(&Dst, &Src, Size, AlMin);  // To u128
-     else if(AlMax & sizeof(v256))Size=SplitCopy<v256,rev>(&Dst, &Src, Size, AlMin);  // To u256
-     else Size=SplitCopy<v512,rev>(&Dst, &Src, Size, AlMin);    // To u512 (default)
+     else if(AlMax & sizeof(u128))Size=SplitCopy<u128,rev>(&Dst, &Src, Size, AlMin);  // To u128
+     else if(AlMax & sizeof(u256))Size=SplitCopy<u256,rev>(&Dst, &Src, Size, AlMin);  // To u256
+     else Size=SplitCopy<u512,rev>(&Dst, &Src, Size, AlMin);    // To u512 (default)
     }
      else Size=SplitCopy<uint64,rev>(&Dst, &Src, Size, AlMin);   // To u64 (default)
   }
@@ -486,20 +501,20 @@ _ninline static void* MemZero(void* _RST Dst, size_t Size)             // Too bi
 // --- VECTORIZED
        if constexpr(NCFG::VectorizeMemOps)  // VECTORIZED
         {
-         if((size_t)Dst & sizeof(uint64))Size=StoreAs<uint64>(0, &Dst, Size);    // Align to v128
-         if(Size >= sizeof(v128))
+         if((size_t)Dst & sizeof(uint64))Size=StoreAs<uint64>(0, &Dst, Size);    // Align to u128
+         if(Size >= sizeof(u128))
           {
-           if((size_t)Dst & sizeof(v128))Size=StoreAs<v128>(v128{0}, &Dst, Size);      // Align to v256
-           if(Size >= sizeof(v256))
+           if((size_t)Dst & sizeof(u128))Size=StoreAs<u128>(u128{0}, &Dst, Size);      // Align to u256
+           if(Size >= sizeof(u256))
             {
-             if((size_t)Dst & sizeof(v256))Size=StoreAs<v256>(v256{0}, &Dst, Size);    // Align to v512
-             if(Size >= sizeof(v512))   // Requires AVX512 on x86
+             if((size_t)Dst & sizeof(u256))Size=StoreAs<u256>(u256{0}, &Dst, Size);    // Align to u512
+             if(Size >= sizeof(u512))   // Requires AVX512 on x86
               {
-               while(Size >= sizeof(v512))Size=StoreAs<v512>(v512{0}, &Dst, Size);    // TODO: Emulate (constexpr) if no 64-byte vector instructions present
+               while(Size >= sizeof(u512))Size=StoreAs<u512>(u512{0}, &Dst, Size);    // TODO: Emulate (constexpr) if no 64-byte vector instructions present
               }
-             if(Size >= sizeof(v256))Size=StoreAs<v256>(v256{0}, &Dst, Size);  // Tail as v256
+             if(Size >= sizeof(u256))Size=StoreAs<u256>(u256{0}, &Dst, Size);  // Tail as u256
             }
-           if(Size >= sizeof(v128))Size=StoreAs<v128>(v128{0}, &Dst, Size);    // Tail as v128
+           if(Size >= sizeof(u128))Size=StoreAs<u128>(u128{0}, &Dst, Size);    // Tail as u128
           }
          if(Size >= sizeof(uint64))Size=StoreAs<uint64>(0, &Dst, Size);  // Tail as u64
         }
@@ -528,7 +543,7 @@ constexpr static void* MemRotRight(void* _RST Dst, size_t Size, size_t Bytes)
 template<typename T=uint8> constexpr _ninline static void* MemFill(void* _RST Dst, size_t Size, const T Val)   // Too complex to inline // TODO: Obj Type version to make alignment detection constexpr (MemFillObj)
 {
  if(!Val)return MemZero(Dst, Size);
- alignas(NCFG::VectorizeMemOps?sizeof(v512):sizeof(uint64)) uint32 ValArr[NCFG::VectorizeMemOps?(sizeof(v512)/sizeof(uint32)):(sizeof(uint64)/sizeof(uint32))];   // TODO: Expand from Val
+ alignas(NCFG::VectorizeMemOps?sizeof(u512):sizeof(uint64)) uint32 ValArr[NCFG::VectorizeMemOps?(sizeof(u512)/sizeof(uint32)):(sizeof(uint64)/sizeof(uint32))];   // TODO: Expand from Val
  InitFillPattern<T,sizeof(ValArr)>(ValArr, Val);
 
 // if constexpr(NCFG::IsBigEnd)val = SwapBytes(val);    // TODO: Fix Swap to work with arrays by ref
@@ -544,20 +559,20 @@ template<typename T=uint8> constexpr _ninline static void* MemFill(void* _RST Ds
 // --- VECTORIZED
        if constexpr(NCFG::VectorizeMemOps)  // VECTORIZED
         {
-         if((size_t)Dst & sizeof(uint64)){Size=StoreAs<uint64>(*(uint64*)&ValArr, &Dst, Size); if constexpr(sizeof(T) > sizeof(uint64))MemRotLeft(&ValArr, sizeof(ValArr), sizeof(uint64));}    // Align to v128
-         if(Size >= sizeof(v128))
+         if((size_t)Dst & sizeof(uint64)){Size=StoreAs<uint64>(*(uint64*)&ValArr, &Dst, Size); if constexpr(sizeof(T) > sizeof(uint64))MemRotLeft(&ValArr, sizeof(ValArr), sizeof(uint64));}    // Align to u128
+         if(Size >= sizeof(u128))
           {
-           if((size_t)Dst & sizeof(v128)){Size=StoreAs<v128>(*(v128*)&ValArr, &Dst, Size); if constexpr(sizeof(T) > sizeof(v128))MemRotLeft(&ValArr, sizeof(ValArr), sizeof(v128));}     // Align to v256
-           if(Size >= sizeof(v256))
+           if((size_t)Dst & sizeof(u128)){Size=StoreAs<u128>(*(u128*)&ValArr, &Dst, Size); if constexpr(sizeof(T) > sizeof(u128))MemRotLeft(&ValArr, sizeof(ValArr), sizeof(u128));}     // Align to u256
+           if(Size >= sizeof(u256))
             {
-             if((size_t)Dst & sizeof(v256)){Size=StoreAs<v256>(*(v256*)&ValArr, &Dst, Size); if constexpr(sizeof(T) > sizeof(v256))MemRotLeft(&ValArr, sizeof(ValArr), sizeof(v256));}    // Align to v512
-             if(Size >= sizeof(v512))   // Requires AVX512 on x86
+             if((size_t)Dst & sizeof(u256)){Size=StoreAs<u256>(*(u256*)&ValArr, &Dst, Size); if constexpr(sizeof(T) > sizeof(u256))MemRotLeft(&ValArr, sizeof(ValArr), sizeof(u256));}    // Align to u512
+             if(Size >= sizeof(u512))   // Requires AVX512 on x86
               {
-               while(Size >= sizeof(v512))Size=StoreAs<v512>(*(v512*)&ValArr, &Dst, Size);    // TODO: Emulate (constexpr) if no 64-byte vector instructions present
+               while(Size >= sizeof(u512))Size=StoreAs<u512>(*(u512*)&ValArr, &Dst, Size);    // TODO: Emulate (constexpr) if no 64-byte vector instructions present
               }
-             if(Size >= sizeof(v256)){Size=StoreAs<v256>(*(v256*)&ValArr, &Dst, Size); if constexpr(sizeof(T) > sizeof(v256))MemCopyMSync<sizeof(v256)>(&ValArr, (uint8*)&ValArr + sizeof(v256), sizeof(v256));}  // Tail as v256
+             if(Size >= sizeof(u256)){Size=StoreAs<u256>(*(u256*)&ValArr, &Dst, Size); if constexpr(sizeof(T) > sizeof(u256))MemCopyMSync<sizeof(u256)>(&ValArr, (uint8*)&ValArr + sizeof(u256), sizeof(u256));}  // Tail as u256
             }
-           if(Size >= sizeof(v128)){Size=StoreAs<v128>(*(v128*)&ValArr, &Dst, Size); if constexpr(sizeof(T) > sizeof(v128))MemCopyMSync<sizeof(v128)>(&ValArr, (uint8*)&ValArr + sizeof(v128), sizeof(v128));}    // Tail as v128
+           if(Size >= sizeof(u128)){Size=StoreAs<u128>(*(u128*)&ValArr, &Dst, Size); if constexpr(sizeof(T) > sizeof(u128))MemCopyMSync<sizeof(u128)>(&ValArr, (uint8*)&ValArr + sizeof(u128), sizeof(u128));}    // Tail as u128
           }
          if(Size >= sizeof(uint64)){Size=StoreAs<uint64>(*(uint64*)&ValArr, &Dst, Size); if constexpr(sizeof(T) > sizeof(uint64))MemCopyMSync<sizeof(uint64)>(&ValArr, (uint8*)&ValArr + sizeof(uint64), sizeof(uint64));} // Tail as u64
         }
@@ -578,16 +593,28 @@ constexpr _minline static size_t MemCmp(void* _RST Dst, void* _RST Src, size_t S
  return 0;
 }
 //---------------------------------------------------------------------------
-// Such approach should be faster for small sizes where misalignments will make less perfomance hit than bunch of conditions
+// Such approach should be faster for small sizes where misalignments will make less performance hit than bunch of conditions
 // NOTE: With O0 actually does it byte by byte
+// NOTE: 'attribute optimize' still have no effect and 'loop vectorize' have no effect with O0
+// TODO: Fix memset and use it in debug builds - will be faster than the byte loop
+// # Clang: Adjust block copy threshold  ?
+//  -mllvm -inline-threshold=500
 //
-template<typename T, size_t Num=1> constexpr _finline static void ZeroObj(T* _RST Dst)   // Too much branches in ZeroMem
+template<typename T> constexpr _finline static void ZeroObj(T*&& _RST Dst, size_t Num=1)  // Too much branches in ZeroMem  // 'T*&&' helps to resolve ambiguity with decaying arrays
 {
+//#pragma clang loop vectorize(enable)
  for(uint8* ptr=(uint8*)Dst, *end=(uint8*)&Dst[Num];ptr < end;ptr++)*ptr = 0;   // It is perfectly vectorized with -O2    // Any possible alignment issues may be solved by compiler options (strict alignment)?
+}
+// NOTE: Do not call - repeat. Otherwise the optimizer won't recognize the pattern.
+template<typename T, size_t N> constexpr _finline static void ZeroObj(T (&Dst)[N])
+{
+//#pragma clang loop vectorize(enable)
+ for(uint8* ptr=(uint8*)Dst, *end=(uint8*)&Dst[N];ptr < end;ptr++)*ptr = 0;   // It is perfectly vectorized with -O2    // Any possible alignment issues may be solved by compiler options (strict alignment)?
 }
 //---------------------------------------------------------------------------
 template<typename T, size_t Num=1> constexpr _finline static void CopyObj(T* _RST Dst, T* _RST Src) 
 {
+//#pragma clang loop vectorize(enable)
  for(uint8 *sptr=(uint8*)Src, *dptr=(uint8*)Dst, *dend=(uint8*)&Dst[Num];dptr < dend;)*dptr++ = *sptr++;   // It is perfectly vectorized with -O2    // Any possible alignment issues may be solved by compiler options (strict alignment)?
 }
 //---------------------------------------------------------------------------
@@ -600,9 +627,9 @@ template<typename T, size_t Num=1> constexpr _finline static void CopyObj(T* _RS
  alignas(sizeof(uint16))  uint8 TestStr2[]  = {"(2) Hello mem test World (2)!"};
  alignas(sizeof(uint32))  uint8 TestStr4[]  = {"(4) Hello mem test World (4)!"};
  alignas(sizeof(uint64))  uint8 TestStr8[]  = {"(8) Hello mem test World (8)!"};
- alignas(sizeof(v128))    uint8 TestStr16[] = {"(16) Hello mem test World (16)!"};
- alignas(sizeof(v256))    uint8 TestStr32[] = {"(32) Hello mem test World (32)!"};
- alignas(sizeof(v512))    uint8 TestStr64[] = {"(64) Hello mem test World (64)!"};
+ alignas(sizeof(u128))    uint8 TestStr16[] = {"(16) Hello mem test World (16)!"};
+ alignas(sizeof(u256))    uint8 TestStr32[] = {"(32) Hello mem test World (32)!"};
+ alignas(sizeof(u512))    uint8 TestStr64[] = {"(64) Hello mem test World (64)!"};
 
  alignas(256) volatile uint8 TstBuf[1024] = {0};
  MemCopy((void*)&TstBuf[0xAF],&TestStr1,0x1A);
@@ -629,14 +656,16 @@ template<typename T, size_t Num=1> constexpr _finline static void CopyObj(T* _RS
 
 extern "C"  
 {
+// #pragma redefine_extname __builtin_memcpy my_memcpy_impl
+// __attribute__((no_builtin("memcpy")))   // The compiler will not replace this code with a call to itself
 void* _ccall memcpy(void* Dst, const void* Src, size_t Size)  // static
 {
- return NMOPS::MemCopy(Dst, (void*)Src, Size);      //  Will be a single jump wrapper, no optimization
+ return MOPR::MemCopy(Dst, (void*)Src, Size);      //  Will be a single jump wrapper, no optimization
 }
 //---------------------------------------------------------------------------
 void* _ccall memmove(void* Dst, const void* Src, size_t Size)   // Fixed but inefficient
 {
- return NMOPS::MemMove(Dst, (void*)Src, Size);
+ return MOPR::MemMove(Dst, (void*)Src, Size);
 }
 //---------------------------------------------------------------------------
 // NOTE: memset will not be inlined and Val is never expanded at compile time when zero to MemZero
@@ -645,7 +674,7 @@ void* _ccall memmove(void* Dst, const void* Src, size_t Size)   // Fixed but ine
 //void* memset(void* Dst, const unsigned int Val, size_t Size)   // TODO: Aligned, SSE by MACRO   _EXTERNC
 void* _ccall memset(void *Dst, int Val, size_t Size)
 {
- return NMOPS::MemFill<uint8>(Dst,Size,(uint8)Val);
+ return MOPR::MemFill<uint8>(Dst,Size,(uint8)Val);
 }
 //---------------------------------------------------------------------------
 // TODO: Need a function which returns number of matched bytes, not just diff of a last unmatched byte

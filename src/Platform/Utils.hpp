@@ -68,7 +68,7 @@ static bool IsValidAbsPath(const achar* Path)      // Use this to validate paths
 static bool IsSepOnPath(const achar* Path)
 {
  achar val;
- for(;val=*Path;Path++)
+ for(;(val=*Path);Path++)
   {
    if(IsFilePathSep(val))return true;
   }
@@ -78,7 +78,7 @@ static bool IsSepOnPath(const achar* Path)
 static bool IsStepBackOnPath(const achar* Path)
 {
  achar val;
- for(;val=*Path;Path++)
+ for(;(val=*Path);Path++)
   {
    if((val == '.') && (Path[1] == '.') && IsFilePathSep(Path[2]))return true;
   }

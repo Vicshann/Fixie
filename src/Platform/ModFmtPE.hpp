@@ -855,7 +855,7 @@ static vptr GetProcAddr(vptr ModuleBase, const achar* ProcName, achar** Forwarde
  return Addr;     
 }
 //------------------------------------------------------------------------------------------------------------
-static vptr GetProcAddrSafe(vptr ModuleBase, achar* ProcName, achar** Forwarder=nullptr, vptr* ProcEntry=nullptr)   // Any PE type
+static vptr GetProcAddrSafe(vptr ModuleBase, const achar* ProcName, achar** Forwarder=nullptr, vptr* ProcEntry=nullptr)   // Any PE type
 {
 // DBGMSG("ApiName: %s",ApiName);
  if(!ModuleBase)return nullptr;

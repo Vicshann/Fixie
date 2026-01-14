@@ -80,6 +80,8 @@
       <EnumValue Name="Combined" DisplayName="Combined" />
       <EnumValue Name="Separate" DisplayName="Separate" />
       <EnumValue Name="ObjOnly" DisplayName="No Linking" />
+      <EnumValue Name="EmitASM" DisplayName="ASM source" />
+      <EnumValue Name="EmitLLVM" DisplayName="LLVM source" />
          <EnumProperty.DataSource>
           <DataSource Persistence="ProjectFile" />
         </EnumProperty.DataSource>     
@@ -117,11 +119,34 @@
       Category="Advanced"
       Visible="True"
       IncludeInCommandLine="True"
+      Separator=" "
       Switch=" ">
       <StringListProperty.DataSource>
         <DataSource Persistence="ProjectFile" SourceType="Property" />
       </StringListProperty.DataSource>
     </StringListProperty> 
+    
+    <StringProperty
+      Name="AppBuildAfter"
+      DisplayName="Execute after build"
+      Category="Advanced"
+      Visible="True" 
+      IncludeInCommandLine="False">
+        <StringProperty.DataSource>
+          <DataSource Persistence="ProjectFile" />
+        </StringProperty.DataSource>
+    </StringProperty>   
+    
+    <StringProperty
+      Name="AppBuildBefore"
+      DisplayName="Execute before build"
+      Category="Advanced"
+      Visible="True" 
+      IncludeInCommandLine="False">
+        <StringProperty.DataSource>
+          <DataSource Persistence="ProjectFile" />
+        </StringProperty.DataSource>
+    </StringProperty>        
   
   </Rule>  
 </ProjectSchemaDefinitions>

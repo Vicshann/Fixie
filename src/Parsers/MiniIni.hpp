@@ -485,22 +485,22 @@ SValRec SetBytes(const achar* Name, vptr ptr, uint size, uint NLen=0, bool Allow
 SValRec DefBool(const achar* Name, bool DefVal, uint NLen=0)
 {
  SValRec rec = this->Owner->FindValue(this, Name, NLen);
- if(rec.IsValid())return rec;
- return this->SetBool(Name, DefVal, NLen);
+ if(!rec.IsValid())rec = this->SetBool(Name, DefVal, NLen);     // NOTE: A single return path is required for NRVO optimization to work (Dumb)
+ return rec;
 }
 //---------------------------------------
 SValRec DefInt(const achar* Name, sint64 DefVal, uint NLen=0)
 {
  SValRec rec = this->Owner->FindValue(this, Name, NLen);
- if(rec.IsValid())return rec;
- return this->SetInt(Name, DefVal, NLen);
+ if(!rec.IsValid())rec = this->SetInt(Name, DefVal, NLen);
+ return rec;
 }
 //---------------------------------------
 SValRec DefUInt(const achar* Name, uint64 DefVal, uint NLen=0)
 {
  SValRec rec = this->Owner->FindValue(this, Name, NLen);
- if(rec.IsValid())return rec;
- return this->SetUInt(Name, DefVal, NLen);
+ if(rec.IsValid())rec = this->SetUInt(Name, DefVal, NLen);
+ return rec;
 }
 //---------------------------------------
 //void DefFloat(double val){}
@@ -1444,8 +1444,8 @@ SValRec AddValue(const achar* name, const achar* value, uint vlen=0, uint nlen=0
 SSecRec GetSection(const achar* name, SSecRec* From=nullptr, uint len=0)
 {
  SSecRec sec = this->FindSection(From, name, len);
- if(sec.IsValid())return sec;
- return this->AddSection(name, len, From);
+ if(!sec.IsValid())sec = this->AddSection(name, len, From);
+ return sec;
 }
 //----------------------------------------------------------------------------
 // These two are slow and inefficient
@@ -1478,12 +1478,9 @@ SValRec GetValue(SSecRec* Sec, const achar* ValName, const achar* DefVal, uint D
 SValRec SetValue(const achar* name, const achar* value, SSecRec* BaseSec=nullptr, uint vlen=0, uint nlen=0)
 {
  SValRec rec = this->FindValue(BaseSec, name, nlen);
- if(rec.IsValid())
-  {
-   this->ChangeValue(&rec, value, vlen);
-   return rec;
-  }
- return this->AddValue(name, value, vlen, nlen, BaseSec);
+ if(!rec.IsValid())rec = this->AddValue(name, value, vlen, nlen, BaseSec);
+   else this->ChangeValue(&rec, value, vlen);
+ return rec;
 }
 //----------------------------------------------------------------------------
 const achar* FindValue(SBaseRec* From, const achar* ValName, uint* ValLen, uint ValNamLen=0, uint MatchIdx=0)    // NOTE: No multiline retrieving here

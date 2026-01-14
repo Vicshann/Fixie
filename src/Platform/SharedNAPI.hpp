@@ -26,12 +26,12 @@ FUNC_WRAPPERFI(PX::usleep,  usleep  )     // Microseconds
 
  PX::timespec ts;
  ts.sec  = msecs / 1000000;    // 1000000 Microseconds in one Second
- ts.nsec = (msecs % 1000000) * 1000;      // 1000 nanoseconds in one Microsecond
+ ts.frac = (msecs % 1000000) * 1000;      // 1000 nanoseconds in one Microsecond
 
  int res = 0;
  while((res=NAPI::clocksleep(&ts, &ts, Flags)) == PXERR(EINTR)) 
   {
-   if(canint)return (ts.sec * 1000000) + (ts.nsec / 1000);    // Return remaining Microseconds        // 1000 nanoseconds in one Microsecond
+   if(canint)return (ts.sec * 1000000) + (ts.frac / 1000);    // Return remaining Microseconds        // 1000 nanoseconds in one Microsecond
   }
  return (uint64)res;  // 0 or negative (error)                                            
 }
@@ -44,12 +44,12 @@ FUNC_WRAPPERFI(PX::msleep,  msleep  )     // Milliseconds
 
  PX::timespec ts;
  ts.sec  = msecs / 1000;
- ts.nsec = (msecs % 1000) * 1000000;  // (milisec*1000000) % 1000000000; ?
+ ts.frac = (msecs % 1000) * 1000000;  // (milisec*1000000) % 1000000000; ?
 
  int res = 0;
  while((res=NAPI::clocksleep(&ts, &ts, Flags)) == PXERR(EINTR)) 
   {
-   if(canint)return (ts.sec * 1000) + (ts.nsec / 1000000);    // Return remaining Milliseconds     // 1000000 nanoseconds in one millisecond
+   if(canint)return (ts.sec * 1000) + (ts.frac / 1000000);    // Return remaining Milliseconds     // 1000000 nanoseconds in one millisecond
   }
  return (uint64)res;  // 0 or negative (error)
 }
@@ -62,7 +62,7 @@ FUNC_WRAPPERFI(PX::sleep,  sleep  )       // Seconds
 
  PX::timespec ts;
  ts.sec  = secs;
- ts.nsec = 0;
+ ts.frac = 0;
 
  int res = 0;
  while((res=NAPI::clocksleep(&ts, &ts, Flags)) == PXERR(EINTR)) 

@@ -29,8 +29,7 @@ if defined CMPLRGDIR__DISABLED (
 rem Redirect any known IDE temporary directories out of the root
 if defined PRJBUILDDIR (
  mkdir "%PRJBUILDDIR%"
- for /f "delims=" %%F in ('dir "%~dp0*.sln" /b /o-n') do set sln_name=%%F
- for /f "delims=" %%F in ('dir "%~dp0*.slnx" /b /o-n') do set sln_name=%%F
+ for /f "delims=" %%F in ('dir "%~dp0*.sln" "%~dp0*.slnx" /b /o-n') do set sln_name=%%F
  if defined sln_name (
   set vs_dir=%PRJBUILDDIR%\.vs
   mkdir !vs_dir!

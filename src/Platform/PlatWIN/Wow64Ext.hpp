@@ -415,20 +415,20 @@ template<typename T> static uint64 _fcall GetModuleHandle64(T lpModuleName, size
 
  uint64 LastEntry = 0;
  uint64 pTeb64    = getTEB64();
- if(pTeb64 < MaxAddrX32)NMOPS::MemCopy(&teb64, (vptr)pTeb64, sizeof(NT64::TEB));   // Always in upper memory?
+ if(pTeb64 < MaxAddrX32)MOPR::MemCopy(&teb64, (vptr)pTeb64, sizeof(NT64::TEB));   // Always in upper memory?
    else getMem64(&teb64, pTeb64, sizeof(NT64::TEB));
  uint64 pPeb64 = teb64.ProcessEnvironmentBlock;
- if(pPeb64 < MaxAddrX32)NMOPS::MemCopy(&peb64, (vptr)pPeb64, sizeof(NT64::PEB));
+ if(pPeb64 < MaxAddrX32)MOPR::MemCopy(&peb64, (vptr)pPeb64, sizeof(NT64::PEB));
    else getMem64(&peb64, pPeb64, sizeof(NT64::PEB));
  uint64 pLdr64 = peb64.Ldr;
- if(pLdr64 < MaxAddrX32)NMOPS::MemCopy(&ldr, (vptr)pLdr64, sizeof(NT64::PEB_LDR_DATA));
+ if(pLdr64 < MaxAddrX32)MOPR::MemCopy(&ldr, (vptr)pLdr64, sizeof(NT64::PEB_LDR_DATA));
    else getMem64(&ldr, pLdr64, sizeof(NT64::PEB_LDR_DATA));
 
  head.InLoadOrderLinks.Flink = ldr.InLoadOrderModuleList.Flink;
  do
   {
    uint64 pHead64 = head.InLoadOrderLinks.Flink;
-   if(pHead64 < MaxAddrX32)NMOPS::MemCopy(&head, (vptr)pHead64, sizeof(NT64::LDR_DATA_TABLE_ENTRY));
+   if(pHead64 < MaxAddrX32)MOPR::MemCopy(&head, (vptr)pHead64, sizeof(NT64::LDR_DATA_TABLE_ENTRY));
      else getMem64(&head, pHead64, sizeof(NT64::LDR_DATA_TABLE_ENTRY));
    wchar_t* Name  = tempBuf;
    uint64 pName64 = head.BaseDllName.Buffer;
@@ -452,7 +452,7 @@ static uint64 _fcall getNTDLL64(void)
  return ntdll64;
 }
 //------------------------------------------------------------------------------------------------------------
-static uint64 _fcall GetProcAddressSimpleX64(uint64 modBase, achar* ProcName)
+static uint64 _fcall GetProcAddressSimpleX64(uint64 modBase, const achar* ProcName)
 {
  if(!modBase || !ProcName || !*ProcName)return 0;
  NPE64::SDosHdr idh;

@@ -21,17 +21,21 @@
 // https://github.com/DaemonEngine/Daemon/blob/master/src/common/Compiler.h
 //------------------------------------------------------------------------------------------------------------
 
+#define SCVR static constexpr const
+
 #ifdef __GNUC__              // CLANG defines it too
 #define COMP_AGCC __GNUC__   // May be GCC, ICC, or something else
 #endif
 #ifdef __clang__              // Must be last here!
 #define COMP_CLNG __clang__   // May define __GNUC__ or _MSC_VER
 #pragma message(">>> Compiler is CLANG")
+static constexpr bool IsMSVC = false;
 #undef COMP_AGCC
 #endif
 #ifdef _MSC_VER
 #define COMP_MSVC _MSC_VER
 #pragma message(">>> Compiler is MSVC")
+static constexpr bool IsMSVC = true;       // TODO: Test it with ClangCL   // Should be real MSVC only
 #undef COMP_CLNG   // CLANG pretends to be MSVC
 #undef COMP_AGCC
 #endif
@@ -69,6 +73,17 @@ static constexpr bool IsArchX64 = true;
 #pragma message(">>> Architecture is X32")
 static constexpr bool IsArchX32 = true;
 static constexpr bool IsArchX64 = false;
+#endif
+
+// NOTE: MSVC just hardcodes LittleEndian anyway
+#if (defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)) || defined(__BIG_ENDIAN__) || defined(_big_endian__) || defined(_BIG_ENDIAN)
+#define _BTORD_BE
+static constexpr bool IsBigEndian = true;
+#pragma message(">>> Byte order is Big endian")
+#else
+#define _BTORD_LE
+static constexpr bool IsBigEndian = false;     // Since the Framework is for x86 and ARM its base operation mode is LittleEndian  // __BIG_ENDIAN__ // __BYTE_ORDER == __BIG_ENDIAN // __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+#pragma message(">>> Byte order is Little endian")
 #endif
 
 // https://stackoverflow.com/questions/3378560/how-to-disable-gcc-warnings-for-a-few-lines-of-code
@@ -221,9 +236,11 @@ static constexpr bool IsDbgBuild = false;
 #endif
 
 #define _RST
+#define NOALIAS __declspec(noalias)
 #pragma intrinsic(_ReturnAddress)
 #pragma intrinsic(_AddressOfReturnAddress)  // Instead of #include <intrin.h>
 
+#define UNREACHABLE() __assume(false)
 #define GETSTKFRAME() _AddressOfReturnAddress()  // ARM? On ARM RetAddr is in LR register, not on stack (assuming first in the stack frame according to ABI) // Will not include address of some previous stack frame (from 'push rbp' at proc addr)    // CLANG:MSVC also supports __builtin_frame_address
 #define GETRETADDR() _ReturnAddress()
 //#define SETRETADDR(addr) (*(void**)_AddressOfReturnAddress() = (void*)(addr))    // Not on ARM? LR is usually pushed on stack
@@ -257,6 +274,8 @@ static constexpr bool IsDbgBuild = false;
 #endif
 
 #define _RST __restrict           // void fr (float * __restrict dest)   // https://stackoverflow.com/questions/1965487/does-the-restrict-keyword-provide-significant-benefits-in-gcc-g
+#define NOALIAS __attribute__((noalias))
+#define UNREACHABLE() __builtin_unreachable()
 // https://gcc.gnu.org/onlinedocs/gcc/Return-Address.html
 // NOTE: __builtin_frame_address does not return the frame address as it was at a function entry. It points at the current function`s frame, including all its local variables
 #define GETSTKFRAME() __builtin_frame_address(0)  // NOTE: MINGW implements _AddressOfReturnAddress() with it  // Anything except 0 will use a stack frame register according to specified ABI // TODO: Rework! // On ARM there is no RetAddr on stack  // Should not include address of some previous stack frame (from 'push rbp' at proc addr)
@@ -315,7 +334,13 @@ static constexpr bool IsDbgBuild = false;
 #define _EXTERNC extern "C"
 #endif
 
-#define SCVR static constexpr const
+// Works on both Clang and GCC (automatically defined to 16 when __int128 is supported as a real scalar type)
+#ifdef __SIZEOF_INT128__
+#define HAS_INT128 1
+static constexpr bool HaveScalarI128 = true;
+#else 
+static constexpr bool HaveScalarI128 = false;
+#endif
 
 // NOTE: Stack will be restored at function's end even if it is inlined (Clang)
 // https://stackoverflow.com/questions/55177353/constructing-a-function-pointer-to-alloca-causes-linker-errors
@@ -441,6 +466,9 @@ template<bool UseTypeA, typename A, typename B> struct TSW;                   //
 template<typename A, typename B> struct TSW<true, A, B> {using T = A;};
 template<typename A, typename B> struct TSW<false, A, B> {using T = B;};
 
+// Helper alias to match std::conditional_t
+template<bool V, typename A, typename B> using TSWT = typename TSW<V, A, B>::T;
+
 template<bool UseTypeA, typename A, typename B> constexpr static auto TypeSwitch(void)       // Usage: struct SMyStruct { decltype(TypeSwitch<MyCompileTimeCondition, MyStructA, MyStructB>()) Val; }
 {
  if constexpr (UseTypeA) {A val{0}; return val;}
@@ -450,8 +478,11 @@ template<bool UseTypeA, typename A, typename B> constexpr static auto TypeSwitch
 //template<typename T, typename U> struct SameType {enum { V = false };};   // Cannot be a member of a local class or a function
 //template<typename T> struct SameType<T, T> {enum { V = true };};
 
-struct TrueType {static constexpr const bool V = true;};       // inline constexpr bool
-struct FalseType {static constexpr const bool V = false;};
+template<typename> struct TrueTypeT {static constexpr const bool V = true;};       // inline constexpr bool  
+template<typename> struct FalseTypeT {static constexpr const bool V = false;};
+
+using TrueType  = TrueTypeT<void>;
+using FalseType = FalseTypeT<void>;
 
 template<typename T, typename U> struct SameType : FalseType {};   // Cannot be a member of a local class or a function
 template<typename T> struct SameType<T, T> : TrueType {};
@@ -472,6 +503,9 @@ template<typename T> consteval static auto TypeToSigned(T Val=0)
    if constexpr (SameType<T, unsigned long>::V)return (signed long)Val;     // X64 mostly   // decltype(sizeof(void*)) is 'unsigned long' there
      else return (signed long long)Val;
   }
+#ifdef HAS_INT128
+ else if constexpr (16 == sizeof(T))return (signed __int128)Val;
+#endif
 }
 //------------------------------------------------------------------------------------------------------------
 template<typename T> consteval static auto TypeToUnsigned(T Val=0)
@@ -484,16 +518,21 @@ template<typename T> consteval static auto TypeToUnsigned(T Val=0)
    if constexpr (SameType<T, unsigned long>::V) return (unsigned long)Val;
      else return (unsigned long long)Val;
   }
+#ifdef HAS_INT128
+ else if constexpr (16 == sizeof(T))return (unsigned __int128)Val;
+#endif
 }
 //------------------------------------------------------------------------------------------------------------
 template<typename V> struct MakeSigned { using T = decltype(TypeToSigned<V>()); };
 template<typename V> struct MakeUnsigned { using T = decltype(TypeToUnsigned<V>()); };
+template<typename Ty> using MakeUnsignedT = typename MakeUnsigned<Ty>::T;
 //------------------------------------------------------------------------------------------------------------
 template<typename T> consteval static auto ChangeTypeSign(T Val=0)  // Should be compiled faster than a template specialization?
 {
  if constexpr (T(-1) < T(0))return TypeToUnsigned<T>(Val);   // IsSigned
    else return TypeToSigned<T>(Val);
 }
+//------------------------------------------------------------------------------------------------------------
 
 constexpr static bool Is64BitBuild(void){return sizeof(void*) == 8;}   // To be used in constexpr expressions instead of __amd64__ macro
 //------------------------------------------------------------------------------------------------------------
@@ -547,6 +586,8 @@ pointer	    64	    64	    64	    32	    32
  using sint128 = __int128;
 #else
 // using int128_t = int __attribute__((mode(TI)));   // !!! https://gcc.gnu.org/onlinedocs/gccint/Machine-Modes.html
+using uint128 = decltype(sizeof(void*)) __attribute__((__vector_size__(16), __aligned__(16), __may_alias__));
+using sint128 = decltype(sizeof(void*)) __attribute__((__vector_size__(16), __aligned__(16), __may_alias__));
 #endif
 
  using int8    = sint8;
@@ -557,7 +598,15 @@ pointer	    64	    64	    64	    32	    32
  using uint    = decltype(sizeof(void*));   // These 'int' are always platform-friendly (same size as pointer type, replace size_t) // "The result of sizeof and sizeof... is a constant of type std::size_t"
  using sint    = decltype(ChangeTypeSign(sizeof(void*)));   // NOTE: use of arch`s default type size by default is better for ARM(no easy way to get/set half of a register) and worse for X86(wasted register halves could be used for something else)
  using vptr    = void*;
- using cvptr   = const void*;
+ using bptr    = uint8*;
+ using wptr    = uint16*;
+ using dptr    = uint32*;
+ using qptr    = uint64*;
+ using vcptr   = const void*;
+ using bcptr   = const uint8*;
+ using wcptr   = const uint16*;
+ using dcptr   = const uint32*;
+ using qcptr   = const uint64*;
  using usize   = uint;    // Should replace size_t (altough just using 'uint' is more intuitive (If size is not specified then it is of the current arch's default size))
  using ssize   = sint;    // isize?   // ui,si,u8,u16,u32,u64 (too short, hard to notice)? 
 
@@ -608,6 +657,7 @@ typedef __builtin_va_list va_list;        // Requires stack alignment by 16
 //  template<typename _Tp> auto reclval() noexcept -> decltype(__declval<_Tp>(0));
 // Ihis is fine... for now
 template <typename T> T declval();        // Not really useful to use an overloaded functions with decltype
+//template<class T> T&& declval() noexcept;   // *only declared, never defined*
 
 // Check if two types are variants of same template  // static_assert(SameKind<decltype(v1), std::vector>::V, "no match");
 template<typename Test, template<typename...> class Ref> struct SameKind : FalseType {};        // is_specialization
@@ -621,11 +671,38 @@ template<template<typename...> class Ref, typename... Args> struct SameKind<Ref<
  return SameKind<A, Base>::V && SameKind<B, Base>::V;     // !!! How to get the 'Base' from A and B???    // https://godbolt.org/z/vnbfa6v7W
 }*/
 
+template<class T> struct IsIntegralLike 
+{
+private:
+ // Primary overload chosen only if "declval<T>() & 1" is a valid unevaluated expression
+ template<class U, class = decltype( (declval<U>() & 1), void() )> static TrueTypeT<U> test(int);
+ template<class> static FalseTypeT<void> test(...);
+public:
+ static constexpr bool V = decltype(test<T>(0))::V;
+};
+
+template<class T> concept IsIntegral   = IsIntegralLike<T>::V;
+template<class T> concept CanDoBitOps  = requires(T x) { x & int(1); };
+
+// the compiler is required to treat T(1) / T(0) for T = int as ill-formed even in an unevaluated constant-expression context, not just "substitution failure", so it cannot be turned into a nice SFINAE check.
+//template<class T> concept CanDivByZero = requires(T x) { []() constexpr {constexpr T v = T(1) / T(0);(void)v;}(); }    //constexpr const y = x / int(1); };    // uint32(1) >> 32;
+
+template<class T> concept IsFltPoint   = (!CanDoBitOps<T>); 
+template<class T> concept IsArithmetic = (IsIntegral<T> || IsFltPoint<T>); 
+
+template<class T> concept SubscriptableAsArray = requires(T x) { x[0]; };
+template<class T> concept IsScalar128 = (sizeof(T) == 16) && (!SubscriptableAsArray<T>);  // is it a 128-bit scalar?
+template<class T> concept IsVectorExt = SubscriptableAsArray<T>;  // is it a vector extension type (any size)?
+
 template<typename T> struct BitSize {using ST = decltype(sizeof(T)); static constexpr const ST V = sizeof(T) * ((ST)8);};
 template<typename T> constexpr T GetBitSize(T x){return BitSize<T>::V;}
 //------------------------------------------------------------------------------------
+//template<typename T> struct IsSigned : TSW<(T(-1) < T(0)), TrueTypeT<T>, FalseTypeT<T>>::T {};   // Add IsArithmetic check?
 
+template<typename T> struct IsSigned { static const bool V = (T(-1) < 0); };
 template<typename T> struct IsUnsigned { static const bool V = (T(-1) >= 0); };     // template<typename T> constexpr _finline static bool IsPositive(void){return (T(-1) >= 0);}    // constinit
+template<typename T> constexpr bool IsSignedV = IsSigned<T>::V;
+template<typename T> constexpr bool IsUnsignedV = IsUnsigned<T>::V;
 
 template<bool condition> struct warn_if{};
 template<> struct [[deprecated]] warn_if<false>{constexpr warn_if() = default;};     // NOTE: MSVC have problems with this!
@@ -634,9 +711,9 @@ template<> struct [[deprecated]] warn_if<false>{constexpr warn_if() = default;};
 template<typename Ty> struct RemoveRef { using T = Ty; };
 template<typename Ty> struct RemoveRef<Ty&> { using T = Ty; };
 template<typename Ty> struct RemoveRef<Ty&&> { using T = Ty; };
-template<typename Ty> using remove_ref_t = typename RemoveRef<Ty>::T;
+template<typename Ty> using  RemoveRefT = typename RemoveRef<Ty>::T;
 
-template<typename T> remove_ref_t<T>& rvalcast(remove_ref_t<T> &&t){return static_cast<remove_ref_t<T> &>(t);}
+template<typename T> RemoveRefT<T>& rvalcast(RemoveRefT<T> &&t){return static_cast<RemoveRefT<T> &>(t);}
 template<typename T> auto __inline rvptr(T&& v){return &v;}
 //------------------------------------------------------------------------------------------------------------
 template <typename Ty> struct TyIdent { using T = Ty; };
@@ -675,14 +752,20 @@ template<typename Ty> struct RemovePtr<Ty* const> { using T = Ty; };
 template<typename Ty> struct RemovePtr<Ty* volatile> { using T = Ty; };
 template<typename Ty> struct RemovePtr<Ty* const volatile> { using T = Ty; };
 
-//template< typename Ty > using remove_pointer_t = typename remove_pointer<Ty>::T;
-
+template<typename Ty> using RemovePtrT = typename RemovePtr<Ty>::T;
 //--------------
 
 template <int Size> struct TypeForSizeU
 {
  using T = typename TSW<(Size < 8), typename TSW<Size < 4, typename TSW<Size < 2, uint8, uint16>::T, uint32>::T, uint64>::T;    // without 'typename' the compiler refuses to look for TSW type
 };
+
+template <int Size> struct TypeForSizeS
+{
+ using T = typename TSW<(Size < 8), typename TSW<Size < 4, typename TSW<Size < 2, sint8, sint16>::T, sint32>::T, sint64>::T;    // without 'typename' the compiler refuses to look for TSW type
+};
+
+template<int Size, bool Unsign=true> using TypeForSizeT = typename TSW<Unsign, typename TypeForSizeU<Size>::T, typename TypeForSizeS<Size>::T>::T;
 //------------------------------------------------------------------------------------------------------------
 // https://stackoverflow.com/questions/46404503/can-i-implement-maxa-maxb-maxc-d-using-fold-expressions
 
@@ -714,6 +797,11 @@ static_assert(SizeOfMaxInPPack((char)1, (float)2) == sizeof(float));
 static_assert(SizeOfMaxInPPack((int)1, (char)2) == 4); */
 
 //------------------------------------------------------------------------------------------------------------
+template<typename T> struct IsRef : FalseTypeT<T> {};      // Primary template - assumes not a reference
+template<typename T> struct IsRef<T&> : TrueTypeT<T> {};   // Specialization for lvalue references
+template<typename T> struct IsRef<T&&> : TrueTypeT<T> {};  // Specialization for rvalue references
+template<typename T> inline constexpr bool IsRefV = IsRef<T>::V;   // C++17 variable template helper
+//------------------------------------------------------------------------------------------------------------
 // https://stackoverflow.com/questions/3177686/how-to-implement-is-pointer
 
 // These are useful with 'auto' arguments
@@ -730,17 +818,28 @@ template <typename Ty> struct RemoveVolatile<volatile Ty> {typedef Ty T;};
 template <typename Ty> struct RemoveCV : RemoveConst<typename RemoveVolatile<Ty>::T> {};
 template <typename Ty> struct IsUPtrType {enum { V = false };};
 template <typename Ty> struct IsUPtrType<Ty*> {enum { V = true };};
-template <typename Ty> struct IsPtrType : IsUPtrType<typename RemoveCV<Ty>::T> {};
-template <typename Ty> static consteval bool IsPointer(const Ty&){return IsPtrType<Ty>::V;}   // Is this one better?
+template <typename Ty> struct IsPtr : IsUPtrType<typename RemoveCV<Ty>::T> {};
+template <typename Ty> inline constexpr bool IsPtrV = IsPtr<Ty>::V;   // C++17 variable template helper
+template <typename Ty> static consteval bool IsPointer(const Ty&){return IsPtr<Ty>::V;}   // Is this one better?
 
 consteval auto ConstEval(auto v){return v;}     // Most constexpr functions prefer to not be evaluated at compile time, even if they can
+
+template<typename Ty> concept NoPtr = !IsPtr<Ty>::V;
+template<typename Ty> concept NoRef = !IsRef<Ty>::V;
+template<typename Ty> concept Plain = !IsPtr<Ty>::V && !IsRef<Ty>::V;
+template<typename Ty> concept Integral = IsIntegral<Ty>;
+//------------------------------------------------------------------------------------------------------------
+//template<typename T> struct is_array_helper : FalseType {};
+//template<typename T, size_t N> struct is_array_helper<T[N]> : TrueType {};
+//template<typename T> struct is_array_helper<T[]> : TrueType {};
+//template<typename T, size_t N> struct is_array_helper<T(&)[N]> : TrueType {};
+//template<typename T> struct is_array_helper<T(&)[]> : TrueType {};
+//
+//template<typename T> constexpr bool IsArray = is_array_helper<RemoveRefT<T>>::V;
 //------------------------------------------------------------------------------------------------------------
 
-template<typename T> constexpr _finline static int32 AddrToRelAddr(T CmdAddr, unsigned int CmdLen, T TgtAddr){return -((CmdAddr + CmdLen) - TgtAddr);}         // x86 only?
-template<typename T> constexpr _finline static T     RelAddrToAddr(T CmdAddr, unsigned int CmdLen, int32 TgtOffset){return ((CmdAddr + CmdLen) + TgtOffset);}  // x86 only?
-
-template <typename T> constexpr _finline static T RotL(T Value, unsigned int Shift){constexpr unsigned int MaxBits = BitSize<T>::V; return T((Value << Shift) | (Value >> ((MaxBits - Shift)&(MaxBits-1))));}
-template <typename T> constexpr _finline static T RotR(T Value, unsigned int Shift){constexpr unsigned int MaxBits = BitSize<T>::V; return T((Value >> Shift) | (Value << ((MaxBits - Shift)&(MaxBits-1))));}
+//template<typename T> constexpr _finline static int32 AddrToRelAddr(T CmdAddr, unsigned int CmdLen, T TgtAddr){return -((CmdAddr + CmdLen) - TgtAddr);}         // x86 only?
+//template<typename T> constexpr _finline static T     RelAddrToAddr(T CmdAddr, unsigned int CmdLen, int32 TgtOffset){return ((CmdAddr + CmdLen) + TgtOffset);}  // x86 only?
 
 template <typename T> constexpr _finline static T Min(T ValA, T ValB){return (ValA < ValB)?ValA:ValB;}
 template <typename T> constexpr _finline static T Max(T ValA, T ValB){return (ValA > ValB)?ValA:ValB;}
@@ -785,22 +884,33 @@ template<typename TObj, typename TR> static constexpr auto get_address(member_fu
 template<typename... A, typename T, typename R> constexpr auto find_overload(R(T::*f)(A...)) { return f; }
 template<typename... A, typename R> constexpr auto find_overload(R(*f)(A...)) { return f; }
 //------------------------------------------------------------------------------------------------------------
+constexpr _finline bool IsConstexprCtx(void) noexcept    // WARNING: Always 'true' in 'if constexpr' or if declared as 'consteval' here
+{
+ return __builtin_is_constant_evaluated();    //  MSVC,GCC,Clang
+}
+//------------------------------------------------------------------------------------------------------------
 // Makes the pointer 'arbitrary', like it came from some malloc
 // Helps the optimizer to 'forget' about where this pointer came from
 // NOTE: May cause the ptr to lose relative addressing? (Arm32)
-auto _finline UnbindPtr(auto* ptr)
-{
- volatile size_t tmp = (size_t)ptr;
- return (decltype(ptr))tmp;
-}
+//auto _finline UnbindPtr(auto* ptr) // __builtin_launder (std::launder)  // UnbindVal replaces it?
+//{
+// volatile size_t tmp = (size_t)ptr;
+// return (decltype(ptr))tmp;
+//}
 //---------------------------------------------------------------------------
+// Removes unwanted metadata from a variable
+// Needed to suppress assumptions about return values from some intrinsics (like  __builtin_clz )
 // Should force compiler to use registers to store constants in code directly instead of putting them into RDATA
-template<typename T> T _finline LoadFromRegister(T value) noexcept       // Actually prevents values from being allocated into RDATA?
+template<typename T> constexpr static T _finline UnbindVal(T value) noexcept     // LoadFromRegister  // Actually prevents values from being allocated into RDATA?
 {
 #if defined(__clang__) || defined(__GNUC__)
- asm("" : "=r"(value) : "0"(value) : );
- return value;
-#else
+ if(!IsConstexprCtx())
+  {
+   asm volatile ("" : "+r"(value));  // asm("" : "+r"(value) : : );  // asm("" : "=r"(value) : "0"(value) : );
+   return value;
+  }
+   else return value;     // Useless in constexpr
+#else       // MSVC fallback
  volatile T reg = value;
  return reg;
 #endif
@@ -916,7 +1026,7 @@ template<typename T> CRRef(T&) -> CRRef<T>;    // Deduction guides
 template<size_t N> struct SStrLit   // String literal (Useful for templates where a string need to be passes as a nontype argument)
 {
  achar value[N];        // Still no way to use it with a custom string class passed as a function argument    // Probably constexpr allocation and consteval counstructor would help somehow to get the size from the constructor?
-                         // Looks like user defined string literals are introduced to "hide" this problem ("argument deduction not allowed in function prototype")
+                        // Looks like user defined string literals are introduced to "hide" this problem ("argument deduction not allowed in function prototype")
  constexpr SStrLit(const achar (&str)[N]) { for(int z=0;z < N;z++)value[z] = str[z]; }        // std::copy_n(str, N, value);   // constexpr cstring(char const* data)
  auto operator<=>(const SStrLit&) const = default;
  bool operator==(const SStrLit&) const  = default;
@@ -976,5 +1086,66 @@ constexpr _finline auto NullStr(void)
  return (const char*)ptr;
 }
 //------------------------------------------------------------------------------------------------------------
+// Byte array wrapper - REQUIRED for BitCast because arrays can't be returned/assigned directly. 
+// Example auto bytes = __builtin_bit_cast(SWrapArray<sizeof(T), uint8>, value);
+template<usize N, typename T=uint8> struct SWrapArray 
+{
+ T data[N];
+ constexpr T& operator[](usize i) { return data[i]; }
+ constexpr const T& operator[](usize i) const { return data[i]; }
+};
+//------------------------------------------------------------------------------------------------------------
+template<typename To, typename From> constexpr To BitCast(const From& src) noexcept 
+{
+ static_assert(sizeof(To) == sizeof(From), "Size mismatch");
+ return __builtin_bit_cast(To, src);
+}
+//------------------------------------------------------------------------------------------------------------
 
+// Generic version with auto return type based on string length (Slow monstrosity)
+/*template<int N> consteval auto StrToCC(const achar (&str)[N]) noexcept 
+{
+// static_assert(N >= 2, "String must be at least 1 character + null terminator");
+ constexpr int CharCount = N - 1;  // Exclude null terminator
+ using RetType =    // Determine return type based on character count
+     TSW_t<(CharCount == 8), uint64,  
+     TSW_t<(CharCount == 4), uint32, 
+     TSW_t<(CharCount == 2), uint16,    
+     TSW_t<(CharCount == 1), uint8,  
+     ETYPE>>>>;  // Error case for > 8 chars
+ static_assert(sizeof(RetType) > 0, "The string can't map to the type");
+ RetType result = 0;
+ if constexpr (!NCFG::IsBigEnd) { for(int idx = 0; idx < CharCount; idx++) result |= (RetType)(uint8(str[idx])) << (idx << 3); }  // Little-endian: first char at LSB     // * 8
+ else { for(int idx = 0; idx < CharCount; idx++) { result<<=8; result |= (RetType)(uint8(str[idx]));} } // Big-endian: first char at MSB  
+ return result;
+} */
 
+/*consteval uint64 MakeCC(const achar* sv, usize len)
+{
+ uint64 result = 0;
+ for(usize i = 0;i < 8; ++i)result |= uint64(uint8(sv[i])) << (i * 8);
+ return result;
+}
+consteval uint64 operator""_cc(const achar* s, usize len){ return MakeCC(s, len); } // C++23 user-defined literal (optional, very convenient)  */
+
+consteval uint32 cc4(const char (&s)[5])    // exactly 4 chars + '\0'  // NOTE: Compare the result with unswapped uint32 as it was read from memory
+{
+ if constexpr (!IsBigEndian)return uint32((uint8)s[0]) | (uint32((uint8)s[1]) << 8) | (uint32((uint8)s[2]) << 16) | (uint32((uint8)s[3]) << 24);
+   else return uint32((uint8)s[3]) | (uint32((uint8)s[2]) << 8) | (uint32((uint8)s[1]) << 16) | (uint32((uint8)s[0]) << 24);
+}
+//------------------------------------------------------------------------------------------------------------
+ _finline constexpr void SetFlags(auto& Value, auto Flags){Value |= Flags;}
+ _finline constexpr void RemoveFlags(auto& Value, auto Flags){Value &= ~Flags;}
+ _finline constexpr bool IsSetFlags(auto Value, auto Flags){return ((Value & Flags) == Flags);}
+ _finline constexpr bool IsSetAnyFlag(auto Value, auto Flags){return (Value & Flags);}
+//-----------------------------------------------------
+// This handles all cases correctly:
+// NumBits == 0:        returns 0 (the & 0xFFFF... zeros it)
+// NumBits == MaxBits:  shift by 0, returns T(-1)
+// 0 < NumBits < Max:   returns proper mask
+template<typename T> static _finline constexpr T MakeBitMask(uint32 NumBits)   // TODO: Optimize
+{
+ SCVR uint32 MaxBits = sizeof(T) * 8;
+ return (T(-1) >> ((MaxBits - NumBits) & (MaxBits - 1))) & -T(NumBits != 0);   // bool?
+} 
+//------------------------------------------------------------------------------------------------------------

@@ -34,7 +34,7 @@ template<typename T=wchar_t> union ChrOpSiUC {static const int Dir=0; static T D
 //---------------------------------------------------------------------------
 // StrValA is a base string to which we match
 // Returns match size, negative for termination offset
-template<typename COp=ChrOpNone<>, typename A=wchar_t*, typename B=wchar_t*> _finline static sint StrMatch(const A StrValA, const B StrValB, size_t MaxLenA=(size_t)-1, size_t MaxLenB=(size_t)-1)
+template<typename COp=ChrOpNone<>, typename A=wchar_t*, typename B=wchar_t*> _minline static sint StrMatch(const A StrValA, const B StrValB, size_t MaxLenA=(size_t)-1, size_t MaxLenB=(size_t)-1)
 {
  if(MaxLenA < MaxLenB)return -MaxLenA;     // Base string is smaller - no match!
  for(sint voffs=0;;voffs++,MaxLenA--,MaxLenB--)    // TODO: Do not decrement, precalculate EndOfStr
@@ -50,11 +50,12 @@ template<typename COp=ChrOpNone<>, typename A=wchar_t*, typename B=wchar_t*> _fi
 }
 //---------------------------------------------------------------------------
 // Return: 0 if strings match
+// strncmp(s1, s2, 0) always returns 0 (match) without inspecting content, which can mask real mismatches if size accidentally hits zero.
 //   UNRELIABLE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 // Need to separate?
 // NOTE: Sloooow!
 //
-template<typename COp=ChrOpNone<>, typename A=wchar_t*, typename B=wchar_t*> _finline static sint StrCompare(const A StrValA, const B StrValB, size_t MaxLen=(size_t)-1)  // Not exactly standard!  // NOTE: For a case sensitive strings there should be a faster way
+template<typename COp=ChrOpNone<>, typename A=wchar_t*, typename B=wchar_t*> _minline static sint StrCompare(const A StrValA, const B StrValB, size_t MaxLen=(size_t)-1)  // Not exactly standard!  // NOTE: For a case sensitive strings there should be a faster way
 {
  for(sint voffs=0;;voffs++,MaxLen--)    // TODO: Do not decrement, precalculate EndOfStr
   {
@@ -67,7 +68,7 @@ template<typename COp=ChrOpNone<>, typename A=wchar_t*, typename B=wchar_t*> _fi
   }
 }
 //---------------------------------------------------------------------------
-template<typename COp=ChrOpNone<>, typename A=wchar_t*> _finline static sint ChrOffset(const A StrVal, wchar_t ChrVal, size_t Offs=0, size_t Len=(size_t)-1)   // TODO: constexpr if to exclude 'Len' if not used (-1)
+template<typename COp=ChrOpNone<>, typename A=wchar_t*> _minline static sint ChrOffset(const A StrVal, wchar_t ChrVal, size_t Offs=0, size_t Len=(size_t)-1)   // TODO: constexpr if to exclude 'Len' if not used (-1)
 {
  if(Offs > Len)return -2;    // NOTE: No pointer check
  ChrVal = COp::DoOp(ChrVal);
@@ -82,7 +83,7 @@ template<typename COp=ChrOpNone<>, typename A=wchar_t*> _finline static sint Chr
 // Offs is needed bacause you can pass in StrBase an object which just supports operator[]
 // But in case of a plain strings, a size is passed separatedly
 //
-template<typename COp=ChrOpNone<>, typename A=wchar_t*, typename B=wchar_t*> _finline static sint StrOffset(const A StrBase, const B StrVal, size_t Offs=0, size_t BaseLen=(size_t)-1, size_t ValLen=(size_t)-1)    // char *strstr(const char *haystack, const char *needle)
+template<typename COp=ChrOpNone<>, typename A=wchar_t*, typename B=wchar_t*> _minline static sint StrOffset(const A StrBase, const B StrVal, size_t Offs=0, size_t BaseLen=(size_t)-1, size_t ValLen=(size_t)-1)    // char *strstr(const char *haystack, const char *needle)
 {
  if(Offs > BaseLen)return -2;    // if(!StrBase || !StrVal || !*StrVal || (Offs > Len))
  for(size_t voffs=0;StrBase[Offs] && (Offs < BaseLen);)     // Slow, by one char. TODO: Use memcmp for case sensitive strngs

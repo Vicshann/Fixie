@@ -78,8 +78,9 @@ template<uint vARM, uint vX86> struct ASV
 SCVR int EOF    = -1;
 SCVR int BadFD  = -1;
 
+static constexpr auto _finline Error(auto val){return -val;} 
 static constexpr bool _finline IsBadFD(fdsc_t fd){return fd < 0;}
-static constexpr bool _finline IsError(int val){return (bool)val;}   // Anything but NOERROR
+static constexpr bool _finline IsError(int val){return (bool)val;}   // Anything but NOERROR   // TODO: Fix for ssize
 
 enum EDFD  // These are just for convenience. These descriptors don`t have to be open on every system (Android?)
 {
@@ -385,10 +386,11 @@ enum ESeek
 };
 
 // Repositions the file offset of the open file description associated with the file descriptor fd to the argument offset according to the directive whence
+// The offset can be negative
 // Negative return values are error codes
 static SSIZE_T PXCALL lseek(fdsc_t fd, SSIZE_T offset, ESeek whence);   // This definition is not good for X32, use INT64 (lseekGD) declaration and llseek wrapper on X32
 
-static sint64 PXCALL lseekGD(fdsc_t fd, int64 offset, ESeek whence);   // Generic definition, wraps lseek(on x64) and llseek(on x32)
+static sint64 PXCALL lseekGD(fdsc_t fd, sint64 offset, ESeek whence);   // Generic definition, wraps lseek(on x64) and llseek(on x32)
 
 // x32 only(Not present on x64)!
 static int PXCALL llseek(fdsc_t fd, uint32 offset_high, uint32 offset_low, PINT64 result, ESeek whence);
@@ -526,23 +528,22 @@ static int PXCALL flock(fdsc_t fd, int operation);
 
 
 // https://en.cppreference.com/w/c/chrono/timespec
-template<typename T> struct STSpec        // nanosleep, fstat (SFStat)
+template<typename T, T FracPerSec> struct STime
 {
- T sec;   // Seconds      // time_t ???
- T nsec;  // Nanoseconds  // valid values are [0, 999999999]   // long (long long on some platforms?)
+ SCVR T FPS = FracPerSec;
+ T sec;   // seconds
+ T frac;  // fractional part (0 to FRAC_PER_SEC-1)
 
-inline STSpec<T>& operator= (const auto& tm){this->sec = (T)tm.sec; this->nsec = (T)tm.nsec; return *this;}
+ _minline STime<T,FracPerSec>& operator= (const auto& tm){this->sec = (T)tm.sec; this->frac = (T)tm.frac; return *this;}
 };
+
+template<typename T = time_t> using STVal  = STime<T, 1000000>;     // microseconds    // suseconds_t (long)          // gettimeofday
+template<typename T = time_t> using STSpec = STime<T, 1000000000>;  // nanoseconds     // valid values are [0, 999999999]   // long (long long on some platforms?)    // nanosleep, fstat (SFStat)
+
 using timespec = STSpec<time_t>;
-using PTiSp = MPTR<timespec,   PHT>;
-
-template<typename T> struct STVal      // gettimeofday
-{
- T sec;   // Seconds         // time_t (long)
- T usec;  // Microseconds    // suseconds_t (long)
-};
-using timeval = STVal<time_t>;
-using PTiVl = MPTR<timeval,   PHT>;
+using timeval  = STVal<time_t>;
+using PTiSp    = MPTR<timespec,   PHT>;
+using PTiVl    = MPTR<timeval,   PHT>;
 
 struct timezone
 {

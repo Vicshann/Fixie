@@ -427,7 +427,7 @@ static _finline sint GetModulePath(achar* DstBuf, size_t BufSize=size_t(-1))
 //------------------------------------------------------------------------------------------------------------
 static vptr LoadModule(const achar* Path)
 {
- static vptr paddr = 0;
+ static vptr paddr = nullptr;
  if(!paddr)
   {
    paddr = NPE::GetProcAddrSafe(fwsinf.pNtDll, "LdrLoadDll"); 

@@ -35,6 +35,22 @@ RTL_SYM void* __emutls_get_address(struct __emutls_object* obj)   // Ignored in 
  return NFWK::NPTM::NTHD::__emutls_get_address(obj);
 }
 //---------------------------------------------------------------------------
+//static void operator delete(void* ptr, unsigned long sz) 
+//{ 
+//   // cout << "custom delete for size " << sz <<endl; 
+//  // delete (ptr); // ::operator delete(ptr) can also be used 
+//} 
+//static void operator delete[](void* ptr, unsigned long sz) 
+//{ 
+//   // cout << "custom delete for size " << sz <<endl; 
+//   // delete (ptr); // ::operator delete(ptr) can also be used 
+//} 
+// Global 'operator delete' for deleting destructors (classes with virtual destructors will have those, used when deleted by a pointer to a base class)
+//void operator delete(void* ptr) noexcept 
+//{
+// // TODO   // Empty or ::operator delete(ptr) if heap available
+//}
+//---------------------------------------------------------------------------
 /*static void* _ccall memset(void* _Dst, int _Val, NFWK::size_t _Size)   // __cdecl   // TODO: Aligned, SSE by MACRO   // DDUUPPLLIICCAATT
 {
  NFWK::size_t ALen = _Size/sizeof(NFWK::size_t);

@@ -15,7 +15,7 @@
 struct NLEX        // It is shorter than CTokenizer (flags are namespaced)
 {
 // TODO: Propagate to token stream (STkn) only useful flags
-enum EToolFlags {   // Tokenizer flags, not a token flags  // Token flags or range flags?   // Only 8 bits for token flags!   // This is for Range/Token records, not the token stream itself     // TODO: Sort the flags
+enum EToolFlags: uint32 {   // Tokenizer flags, not a token flags  // Token flags or range flags?   // Only 8 bits for token flags!   // This is for Range/Token records, not the token stream itself     // TODO: Sort the flags
   tfNone          = 0, 
   tfWhtspc        = 0x00000001,   // This range is a whitespace (At least one empty position is occupied)
   tfIgnore        = 0x00000002,   // Ignore the char range, like ' in numbers. Do not change the state?
@@ -106,7 +106,7 @@ struct STknInf  // Base token description struct for 'ProcessToken'
  uint32 Offs;  // In the buffer                                             
  uint32 EPos;  // Actual size of the token (In the buffer) is EPos - Offs
  uint32 CSize; // Size in chars (In the buffer)
- uint32 Types; // Accumulated, Set/Clr controlled
+ uint32 Types; // Accumulated, Set/Clr controlled         // Custom
  uint32 Group; // The Last one assignment will be used
  uint32 Flags; // The Last one assignment will be used
 
@@ -151,20 +151,20 @@ struct SRangeLst              // Shared with all tokenizing instances
  SCVR uint MaxRanges = 256;   // Max unique ranges for all states   // Using uint8 for RangeMap saves a lot of memory  // (Cannot be changed without breaking everything (for now))
 
 struct SState                 // Indexed by a 'State' into StateArr // Even with only one range per state we can have max 256 states. More ranges - less states possible because the range list is global(To index it by a byte from RangeMap)
-{
- uint8 RangeMap[MaxRanges];   // Stores indexes into RangeArr. Indexed by a 'Char'  // 0 is for an empty slot (max 255 ranges)  // Range indexes for chars  // Max 256 ranges (Meaning that we can declare each char separatedly)
+{                             // TODO: Use uint16 if MaxRanges > 256
+ uint8 RangeMap[MaxRanges];   // Stores indexes into RangeArr. Indexed by a 'Char'  // 0 is for an empty slot (max 255 ranges)  // Range indexes for chars  // Max 256 ranges (Meaning that we can declare each char separately)
 };
 
 struct SRange
 {
  uint8  First;      // First byte in range (UTF-8 is split in multi-depth byte ranges)
  uint8  Last;       // Last byte in range
- uint8  Repl;       // Replace with this value if required
- uint8  State;      // Max 256 states (Max uint8 value 00-FF), 64K memory (Allocated by 4K?)
- uint32 Group;      // Useful for Scopes (Max 256 scope types)   // Actual group value is uint8, higher bytes are arbitrary
- uint32 Flags;      // ETokenFlags  // By default all unassigned char ranges cause fallback to state 0. Invalid char ranges must be defined to break parsing if necessary 
- uint32 FlgSet;     // Set (OR) the accumumulated token flags for the Lexer (Low part)
- uint32 FlgClr;     // Clear(~AND) the accumumulated token flags for the Lexer (Low part)
+ uint8  Repl;       // Replace with this value if required   (Used only with tfCharReplace)
+ uint8  State;      // The state to which this range will cause transition. Max 256 states (Max uint8 value 00-FF), 64K memory (Allocated by 4K?)
+ uint32 Group;      // Useful for Scopes (Max 256 scope types)   // Actual group value is uint8, higher bytes are arbitrary (Used as GroupId for scopes)
+ uint32 Flags;      // ETokenFlags  // By default all unassigned char ranges cause fallback to state 0. Invalid char ranges must be defined to break parsing if necessary   // Used by the state machine
+ uint32 FlgSet;     // Set (OR) the accumulated token flags for the Lexer (Low part)       // Custom: STknInf.Types
+ uint32 FlgClr;     // Clear(~AND) the accumulated token flags for the Lexer (Low part)    // Custom: STknInf.Types
  
  bool IsValid(void){return (First|Last);}  // 0 char is invalid
 };
@@ -568,7 +568,7 @@ sint Tokenize(void)  // TODO: Continuable (Done?) // TODO: Break on warnings too
 
    SRangeLst::SRange* Rng;
    uint32 SplitFlg = this->PrvSplitFlg;
-   while((Rng=this->Ranges->Get(Val, this->State),!Rng->IsValid()))   // Detect and fallback to a base state 0 if there is no valid defined range for the char in current state    // If a range is not defined it is a empty record with NextState is 0 (Base state)
+   while((Rng=this->Ranges->Get(Val, this->State),(!Rng->IsValid())))   // Detect and fallback to a base state 0 if there is no valid defined range for the char in current state    // If a range is not defined it is a empty record with NextState is 0 (Base state)
     {
      if(!this->State)return this->ErrCtx.Set(leUnexpChar, this->State, 1, this->Buffer.Put(Val, this->CurTkn.Size()) - this->Buffer.Ptr(), SPos(this->LineNum,this->LinePos,this->Offset,1,this->ChOffs,1), this->CurTkn.Pos);    // Nowhere to fallback, already in state 0 (All usable ASCII ranges must be defined in state 0)
      this->State = 0;              // Rng->State (An invalid rec is empty and its state is 0 too)

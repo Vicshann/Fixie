@@ -9,24 +9,25 @@
   </ItemGroup>
   
   <PropertyGroup>  
-    <TargetExt>.</TargetExt>
+    <TargetExt></TargetExt>
     <TargetExt Condition="'$(AppTargetOS)' == 'WIN' AND $(AppSharedModule) == True">.dll</TargetExt> 
     <TargetExt Condition="'$(AppTargetOS)' == 'WIN' AND $(AppSharedModule) == False">.exe</TargetExt> 
 
     <OutBinPath>$(OutDir)$(TargetName)$(TargetExt)</OutBinPath>
     
-    <ExtraOpts>$(CCmdLine)</ExtraOpts>
+    <ExtraOpts>$(AppCmdLine)</ExtraOpts>
     <!--  -flto ; -ffunction-sections ; -fno-asynchronous-unwind-tables  those will cause PDB files to be incomplete and break stack-trace and single-stepping -->
-    <ExtraOpts Condition="'$(AppTargetOS)' == 'WIN' and '$(Configuration)'=='Debug'"> -fno-lto -fasynchronous-unwind-tables -fno-function-sections -O0 -g0 -g -gcodeview -Wl,/DEBUG:FULL -Wl,/PDB:"$(IntDir)$(TargetName).pdb" $(ExtraOpts)</ExtraOpts>
+    <ExtraOpts Condition="'$(AppTargetOS)' == 'WIN' and '$(AppConfigType)'=='Debug'"> -fno-lto -fasynchronous-unwind-tables -fno-function-sections -O0 -g0 -g -gcodeview -Wl,/DEBUG:FULL -Wl,/PDB:"$(IntDir)$(TargetName).pdb" $(ExtraOpts)</ExtraOpts>
        
     <BinaryDir>$(OutDir)</BinaryDir>
     <BinaryExt>$(TargetExt)</BinaryExt>
+    <BinaryExt  Condition="'$(BinaryExt)' == ''">.</BinaryExt>
   </PropertyGroup> 
 
   <PropertyGroup Condition="$(AppLnkVerbose) == True"> <ExtraOpts> -Wl,/VERBOSE $(ExtraOpts)</ExtraOpts> </PropertyGroup>  
   <PropertyGroup Condition="$(AppTimeTrace) == True"> <ExtraOpts> -ftime-trace="$(IntDir)$(TargetName).json" $(ExtraOpts)</ExtraOpts> </PropertyGroup>  
   
-  <PropertyGroup>
+  <PropertyGroup Condition="'$(AppTargetOS)' == 'WIN'">
     <ValSubSys></ValSubSys> 
     <ValSubSys Condition="$(AppLnkSubsys) == Windows">WINDOWS</ValSubSys> 
     <ValSubSys Condition="$(AppLnkSubsys) == Console">CONSOLE</ValSubSys>
@@ -36,32 +37,56 @@
   </PropertyGroup>
   
   <!-- Compile to OBJ ('.o' if not for Windows?) -->
-  <PropertyGroup Condition="'$(AppLnkMode)' != 'Combined'">  
+  <PropertyGroup Condition="'$(AppLnkMode)' == 'Separate' and '$(AppLnkMode)' == 'ObjOnly'">  
     <BinaryDir>$(IntDir)</BinaryDir>
     <BinaryExt>.obj</BinaryExt>
     <ExtraOpts>-c $(ExtraOpts)</ExtraOpts>
   </PropertyGroup> 
   
+  <PropertyGroup Condition="'$(AppLnkMode)' == 'EmitLLVM'">  
+    <BinaryDir>$(IntDir)</BinaryDir>
+    <BinaryExt>.ll</BinaryExt>
+    <ExtraOpts>-S -emit-llvm $(ExtraOpts)</ExtraOpts>
+  </PropertyGroup>    
+  
+  <PropertyGroup Condition="'$(AppLnkMode)' == 'EmitASM'">  
+    <BinaryDir>$(IntDir)</BinaryDir>
+    <BinaryExt>.asm</BinaryExt>
+    <ExtraOpts>-S $(ExtraOpts)</ExtraOpts>
+  </PropertyGroup>   
+  
+  <PropertyGroup> 
+    <ArchPrefix></ArchPrefix> 
+    <ArchPrefix Condition="'$(PROCESSOR_ARCHITECTURE)' == 'AMD64'">x64\</ArchPrefix> 
+    <ArchPrefix Condition="'$(PROCESSOR_ARCHITECTURE)' == 'ARM64'">ARM64\</ArchPrefix> 
+    
+    <LlvmRoot>$(ClangTidyLLVMInstallDir)</LlvmRoot>
+    <LlvmRoot Condition="!Exists('$(LlvmRoot)\bin\clang.exe')">$(VsInstallRoot)\VC\Tools\Llvm\$(ArchPrefix)</LlvmRoot>
+  </PropertyGroup>
+  
+  <!-- Note: Clang may return 0 for 'missing include files' error -->
   <Target Name="Build">
-    <Message Text="NOTE: Building $(AppBuildType) -> $(OutBinPath)" Importance="high" />
+    <Message Text="Building $(AppBuildType) -> $(OutBinPath)" Importance="high" />
     <Message Text="PreprocessorDefinitions: $(NMakePreprocessorDefinitions)" />
-    <Exec Command="&quot;$(FwkDirPath)COMPILE\BUILD_BY_CFG.bat&quot; $(AppBuildType) $(TargetName) $(BinaryExt) $(AppMainFile) $(BinaryDir) $(ProjectDir) $(ExtraOpts)" ContinueOnError="false" EnvironmentVariables="VS_LLVMPATH=$(ClangTidyLLVMInstallDir)"> 
+    <Message Text="LLVM Root: $(LlvmRoot)" />
+    <Exec Command="&quot;$(FwkDirPath)COMPILE\BUILD_BY_CFG.bat&quot; $(AppBuildType) &quot;$(TargetName)&quot; &quot;$(BinaryExt)&quot; &quot;$(AppMainFile)&quot; &quot;$(BinaryDir)&quot; &quot;$(SolutionDir)&quot; $(ExtraOpts)" ContinueOnError="false" EnvironmentVariables="VS_LLVMPATH=$(LlvmRoot)"> 
       <Output TaskParameter="ExitCode" PropertyName="BuildExitCode" />  <!-- Condition="'$(BuildExitCode)' == '0'"  -->
-    </Exec>   
+    </Exec> 
     <OnError ExecuteTargets="UpdateDefs" />  <!-- ContinueOnError -->
   </Target>
   
   <Target Name="Rebuild">
-    <Message Text="NOTE: ReBuilding $(AppBuildType) -> $(OutBinPath)" Importance="high" />
+    <Message Text="ReBuilding $(AppBuildType) -> $(OutBinPath)" Importance="high" />
     <Message Text="PreprocessorDefinitions: $(NMakePreprocessorDefinitions)" />
-    <Exec Command="&quot;$(FwkDirPath)COMPILE\BUILD_BY_CFG.bat&quot; $(AppBuildType) $(TargetName) $(BinaryExt) $(AppMainFile) $(BinaryDir) $(ProjectDir) $(ExtraOpts)" ContinueOnError="false" EnvironmentVariables="VS_LLVMPATH=$(ClangTidyLLVMInstallDir)"> 
+    <Message Text="LLVM Root: $(LlvmRoot)" />
+    <Exec Command="&quot;$(FwkDirPath)COMPILE\BUILD_BY_CFG.bat&quot; $(AppBuildType) &quot;$(TargetName)&quot; &quot;$(BinaryExt)&quot; &quot;$(AppMainFile)&quot; &quot;$(BinaryDir)&quot; &quot;$(SolutionDir)&quot; $(ExtraOpts)" ContinueOnError="false" EnvironmentVariables="VS_LLVMPATH=$(LlvmRoot)"> 
       <Output TaskParameter="ExitCode" PropertyName="BuildExitCode" />  <!-- Condition="'$(BuildExitCode)' == '0'"  -->
-    </Exec>   
+    </Exec>  
     <OnError ExecuteTargets="UpdateDefs" />  <!-- ContinueOnError -->
   </Target>
 
   <Target Name="Clean">  <!--  DependsOnTargets="DeleteBinaries"  -->
-    <Message Text="NOTE: Cleaning" Importance="high" />
+    <Message Text="Cleaning" Importance="high" />
     <!-- <ItemGroup>    : The log is busy
        <FilesToDelete Include="$(IntDir)/$(TargetName).log"/> 
     </ItemGroup>
@@ -83,6 +108,8 @@
       <FilesToDelete Include="$(IntDir)$(TargetName).pdb"/>
       <FilesToDelete Include="$(IntDir)$(TargetName).lib"/>
       <FilesToDelete Include="$(IntDir)$(TargetName).map"/>
+      <FilesToDelete Include="$(IntDir)$(TargetName).asm"/>
+      <FilesToDelete Include="$(IntDir)$(TargetName).ll"/>
     </ItemGroup>
     <Delete Files="@(FilesToDelete)">
       <Output TaskParameter="DeletedFiles" ItemName="FilesDeleted" />
@@ -103,9 +130,9 @@
     <!--<Message Text="Files deleted: @(FilesDeleted)" />  -->
   </Target>  
   
-  <Target Name="MakePdbFromDwarf" AfterTargets="Build;Rebuild" Condition="'$(AppTargetOS)' == 'WIN' and '$(Configuration)'=='Debug' and $(AppLnkMode) == Combined and !Exists('$(IntDir)$(TargetName).pdb')">
+  <Target Name="MakePdbFromDwarf" AfterTargets="Build;Rebuild" Condition="'$(AppTargetOS)' == 'WIN' and '$(AppConfigType)'=='Debug' and $(AppLnkMode) == Combined and !Exists('$(IntDir)$(TargetName).pdb') and Exists('$(OutBinPath)')">
     <Message Text="Converting DWARF to PDB: $(IntDir)$(TargetName).pdb" Importance="high" />
-    <Exec Command="&quot;$(FwkVSPath)cv2pdb.exe&quot; $(OutBinPath)" /> 
+    <Exec Command="&quot;$(FwkVSPath)cv2pdb.exe&quot; &quot;$(OutBinPath)&quot;" /> 
   </Target> 
   
   <Target Name="LinkForWindows" AfterTargets="Build;Rebuild" Condition="'$(AppTargetOS)' == 'WIN' and $(AppLnkMode) == Separate and Exists('$(IntDir)$(TargetName).obj')">
@@ -116,11 +143,11 @@
       <LnkOpts Condition="$(AppSharedModule) == True"> $(LnkOpts) /DLL</LnkOpts>
       <LnkOpts> $(LnkOpts) /MACHINE:$(Platform) /ENTRY:Mod_Enter_Proc_Main</LnkOpts> 
       <LnkOpts> $(LnkOpts) /NODEFAULTLIB /INCREMENTAL:NO /DYNAMICBASE /LARGEADDRESSAWARE /NXCOMPAT:NO /SAFESEH:NO /OPT:REF /OPT:ICF /RELEASE</LnkOpts>
-      <LnkOpts Condition="'$(Configuration)'=='Debug'"> $(LnkOpts) /DEBUG:FULL /MAP:"$(IntDir)$(TargetName).map" /PDB:"$(IntDir)$(TargetName).pdb" </LnkOpts>  
+      <LnkOpts Condition="'$(AppConfigType)'=='Debug'"> $(LnkOpts) /DEBUG:FULL /MAP:"$(IntDir)$(TargetName).map" /PDB:"$(IntDir)$(TargetName).pdb" </LnkOpts>  
       <LnkOpts>$(LnkOpts) /OUT:"$(OutDir)$(TargetName)$(TargetExt)" "$(IntDir)$(TargetName).obj"</LnkOpts>
       <!-- /DEF:"Exports.def" /FIXED:NO /FORCE:UNRESOLVED   -->
       <LnkerPath>$(CMPLRGDIR)</LnkerPath>
-      <LnkerPath Condition="!Exists('$(LnkerPath)\bin\lld-link.exe')">$(ClangTidyLLVMInstallDir)</LnkerPath>
+      <LnkerPath Condition="!Exists('$(LnkerPath)\bin\lld-link.exe')">$(LlvmRoot)</LnkerPath>
     </PropertyGroup>
     <Message Text="CmdLine: $(LnkOpts)" Importance="high" />
     <Exec Command="&quot;$(LnkerPath)\bin\lld-link.exe&quot; $(LnkOpts)" /> 
@@ -131,16 +158,37 @@
     <Message Text="Linking: TODO" Importance="high" />
   </Target>   
   
-  <Target Name="UpdateDefs" AfterTargets="Build;Rebuild" Condition="!Exists('$(IntDir)/definitions.props')">
-    <Message Text="Updating preprocessor definitions for IntelliSense" />
+  <Target Name="UpdateDefs" AfterTargets="Build;Rebuild" Condition="!Exists('$(IntDir)/definitions.props') and Exists('$(IntDir)/configuration.cfg')">
+    <Message Text="Updating preprocessor definitions for IntelliSense from: $(IntDir)/configuration.cfg" />
     <Exec Command="&quot;$(FwkDirPath)\COMPILE\EXTRACT_DEFS.bat&quot; &quot;$(IntDir)/configuration.cfg&quot; &quot;$(IntDir)/definitions.props&quot;"> 
         <Output TaskParameter="ExitCode" PropertyName="BuildExitCode" />  
     </Exec>
-    <!--  <Message Text="BuildExitCode: $(BuildExitCode)" />
+    <!--  <Message Text="BuildExitCode: $(BuildExitCode)" />  
+    <Message Text="ProjectDir: $(ProjectDir)" />
+    <Message Text="SolutionDir: $(SolutionDir)" />
     <Message Text="ProjectPath: $(ProjectPath)" />
     <Message Text="SolutionPath: $(SolutionPath)" />  -->
-    <Exec Command="copy /b &quot;$(SolutionPath)&quot;+,," Condition="'$(BuildExitCode)' == '0' and Exists('$(SolutionPath)')"/> 
-    <Exec Command="copy /b &quot;$(ProjectPath)&quot;+,," Condition="'$(BuildExitCode)' == '0' and !Exists('$(SolutionPath)')"/>
+    <!-- Touch the solution or project file (Does not overwrites, just updates its time) --> 
+    <Exec Command="copy /b &quot;$(SolutionPath)&quot; +,, &quot;$(SolutionPath)&quot;" Condition="'$(BuildExitCode)' == '0' and Exists('$(SolutionPath)')"/> 
+    <Exec Command="copy /b &quot;$(ProjectPath)&quot; +,, &quot;$(ProjectPath)&quot;" Condition="'$(BuildExitCode)' == '0' and !Exists('$(SolutionPath)')"/>
+  </Target>  
+  
+  <!-- Targets execute in declaration order -->
+  <Target Name="AfterBuild" AfterTargets="Build;Rebuild" Condition="'$(AppBuildAfter)' != ''">
+    <Message Text="Executing: $(AppBuildAfter)" Importance="high" />
+    <Exec Command="$(AppBuildAfter)" ContinueOnError="true" /> 
+  </Target>  
+  
+  <Target Name="BeforeBuild" BeforeTargets="Build;Rebuild" Condition="'$(AppBuildBefore)' != ''">
+    <Message Text="Executing: $(AppBuildBefore)" Importance="high" />
+    <Exec Command="$(AppBuildBefore)" ContinueOnError="true" /> 
+  </Target> 
+
+  <!-- OVERRIDE: Put this AFTER all imports -->
+  <Target Name="Deploy">
+    <Message Text="My custom Deploy logic!" Importance="high" />
+    <!-- Your custom tasks here -->
+    <!-- Optionally call original: <CallTarget Targets="OriginalDeploy" /> -->
   </Target>  
   
 </Project>

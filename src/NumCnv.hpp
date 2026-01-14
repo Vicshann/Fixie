@@ -153,7 +153,7 @@ static _finline uint16 ByteToHexChar(uint8 Value, bool UpCase=true)  // Fast but
  achar ChrTable[] = {'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};    // TODO: Local?
  uint16 cmsk = uint16((uint8)!UpCase << 5);  // Low case bit mask
  cmsk |= cmsk << 8;    // Turns upper case to lower by setting bit 5 if required
- if constexpr(NCFG::IsBigEnd) return (uint16(ChrTable[Value >> 4] << 8) | uint16(ChrTable[Value & 0x0F])) | cmsk;
+ if constexpr(IsBigEndian) return (uint16(ChrTable[Value >> 4] << 8) | uint16(ChrTable[Value & 0x0F])) | cmsk;
  else return (uint16(ChrTable[Value & 0x0F] << 8) | uint16(ChrTable[Value >> 4])) | cmsk;
 }
 //---------------------------------------------------------------------------

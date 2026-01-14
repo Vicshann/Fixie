@@ -599,6 +599,7 @@ _fcall ThProcCallStub(void)       // Static, no inlining, args in registers
    NTHD::ReleaseRec((NTHD::SThCtx**)(ThrFrame->SelfPtr));     // TODO: Remove from mem rec. For now: Keep the stack memory to be reused by another new thread (Cannot deallocate stack without ASM, the compiler won`t store 'res' in a register and will touch the stack for some other useless reasons anyway)
   }
  NAPI::exit(res);  // Any ABI preserved registers are not important at this point  ThProc(nullptr,0)
+ UNREACHABLE();
 } 
 //------------------------------------------------------------------------------------------------------------
 public:

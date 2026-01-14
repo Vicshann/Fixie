@@ -228,7 +228,7 @@ static int LoadRichInfo(uint8* ModuleBase, SRichRec* Recs, uint32* RecsNum, uint
  if(EndOffs > 1024)EndOffs = 1024;  
  uint32* EndPtr = (uint32*)&((uint8*)ModuleBase)[EndOffs];
  uint32  XorKey = 0;
- uint32  Sign   = 'hciR';
+ uint32  Sign   = cc4("Rich"); //'hciR';
  uint32* RBeg   = nullptr;
  uint32* REnd   = nullptr;
  do
@@ -239,7 +239,7 @@ static int LoadRichInfo(uint8* ModuleBase, SRichRec* Recs, uint32* RecsNum, uint
      if(REnd){RBeg=EndPtr; break;}
      XorKey = EndPtr[1];
      REnd   = EndPtr;
-     Sign   = 'SnaD' ^ XorKey;
+     Sign   = cc4("DanS") ^ XorKey;    // 'SnaD'
     }
   }
    while(EndPtr > (uint32*)ModuleBase);
@@ -304,12 +304,12 @@ static int SaveRichInfo(uint8* ModuleBase, SRichRec* Recs, uint32 RecsNum, uint3
 
  DosHdr->OffsetHeaderPE = NewOffsPE;
  memset(OPtr, 0, RichSize);  
- *(OPtr++) = XorKey ^ 'SnaD';
+ *(OPtr++) = XorKey ^ cc4("DanS"); //'SnaD';
  *(OPtr++) = XorKey;
  *(OPtr++) = XorKey;
  *(OPtr++) = XorKey;
  for(uint32 Idx=0,Tot=RecsNum*2;Idx < Tot;Idx++)*(OPtr++) = ((uint32*)Recs)[Idx] ^ XorKey; 
- *(OPtr++) = 'hciR';
+ *(OPtr++) = cc4("Rich");  //'hciR';
  *(OPtr++) = XorKey;
  return RichSize;
 }

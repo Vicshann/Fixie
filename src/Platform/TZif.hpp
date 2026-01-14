@@ -55,7 +55,7 @@ struct SHdrTZ       // NOTE: Misalignment will be on each access!
 //---------------------------------------------------------------------------
 template<typename T> static T ReadField(void* ptr)
 {
- if constexpr(!NCFG::IsBigEnd)return RevByteOrder<T>(*(T*)ptr);
+ if constexpr(!IsBigEndian)return RevByteOrder<T>(*(T*)ptr);
   else return *(T*)ptr;
 }
 template<typename T> static T ReadField(void* ptr, uint& offs)

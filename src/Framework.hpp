@@ -12,8 +12,10 @@
 */
 
 #define _HIDENT(x) x
-#define _HXSTR(x) #x
-#define _HSTR(x) _HXSTR(x)
+#define _HSTR2(x) #x
+#define _HSTR(x) _HSTR2(x)
+#define _HJOIN(a,b) _HJOIN2(a,b)
+#define _HJOIN2(a,b) a##b
 #define _JOIN_PATH(x,y) _HSTR(_HIDENT(x)_HIDENT(y))
 
 #ifdef _APPNAME
@@ -60,6 +62,7 @@ namespace std
 //extern "C" void*  __cdecl memmove(void* _Dst, const void* _Src, size_t _Size);
 //extern "C" void*  __cdecl memset(void* _Dst, int _Val, size_t _Size)
 
+//---------------------------------------------------------------------------
 // Format: 'N'+'Four letters of namespace'
 // NOTE: It is impossible to put a 'namespace' inside of a 'class'
 namespace NFWK      // Must be a namespace because we are adding some namespaces and configs in it
@@ -93,7 +96,7 @@ namespace NCRYPT
 #include "Math.hpp"
 #include "UTF.hpp"
 #include "NumCnv.hpp"
-#include "DateTime.hpp"
+//#include "DateTime.hpp"    // Moved to Platform
 #include "StrUtils.hpp"
 #include "StrFmt.hpp"
 #if defined(CPU_X86)
@@ -107,15 +110,22 @@ using PX64 = NPTM::PX64;
 // Now we have access to SAPI+NAPI
 // TODO: CStr which can be initialized from a pointer and contains string utilities
 
+       
+#include "Memory/MemProviders.hpp"
+#include "Memory/MemRegion.hpp"
+#include "Memory/AllocatorTLSF.hpp"
+#include "Memory/StorPolicies.hpp"
 
-#include "Containers/Allocators.hpp"
 #include "Streams/Streams.hpp"
+#include "Compression/RLE.hpp"
 
 //#include "MemUtils.hpp"
 //#include "MemStorage.hpp"
 //#include "StrStorage.hpp"
 //#include "StrPool.hpp"
-#include "Arrays.hpp"
+#include "Containers/Array.hpp"
+#include "Containers/BitArray.hpp"
+#include "Containers/BitTrie.hpp"
 #include "Parsers/MiniIni.hpp"
 
 namespace NCRYPT     // https://github.com/abbbaf/Compile-time-hash-functions
@@ -129,9 +139,11 @@ namespace NCRYPT     // https://github.com/abbbaf/Compile-time-hash-functions
 
 //--- Extra
 #include "StrLocalizer.hpp"
-#include "Containers/BitTrie.hpp"
 #include "Parsers/Tokenizer.hpp"
 //---
+
+//#include "Compression/RLE.hpp"
+
 #ifdef FWK_CFG_USE_RCE
 #include "RCE/HDE.hpp"
 #include "RCE/UniHook/UniHook.hpp"     // TODO: X86!!!

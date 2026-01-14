@@ -279,4 +279,26 @@ static size_t PXCALL ptrace(EPTraceCommands op, PX::pid_t pid, size_t addr, size
 #define ARM_ORIG_r0	uregs[17]
 */
 //---------------------------------------------------------------------------
+struct STElapsed
+{
+ NPTM::PX::timespec start, end, diff;
+
+ STElapsed(void) {this->Reset();}
+//-----------------------------------------------------
+void Reset(void)
+{
+ NPTM::NAPI::gettime(&this->start, NPTM::PX::CLOCK_MONOTONIC);
+}
+//-----------------------------------------------------
+void Measure(void)
+{
+ NPTM::NAPI::gettime(&this->end, NPTM::PX::CLOCK_MONOTONIC);
+ NPTM::NDT::TimeDiff(&this->diff, &this->start, &this->end);
+ uint ms = this->diff.frac / 1000000L;
+ LOGMSG("Elapsed time: %u.%03u seconds\n", this->diff.sec, ms);
+ this->start = this->end;
+}
+
+};
+//---------------------------------------------------------------------------
 };

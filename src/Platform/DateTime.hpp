@@ -193,30 +193,23 @@ sint CompareDateTime(const DT* dt1, const DT* dt2)
  return 0;
 }
 //---------------------------------------------------------------------------
-// timeval_diff(&diff, &after, &before);  // %lu.%06d
-//
-static int timeval_diff(auto result, auto x, auto y)    // Params are NPTM::PX::timeval
+template<typename T, T FracPerSec> static _minline int TimeDiff(PX::STime<T, FracPerSec>* result, const PX::STime<T, FracPerSec>* before, const PX::STime<T, FracPerSec>* after)
 {
- // Perform the carry for the later subtraction by updating y.
- if(x->usec < y->usec) 
+ result->sec  = after->sec  - before->sec;
+ result->frac = after->frac - before->frac;
+ 
+ // Normalize frac to 0..(FracPerSec-1)
+ if(result->frac < 0) 
  {
-  sint nsec = (y->usec - x->usec) / 1000000 + 1;
-  y->usec -= 1000000 * nsec;
-  y->sec  += nsec;
- }
- if(x->usec - y->usec > 1000000) 
+  result->frac += FracPerSec;
+  result->sec  -= 1;
+ } 
+ else if(result->frac >= FracPerSec) 
  {
-  sint nsec = (x->usec - y->usec) / 1000000;
-  y->usec += 1000000 * nsec;
-  y->sec -= nsec;
+  result->frac -= FracPerSec;
+  result->sec  += 1;
  }
-
- // Compute the time remaining to wait. tv_usec is certainly positive. 
- result->sec  = x->sec  - y->sec;
- result->usec = x->usec - y->usec;
-
- // Return 1 if result is negative. 
- return x->sec < y->sec;
+ return (result->sec < 0);     // Return 1 if result is negative    // return (result->sec < 0) || (!result->sec && result->frac < 0);
 }
 //---------------------------------------------------------------------------
 /*void UnixTimeToSystemTime(UINT64 ut, SYSTEMTIME* pst)
@@ -267,7 +260,10 @@ static int timeval_diff(auto result, auto x, auto y)    // Params are NPTM::PX::
  return Buffer;
 } */
 //---------------------------------------------------------------------------
+static void DoTests(void)
+{
 
+}
 //---------------------------------------------------------------------------
 };
 

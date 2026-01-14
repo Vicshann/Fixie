@@ -79,4 +79,17 @@
   </PropertyGroup>  
   <PropertyGroup Condition="$(AppMainHppPath) == ''"> <AppMainCppPath>$(FwkSrcPath)AppMain.cpp</AppMainCppPath> </PropertyGroup>
   
+  <PropertyGroup> 
+    <ShowAllFiles Condition="'$(SolutionDir)' == '$(ProjectDir)'">true</ShowAllFiles> 
+    <LocalRemoteCopySources>false</LocalRemoteCopySources>
+    <RemotePostBuildEventUseInBuild>false</RemotePostBuildEventUseInBuild>    
+  </PropertyGroup>
+   
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <CLanguageStandard>Default</CLanguageStandard>
+      <CppLanguageStandard>Default</CppLanguageStandard>
+    </ClCompile>
+  </ItemDefinitionGroup>   
+  
 </Project>

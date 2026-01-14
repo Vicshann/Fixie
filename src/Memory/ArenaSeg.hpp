@@ -21,7 +21,7 @@
 // Allocating 64k for page index is not a problem on linux. On Windows it must be 64k or a memory hole will be created.
 //
 private:
-template<size_t PageLen, size_t UnitLen, size_t FHdrLen, size_t NHdrLen, size_t RMin, size_t RMax, typename Der> struct SBASBase
+template<size_t PageLen, size_t UnitLen, size_t FHdrLen, size_t NHdrLen, size_t RMin, size_t RMax, typename Der> struct SBAPBase
 {
  SCVR size_t TagMask   = ((size_t)NPTM::MEMPAGESIZE - 1);   // Do not use PageSize to keep it consistent with other strategies
  SCVR size_t PtrMask   = ~TagMask;
@@ -68,7 +68,7 @@ public:
 // Size = Size   // Uniform allocation (Every block size is the same)
 // NOTE: Do not use pages of MEMPAGESIZE on Windows or the entire address space will be full of unreclaimable holes of 60k in size!
 //
-template<size_t UnitLen, size_t PageLen=NPTM::MEMGRANSIZE, size_t FHdrLen=0, size_t NHdrLen=0, size_t LBlkMin=0> class SBASUni: public SBASBase<AlignFrwdP2(((PageLen - Max(FHdrLen, NHdrLen)) < UnitLen)?(UnitLen+Max(FHdrLen, NHdrLen)):(PageLen),NPTM::MEMGRANSIZE), UnitLen, FHdrLen, NHdrLen, (LBlkMin?LBlkMin:14), (size_t)-1, SBASUni<UnitLen,PageLen,FHdrLen,NHdrLen> >
+template<size_t UnitLen, size_t PageLen=NPTM::MEMGRANSIZE, size_t FHdrLen=0, size_t NHdrLen=0, size_t LBlkMin=0> class SBAPUni: public SBAPBase<AlignFrwdP2(((PageLen - Max(FHdrLen, NHdrLen)) < UnitLen)?(UnitLen+Max(FHdrLen, NHdrLen)):(PageLen),NPTM::MEMGRANSIZE), UnitLen, FHdrLen, NHdrLen, (LBlkMin?LBlkMin:14), (size_t)-1, SBAPUni<UnitLen,PageLen,FHdrLen,NHdrLen> >
 {
  DEFINE_SELF   // To fix dependent name lookup - not going to repeat that looong base class template type!
 
@@ -125,7 +125,7 @@ static uint BruteForIndex(size_t ObjIdx, size_t& Idx)  // For testing
 // Size = Size + BaseSize    // Linear allocation growth   // BlkSize=PageSize*(BlkIdx+1)
 // NOTE: Do not use pages of MEMPAGESIZE on Windows or the entire address space will be full of unreclaimable holes of 4-60k in size!
 //
-template<size_t UnitLen, size_t PageLen=NPTM::MEMGRANSIZE, size_t FHdrLen=0, size_t NHdrLen=0, size_t LBlkMin=0> class SBASLin: public SBASBase<AlignFrwdP2(((PageLen - Max(FHdrLen, NHdrLen)) < UnitLen)?(UnitLen+Max(FHdrLen, NHdrLen)):(PageLen),NPTM::MEMGRANSIZE), UnitLen, FHdrLen, NHdrLen, (LBlkMin?LBlkMin:6), (size_t)-1, SBASLin<UnitLen,PageLen,FHdrLen,NHdrLen> >
+template<size_t UnitLen, size_t PageLen=NPTM::MEMGRANSIZE, size_t FHdrLen=0, size_t NHdrLen=0, size_t LBlkMin=0> class SBAPLin: public SBAPBase<AlignFrwdP2(((PageLen - Max(FHdrLen, NHdrLen)) < UnitLen)?(UnitLen+Max(FHdrLen, NHdrLen)):(PageLen),NPTM::MEMGRANSIZE), UnitLen, FHdrLen, NHdrLen, (LBlkMin?LBlkMin:6), (size_t)-1, SBAPLin<UnitLen,PageLen,FHdrLen,NHdrLen> >
 {
  DEFINE_SELF   // To fix dependent name lookup - not going to repeat that looong base class template type!
 
@@ -231,7 +231,7 @@ static uint BruteForIndex(size_t ObjIdx, size_t& Idx)  // For testing
 // PageLen is rounded up to nearest Pow2
 // RMin: 32 Should be enough for x32 and x64 even if base page size is 4096 (16TB max) (RangeNum times : PageSize = (PageSize * 2))
 //
-template<size_t UnitLen, size_t PageLen=NPTM::MEMPAGESIZE, size_t FHdrLen=0, size_t NHdrLen=0, size_t LBlkMin=0> class SBASExp: public SBASBase<AlignToP2Up(((PageLen - Max(FHdrLen, NHdrLen)) < UnitLen)?(UnitLen+Max(FHdrLen, NHdrLen)):(PageLen)), UnitLen, FHdrLen, NHdrLen, 32, 32, SBASExp<UnitLen,PageLen,FHdrLen,NHdrLen> >
+template<size_t UnitLen, size_t PageLen=NPTM::MEMPAGESIZE, size_t FHdrLen=0, size_t NHdrLen=0, size_t LBlkMin=0> class SBAPExp: public SBAPBase<BitCeil(((PageLen - Max(FHdrLen, NHdrLen)) < UnitLen)?(UnitLen+Max(FHdrLen, NHdrLen)):(PageLen)), UnitLen, FHdrLen, NHdrLen, 32, 32, SBAPExp<UnitLen,PageLen,FHdrLen,NHdrLen> >
 {
  DEFINE_SELF   // To fix dependent name lookup - not going to repeat that looong base class template type!
 
@@ -322,10 +322,10 @@ static uint BruteForIndex(size_t ObjIdx, size_t& Idx)  // For testing
 //------------------------------------------------------------------------------------------------------------
 template<uint32 StratType, size_t LBlkMin=0, size_t UnitLen=0x100, size_t PageLen=0x1000, size_t FHdrLen=0, size_t NHdrLen=0> struct SSel
 {
- STASRT(StratType <= afGrowExp, "Wrong grow strategy!");
+ STASRT(StratType <= afGrowExp, "Wrong grow policy!");
  using T = TSW<LBlkMin,
-               typename TSW<StratType==afGrowExp, SBASExp<UnitLen,PageLen,FHdrLen,NHdrLen,LBlkMin>, typename TSW<StratType==afGrowLin, SBASLin<UnitLen,PageLen,FHdrLen,NHdrLen,LBlkMin>, SBASUni<UnitLen,PageLen,FHdrLen,NHdrLen,LBlkMin> >::T>::T,
-               typename TSW<StratType==afGrowExp, SBASExp<UnitLen,PageLen,FHdrLen,NHdrLen>, typename TSW<StratType==afGrowLin, SBASLin<UnitLen,PageLen,FHdrLen,NHdrLen>, SBASUni<UnitLen,PageLen,FHdrLen,NHdrLen> >::T>::T
+               typename TSW<StratType==afGrowExp, SBAPExp<UnitLen,PageLen,FHdrLen,NHdrLen,LBlkMin>, typename TSW<StratType==afGrowLin, SBAPLin<UnitLen,PageLen,FHdrLen,NHdrLen,LBlkMin>, SBAPUni<UnitLen,PageLen,FHdrLen,NHdrLen,LBlkMin> >::T>::T,
+               typename TSW<StratType==afGrowExp, SBAPExp<UnitLen,PageLen,FHdrLen,NHdrLen>, typename TSW<StratType==afGrowLin, SBAPLin<UnitLen,PageLen,FHdrLen,NHdrLen>, SBAPUni<UnitLen,PageLen,FHdrLen,NHdrLen> >::T>::T
               >::T;
 };
 //============================================================================================================
@@ -333,7 +333,7 @@ template<uint32 StratType, size_t LBlkMin=0, size_t UnitLen=0x100, size_t PageLe
 //------------------------------------------------------------------------------------------------------------
 // NOTE: Allocations may fail depending on available memory and address space.
 //
-template<size_t PageLen, uint32 Flg, typename Ty=uint8, typename TCIfo=SEmptyType, typename TBIfo=SEmptyType, typename MP=SMemPrvBase, size_t MaxAlign=DefMaxAlign, size_t LBlkMin=0> class SBlkAlloc   // Multiple linear ranges    // Alignment 64 is enough even for AVX512
+template<size_t PageLen, uint32 Flg, typename Ty=uint8, typename TCIfo=SEmptyType, typename TBIfo=SEmptyType, typename MP=SMemProvBase, size_t MaxAlign=DefMaxAlign, size_t LBlkMin=0> class CSegArena   // Multiple linear ranges    // Alignment 64 is enough even for AVX512
 {
 SCVR bool   EmptyMP   = sizeof(MP) <= 1;    // MP will have 1 size without any data members    // The MP size should be either 0 or > 1
 SCVR bool   EmptyTB   = sizeof(TBIfo) <= 1;
@@ -358,7 +358,7 @@ struct SBlkPtrB
 };
 using SBlkPtr = TSW< BCtxInIdx, SBlkPtrB, SBlkPtrA >::T; //   // May also include TBIfo
 
-struct SBlkArrI    // Only for SBASExp
+struct SBlkArrI    // Only for SBAPExp
 {
  size_t  BlkNum;    // Max number of blocks that ever been allocated     // uint32 + padding?
  SBlkPtr BlkArr[TBStrat::RangeMin];
@@ -366,7 +366,7 @@ struct SBlkArrI    // Only for SBASExp
  static _finline uint GetArrMax(void) {return sizeof(BlkArr)/sizeof(vptr);}
 };
 
-struct SBlkArrP    // SepBlkIdx: Not SBASExp
+struct SBlkArrP    // SepBlkIdx: Not SBAPExp
 {
  size_t   BlkNum;  // No allocated blocks is expected starting from this one. But in the range some may be NULL
  size_t   BlkLen;  // Number of pointers total to fit in the array
@@ -435,7 +435,7 @@ static_assert(sizeof(SSerBlk) == 16);
 static_assert(sizeof(SSerHdr) == 32);
 
 // Is this the most appropriate alignment strategy?
-SCVR size_t AlUnitLen = (Flg & afObjAlign)  ? ( (Flg & afAlignPow2)?(AlignToP2Up(sizeof(Ty))):(AlignFrwdP2(sizeof(Ty), sizeof(size_t))) ):(sizeof(Ty));   // May align to nearest Pow@ or by pointer size, depending what is the best for the current strategy
+SCVR size_t AlUnitLen = (Flg & afObjAlign)  ? ( (Flg & afAlignPow2)?(BitCeil(sizeof(Ty))):(AlignFrwdP2(sizeof(Ty), sizeof(size_t))) ):(sizeof(Ty));   // May align to nearest Pow@ or by pointer size, depending what is the best for the current strategy
 SCVR size_t AlNHdrLen = (sizeof(SNHdr) > 1) ? ( (!(Flg & afLimitHdrAl) || (AlUnitLen <= MaxAlign))?(AlignFrwd(sizeof(SNHdr),AlUnitLen)):(AlignFrwdP2(sizeof(SNHdr),MaxAlign)) ):0;              // May align to UnitSize
 SCVR size_t AlFHdrLen = CtxInFBlk ? ( (!(Flg & afLimitHdrAl) || (AlUnitLen <= MaxAlign))?(AlignFrwd(sizeof(SFHdrEx),AlUnitLen)):(AlignFrwdP2(sizeof(SFHdrEx),MaxAlign)) ): AlNHdrLen;
 
@@ -503,7 +503,7 @@ vptr AllocBlock(size_t BlkIdx)
 
      vptr   OPtr = (vptr)ablk->BlkArr;
      size_t OLen = ablk->GetArrMax()*sizeof(vptr);
-     NMOPS::MemCopy(IPtr, OPtr, OLen);
+     MOPR::MemCopy(IPtr, OPtr, OLen);
 
      ablk->BlkArr = (SBlkPtr*)IPtr;    // Separate array
      ablk->BlkLen = NMax;     // Max number of block slots available
@@ -529,16 +529,16 @@ vptr AllocBlock(size_t BlkIdx)
 //-------------------------------------------------------------
 public:
 //-------------------------------------------------------------
-//SBlkAlloc(void) = delete;
+//CSegArena(void) = delete;
 
-_finline SBlkAlloc(MP* mp=(MP*)nullptr){this->Init(mp);}   // Not all memory providers use contexts so nullptr as default is OK
-_finline ~SBlkAlloc(){this->Release();}
+_finline CSegArena(MP* mp=(MP*)nullptr){this->Init(mp);}   // Not all memory providers use contexts so nullptr as default is OK
+_finline ~CSegArena(){this->Release();}
 //-------------------------------------------------------------
 inline void Init(MP* mp=(MP*)nullptr)
 {
- //NMOPS::ZeroObj(this);
+ //NMOP::ZeroObj(this);
  if constexpr (CtxInFBlk)this->Context = nullptr;    // The context on 'this' is a single pointer
-   else NMOPS::ZeroObj(this);
+   else MOPR::ZeroObj(this);
  if constexpr (!EmptyMP)
   {
    if constexpr (CtxInFBlk)this->Context = (SFHdr*)((size_t)mp | 1);     // In most cases MP is zero    // NOTE: This will make the GetCtx to return an invalid context pointer until first call to AllocBlock
@@ -821,7 +821,7 @@ size_t GetElmMax(void)
 // NOTE: Original memory provider is preserved
 // NOTE: Works! But why it takes twice time of storing or matching???
 //
-bool Duplicate(SBlkAlloc& to)  // NOTE: Types must match - duplicated by blocks
+bool Duplicate(CSegArena& to)  // NOTE: Types must match - duplicated by blocks
 {
 // static_assert(to.AlUnitLen == this->AlUnitLen);     // None of such checks are doable in GCC mode
 // static_assert(to.AlNHdrLen == this->AlNHdrLen);
@@ -1141,7 +1141,7 @@ class SIterator    // I do not like clumsy ranged FOR but i need iterator object
   this->EIdx = itr->EIdx;
  }
  //------------------------------------------------------
- _finline void Reset(void)
+ _finline void Reset(void)                   // Makes the iterator invalid  ('At' can restore it)
  {
   this->BIdx = this->EIdx = -1;    // reset to END
   this->CPtr = this->BPtr = this->EPtr = nullptr;
@@ -1182,7 +1182,7 @@ public:
   this->Ctx  = ctx;
  }
  //------------------------------------------------------
- inline Ty* At(size_t ElmIdx)
+ inline Ty* At(size_t ElmIdx)      // Set the position in objects and retrieves an element at it
  {
   if((ElmIdx >= this->EIdx)&&(ElmIdx < (this->EIdx + (this->EPtr - this->BPtr))))this->CPtr = this->BPtr + (ElmIdx - this->EIdx);   // NOTE: '(this->EPtr - this->BPtr)' may use DIV and '(ElmIdx - this->EIdx)' may be used with MUL
     else this->SetBlockFor(ElmIdx);
@@ -1196,7 +1196,7 @@ public:
  //------------------------------------------------------
  inline void operator= (const SIterator& itr)
  {
-  NMOPS::CopyObj(this, itr);
+  MOPR::CopyObj(this, itr);
  }
  //------------------------------------------------------
  inline void operator= (size_t ElmIdx)    // Set the position in objects      // Fast if in boundaries of the current block
@@ -1241,16 +1241,16 @@ public:
  }
  //------------------------------------------------------
  // Postfix
- inline SIterator operator++(int) { SIterator tmp = *this; ++(*this); return tmp; }     // NOTE: copying the iterator is not cheap - avoid postfix increment/decrement
- inline SIterator operator--(int) { SIterator tmp = *this; --(*this); return tmp; }     // Not used by ranged FOR (Clumsy, i don`t like them anyway)
+ _finline SIterator operator++(int) { SIterator tmp = *this; ++(*this); return tmp; }     // NOTE: copying the iterator is not cheap - avoid postfix increment/decrement
+ _finline SIterator operator--(int) { SIterator tmp = *this; --(*this); return tmp; }     // Not used by ranged FOR (Clumsy, i don`t like them anyway)
 
- inline Ty& operator*(void) const { return *this->CPtr; }    // Access by a pointer - the cheapest operation
- inline Ty* operator->(void) { return this->CPtr; }
+ _finline Ty& operator*(void) const { return *this->CPtr; }    // Access by a pointer - the cheapest operation
+ _finline Ty* operator->(void) { return this->CPtr; }
 
- inline operator bool() const { return (bool)this->CPtr; }      // to check if this iterator is NULL    // More efficient when iterating not in ranged 'for' loop than comparing equality
+ _finline operator bool() const { return (bool)this->CPtr; }      // to check if this iterator is NULL    // More efficient when iterating not in ranged 'for' loop than comparing equality
 
- friend inline bool operator== (const SIterator& a, const SIterator& b) { return !((a.BIdx ^ b.BIdx)|((size_t)a.CPtr ^ (size_t)b.CPtr)); }  // Do not compare pointers, +1 pointer may be in a next block with a random element index
- friend inline bool operator!= (const SIterator& a, const SIterator& b) { return ((a.BIdx ^ b.BIdx)|((size_t)a.CPtr ^ (size_t)b.CPtr)); }   // Can it be done simpler?  // Just replace with '(bool)a->CPtr' to work efficiently in ranged 'for' loops?
+ friend _finline bool operator== (const SIterator& a, const SIterator& b) { return !((a.BIdx ^ b.BIdx)|((size_t)a.CPtr ^ (size_t)b.CPtr)); }  // Do not compare pointers, +1 pointer may be in a next block with a random element index
+ friend _finline bool operator!= (const SIterator& a, const SIterator& b) { return ((a.BIdx ^ b.BIdx)|((size_t)a.CPtr ^ (size_t)b.CPtr)); }   // Can it be done simpler?  // Just replace with '(bool)a->CPtr' to work efficiently in ranged 'for' loops?
 };
 //-------------------------------------------------------------
 SIterator ElmFrom(size_t ElmIdx)    // Returns iterator for the ElmIdx if it exist    // Will not add new blocks

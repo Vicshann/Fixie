@@ -165,7 +165,7 @@ template<typename R, typename T> constexpr static R RePackElements(T Arr, unsign
  using ElType = decltype(Arr[0]);
  static_assert(sizeof(R) > sizeof(ElType), "Destination type is smaller!");
  R Result = 0;
- if constexpr (NCFG::IsBigEnd)
+ if constexpr (IsBigEndian)
  {
   for(unsigned int ctr = 0; BLeft && (ctr < (sizeof(R) / sizeof(ElType))); ctr++, BLeft--)
    Result |= (R)Arr[ctr] << ((((sizeof(R) / sizeof(ElType))-1)-ctr) * (8*sizeof(ElType)));
@@ -220,7 +220,7 @@ template<typename V, typename T, usize N> struct CPData    // alignas(8) // !!! 
 template<typename V, typename T, usize N> struct CEData: CPData<V,T,N>
 { 
  using self = CPData<V,T,N>;  // DEFINE_SELF
- SCVR usize DataKey = BdEncKey; 
+ SCVR usize DataKey = usize(BdEncKey); 
    
 consteval void Init(const T* str)
  {
@@ -273,12 +273,15 @@ template<typename T, usize N> struct CEArr: CEData<uint8,T,N>       // Have to s
  consteval CEArr(const T* str, usize l) { this->Init(str); }  // Must have an useless arg to be different from another constructor
  consteval CEArr(const T(&str)[N]) { this->Init(str); }
 };
+
+//template <typename T, usize N> CPStr(const T (&)[N]) -> CPStr<T, N>;  // This makes CTAD intentional and suppresses '-Wctad-maybe-unsupported' warning // Added '-Wno-ctad-maybe-unsupported' instead
 //------------------------------------------------------------------------------------------------------------
 
 // ps is embedded packed string or EncryptedString using C++20 (Fast, no index sequences required)
-// Nono of thore are working - this C++ feature is too esoteric
+// None of those are working - this C++ feature is too esoteric
 template<CPStr str> consteval static auto operator"" _ps() { return str; }  // 'const auto' or 'auto&&' ???  // must be in a namespace or global scope  // C++20, no inlining required if consteval and MSVC bug is finally fixed   // Examples: auto st = "Hello World!"_ps;  MyProc("Hello World!"_ps);
 template<CEStr str> consteval static auto operator"" _es() { return str; }
+
 
 // Examples: MyProc(_PS("Hello World!"));
 // I give up and use the ugly macro(At least it accesses 'str' only once). In C++ we cannot pass constexprness as a function argument and cannot pass 'const char*' as a template argument without complications
@@ -289,7 +292,7 @@ template<CEStr str> consteval static auto operator"" _es() { return str; }
 #define _ES NFWK::NCTM::CEStr
 
 
-// NOTE: _PS can be encrypted if options is set but _ES is always encrypred
+// NOTE: _PS can be encrypted if options is set but _ES is always encrypted
 // Encrypted strings should decrypt into a temporary object, not directly inplace(duplicate on stack, but allows them to be global)?
 //============================================================================================================
 /*template<typename T, uint N> struct alignas(8) CEStr

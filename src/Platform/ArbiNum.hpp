@@ -13,60 +13,15 @@ enum EBbfLevel {
 
 constexpr int GObfuLevel = olStrong;
 
-
 namespace NARNUM
 {
-//====================================================================================
-// https://www.techtarget.com/whatis/definition/logic-gate-AND-OR-XOR-NOT-NAND-NOR-and-XNOR
-struct SBitLogic
-{
-enum EBitOp
-{
- boNone,
-// Base logic gates
- boOr,
- boAnd,
- boNot,
-// Combined logic gates
- boXOr,
- boNOr,
- boXNOr,
- boNAnd
-};
-
-static _finline bool OpNOT(bool V1){return !V1;}
-static _finline bool OpOR(bool V1, bool V2){return V1|V2;}
-static _finline bool OpAND(bool V1, bool V2){return V1&V2;}
-static _finline bool OpXOR(bool V1, bool V2){return V1^V2;}
-
-static _finline bool OpNOR(bool V1, bool V2){return OpNOT(OpOR(V1,V2));}
-static _finline bool OpXNOR(bool V1, bool V2){return OpNOT(OpXOR(V1,V2));}
-static _finline bool OpNAND(bool V1, bool V2){return OpNOT(OpAND(V1,V2));}
-
-static _finline bool ModBit(EBitOp Op, bool ValA, bool ValB=0)
-{
- switch(Op)
-  {
-   case SBitLogic::boNot:  {return SBitLogic::OpNOT( ValA); break;}      // Input ValB is ignored
-   case SBitLogic::boOr:   {return SBitLogic::OpOR(  ValA, ValB); break;}
-   case SBitLogic::boAnd:  {return SBitLogic::OpAND( ValA, ValB); break;}
-   case SBitLogic::boXOr:  {return SBitLogic::OpXOR( ValA, ValB); break;}
-   case SBitLogic::boNOr:  {return SBitLogic::OpNOR( ValA, ValB); break;}
-   case SBitLogic::boXNOr: {return SBitLogic::OpXNOR(ValA, ValB); break;}
-   case SBitLogic::boNAnd: {return SBitLogic::OpNAND(ValA, ValB); break;}
-  }
- return 0;
-}
-//------------------------------------------------------------------------------------
-
-};
 //====================================================================================
 // Bitset static Interface (Should be optional, for debug or test builds)
 template<typename D> class CBSBase
 {
 protected:
 CBSBase(void)
-{  // No specific signatures, but some test arguments are possible (And reqiured to compile with GCC, but Clang and MSVC are OK)
+{  // No specific signatures, but some test arguments are possible (And required to compile with GCC, but Clang and MSVC are OK)
  static_assert(requires(D&& v) { v.OffsForIdx; });
  static_assert(requires(D&& v) { v.Get; });
  static_assert(requires(D&& v) { v.Set; });
@@ -89,31 +44,25 @@ CBSBase(void)
 //
 template<unsigned int S=sizeof(void*)*8, typename DP=unsigned int> class CObfBitset  //: public CBSBase<CObfBitset<T,DP>>                                                    // <int Size=4, typename DT=unsigned char>
 {
- static constexpr unsigned int UnitMsk = sizeof(DP)-1;         // To extract byte index in Unit
- static constexpr unsigned int UnitSft = ((sizeof(DP) > 1)?( ((sizeof(DP) > 2)?( ((sizeof(DP) > 4)?( 3 ):(2)) ):(1)) ):(0));   // To extract Unit index from Idx
+ SCVR unsigned int UnitMsk = sizeof(DP)-1;         // To extract byte index in Unit
+ SCVR unsigned int UnitSft = ((sizeof(DP) > 1)?( ((sizeof(DP) > 2)?( ((sizeof(DP) > 4)?( 3 ):(2)) ):(1)) ):(0));   // To extract Unit index from Idx
 public:
- static constexpr unsigned int MaxBits     = S;     // Stop any operations on this to allow expected overflow behaviour on derived types?
- static constexpr unsigned int SizeInBits  = AlignFrwdP2(MaxBits, sizeof(DP));   // AlignFrwdP2(sizeof(T)*8, sizeof(DP));  // Bits must fit in DP units as bytes
- static constexpr unsigned int SizeInUnits = SizeInBits / sizeof(DP);
- static constexpr unsigned int SizeInBytes = SizeInBits / 8;      // Useless. 4 for int32 and so on
+ SCVR unsigned int MaxBits     = S;     // Stop any operations on this to allow expected overflow behaviour on derived types?
+ SCVR unsigned int SizeInBits  = AlignFrwdP2(MaxBits, sizeof(DP));   // AlignFrwdP2(sizeof(T)*8, sizeof(DP));  // Bits must fit in DP units as bytes
+ SCVR unsigned int SizeInUnits = SizeInBits / sizeof(DP);
+ SCVR unsigned int SizeInBytes = SizeInBits / 8;      // Useless. 4 for int32 and so on
 
 private:
- static constexpr unsigned int BitRange    = 8;           // One byte
- static constexpr unsigned int OffsMsk     = BitRange-1;  // 7 bits, single byte
- static constexpr unsigned int BitShift    = 3;           // Adjustable. Shift of bit value position, relative to DT index
- static constexpr unsigned int RotDir      = 1;           // Adjustable. Left or Right
+ SCVR unsigned int BitRange    = 8;           // One byte
+ SCVR unsigned int OffsMsk     = BitRange-1;  // 7 bits, single byte
+ SCVR unsigned int BitShift    = 3;           // Adjustable. Shift of bit value position, relative to DT index
+ SCVR unsigned int RotDir      = 1;           // Adjustable. Left or Right
+
+ using MaxType = TypeForSizeT<SizeInBytes, true>;     // Unsigned!
 
  DP Data[SizeInUnits];   // One byte stores one bit (for obfuscation). Size is in units  // Format is LittleEndian   // Initialized to random
 //------------------------------------------------------------------------------------
 template<typename X> consteval static bool IsBitsetType(void) {return sizeof(X) > 8;}   //     {return requires(const X&& v) { sizeof(v.Data); };}    // Cannot recognize v.IsBitsetType or X::IsBitsetType !!!
-//------------------------------------------------------------------------------------
-consteval static auto GetMaxType(void)       // Usage: struct SMyStruct { decltype(TypeSwitch<MyCompileTimeCondition, MyStructA, MyStructB>()) Val; }
-{
- if constexpr (SizeInBytes == sizeof(char)) {unsigned char val{0}; return val;}
- else if constexpr (SizeInBytes == sizeof(short)) {unsigned short val{0}; return val;}
- else if constexpr (SizeInBytes == sizeof(int)) {unsigned int val{0}; return val;}
-  else {unsigned long long val{0}; return val;}
-}
 //------------------------------------------------------------------------------------
 // Return a byte with halves in range 1 - 14
 consteval static unsigned char NextRndByte(unsigned int Idx, unsigned int& Val)
@@ -191,7 +140,7 @@ template<typename B> constexpr _finline void SetBits(B Val, unsigned int Cnt=Siz
  for(unsigned int idx=From,end=From+Cnt,offs=OffsForIdx(idx);idx < end;Val>>=1)this->SetNext(Val & 1, idx, offs);    // Extra bits will be zero
 }
 //------------------------------------------------------------------------------------
-template<typename B> constexpr _finline void ModBits(B Val, SBitLogic::EBitOp Op, unsigned int Cnt=SizeInBits, unsigned int From=0)
+template<typename B> constexpr _finline void ModBits(B Val, EBitOp Op, unsigned int Cnt=SizeInBits, unsigned int From=0)
 {
  if(From >= SizeInBits)return;
  if((From+Cnt) > SizeInBits)Cnt = SizeInBits - From;
@@ -207,11 +156,11 @@ template<typename B> constexpr _finline int CompareBits(B Val, unsigned int Cnt=
 }
 //------------------------------------------------------------------------------------
 // Get bits as Val. Extracts lower bits if the output value is smaller
-template<typename B=decltype(GetMaxType())> _finline B GetBits(unsigned int Cnt=SizeInBits, unsigned int From=0) const   // Should never be constexpr if obfuscation is required (Can the compiler restore original values at compile time?)
+template<typename B=MaxType> _finline B GetBits(unsigned int Cnt=SizeInBits, unsigned int From=0) const   // Should never be constexpr if obfuscation is required (Can the compiler restore original values at compile time?)
 {
  if(From >= SizeInBits)return 0;
  if((From+Cnt) > SizeInBits)Cnt = SizeInBits - From;
- B Val = 0;   //  decltype(GetMaxType()) Val = 0;
+ B Val = 0;   //  MaxType Val = 0;
  unsigned int BitLen = sizeof(Val)*8;
  if(BitLen > Cnt)BitLen = Cnt;
  for(unsigned int idx=(From+BitLen)-1,end=idx-BitLen,offs=OffsForIdx(idx);idx != end;)Val = (Val << 1)|(unsigned int)this->GetPrev(idx, offs);
@@ -231,7 +180,7 @@ constexpr _finline void SetFrom(auto&& Val, unsigned int SrcCnt=(unsigned int)-1
 }
 //------------------------------------------------------------------------------------
 // NOTE: We may want to init a new bitset as a result this so it is better to have the source is separate
-constexpr _finline void ModWith(auto&& Val, SBitLogic::EBitOp Op, unsigned int SrcCnt=(unsigned int)-1, unsigned int SrcIdx=0, unsigned int DstCnt=SizeInBits, unsigned int DstIdx=0)
+constexpr _finline void ModWith(auto&& Val, EBitOp Op, unsigned int SrcCnt=(unsigned int)-1, unsigned int SrcIdx=0, unsigned int DstCnt=SizeInBits, unsigned int DstIdx=0)
 {
  static_assert(IsBitsetType<decltype(Val)>(), "Only a BitSet is allowed!");
  if(DstIdx >= SizeInBits)return;
@@ -304,13 +253,13 @@ constexpr _finline void SetPrev(bool Val, unsigned int& Idx, unsigned int& Offs)
  StepPrev(Idx, Offs);
 }
 //------------------------------------------------------------------------------------
-constexpr _finline void ModNext(bool Val, SBitLogic::EBitOp Op, unsigned int& Idx, unsigned int& Offs)
+constexpr _finline void ModNext(bool Val, EBitOp Op, unsigned int& Idx, unsigned int& Offs)
 {
  this->ModBitAt(Val, Op, Idx, Offs);
  StepNext(Idx, Offs);
 }
 //------------------------------------------------------------------------------------
-constexpr _finline void ModPrev(bool Val, SBitLogic::EBitOp Op, unsigned int& Idx, unsigned int& Offs)
+constexpr _finline void ModPrev(bool Val, EBitOp Op, unsigned int& Idx, unsigned int& Offs)
 {
  this->ModBitAt(Val, Op, Idx, Offs);
  StepPrev(Idx, Offs);
@@ -353,9 +302,9 @@ constexpr _finline bool SetBitAt(bool Val, unsigned int Idx, unsigned int Offs)
  return Val;
 }
 //------------------------------------------------------------------------------------
-constexpr _finline bool ModBitAt(bool Val, SBitLogic::EBitOp Op, unsigned int Idx, unsigned int Offs)
+constexpr _finline bool ModBitAt(bool Val, EBitOp Op, unsigned int Idx, unsigned int Offs)
 {
- return this->SetBitAt(SBitLogic::ModBit(Op,this->GetBitAt(Idx, Offs),Val), Idx, Offs);
+ return this->SetBitAt(SBitLogic<>::ModBit(Op,this->GetBitAt(Idx, Offs),Val), Idx, Offs);
 }
 //------------------------------------------------------------------------------------
 // TODO: Shift/Rotate
@@ -500,21 +449,21 @@ constexpr _finline operator unsigned char* () const {return (unsigned char*)this
 //
 constexpr _finline Self& operator~() {this->bitv.Invert(); return *this;}
 
-constexpr _finline friend Self operator|(const auto& lhv, const auto& rhv) {Self tmp(lhv); if constexpr(IsBinNumType<decltype(rhv)>())tmp.bitv.ModWith(rhv.bitv, SBitLogic::boOr); else tmp.bitv.ModBits(rhv, SBitLogic::boOr); return tmp;}
+constexpr _finline friend Self operator|(const auto& lhv, const auto& rhv) {Self tmp(lhv); if constexpr(IsBinNumType<decltype(rhv)>())tmp.bitv.ModWith(rhv.bitv, boOr); else tmp.bitv.ModBits(rhv, boOr); return tmp;}
 
-constexpr _finline friend Self operator&(const auto& lhv, const auto& rhv) {Self tmp(lhv); if constexpr(IsBinNumType<decltype(rhv)>())tmp.bitv.ModWith(rhv.bitv, SBitLogic::boAnd); else tmp.bitv.ModBits(rhv, SBitLogic::boAnd); return tmp;}
+constexpr _finline friend Self operator&(const auto& lhv, const auto& rhv) {Self tmp(lhv); if constexpr(IsBinNumType<decltype(rhv)>())tmp.bitv.ModWith(rhv.bitv, boAnd); else tmp.bitv.ModBits(rhv, boAnd); return tmp;}
 
-constexpr _finline friend Self operator^(const auto& lhv, const auto& rhv) {Self tmp(lhv); if constexpr(IsBinNumType<decltype(rhv)>())tmp.bitv.ModWith(rhv.bitv, SBitLogic::boXOr); else {static_assert(sizeof(rhv) <= 8); tmp.bitv.ModBits(rhv, SBitLogic::boXOr);} return tmp;}
+constexpr _finline friend Self operator^(const auto& lhv, const auto& rhv) {Self tmp(lhv); if constexpr(IsBinNumType<decltype(rhv)>())tmp.bitv.ModWith(rhv.bitv, boXOr); else {static_assert(sizeof(rhv) <= 8); tmp.bitv.ModBits(rhv, boXOr);} return tmp;}
 
 constexpr _finline friend Self operator+(const auto& lhv, const auto& rhv) {Self tmp(lhv); BinAdd(tmp, rhv); return tmp;}
 
 constexpr _finline friend Self operator-(const auto& lhv, const auto& rhv) {Self tmp(lhv); BinSub(tmp, rhv); return tmp;}
 
-constexpr _finline Self& operator|=(const auto& rhv) {if constexpr(IsBinNumType<decltype(rhv)>())this->bitv.ModWith(rhv.bitv, SBitLogic::boOr); else this->bitv.ModBits(rhv, SBitLogic::boOr); return *this;}
+constexpr _finline Self& operator|=(const auto& rhv) {if constexpr(IsBinNumType<decltype(rhv)>())this->bitv.ModWith(rhv.bitv, boOr); else this->bitv.ModBits(rhv, boOr); return *this;}
 
-constexpr _finline Self& operator&=(const auto& rhv) {if constexpr(IsBinNumType<decltype(rhv)>())this->bitv.ModWith(rhv.bitv, SBitLogic::boAnd); else this->bitv.ModBits(rhv, SBitLogic::boAnd); return *this;}
+constexpr _finline Self& operator&=(const auto& rhv) {if constexpr(IsBinNumType<decltype(rhv)>())this->bitv.ModWith(rhv.bitv, boAnd); else this->bitv.ModBits(rhv, boAnd); return *this;}
 
-constexpr _finline Self& operator^=(const auto& rhv) {if constexpr(IsBinNumType<decltype(rhv)>())this->bitv.ModWith(rhv.bitv, SBitLogic::boXOr); else this->bitv.ModBits(rhv, SBitLogic::boXOr); return *this;}
+constexpr _finline Self& operator^=(const auto& rhv) {if constexpr(IsBinNumType<decltype(rhv)>())this->bitv.ModWith(rhv.bitv, boXOr); else this->bitv.ModBits(rhv, boXOr); return *this;}
 
 constexpr _finline Self& operator+=(const auto& rhv) {BinAdd(*this, rhv); return *this;}
 

@@ -19,7 +19,7 @@ struct SHDE32
  static const uint16 DELTA_OP_ONLY_MEM  = 0x1cb;
  static const uint16 DELTA_OP2_ONLY_MEM = 0x1da;
 
- static inline uint8 Table[] = {
+ static const inline uint8 Table[] = {
   0xa3,0xa8,0xa3,0xa8,0xa3,0xa8,0xa3,0xa8,0xa3,0xa8,0xa3,0xa8,0xa3,0xa8,0xa3,
   0xa8,0xaa,0xaa,0xaa,0xaa,0xaa,0xaa,0xaa,0xaa,0xac,0xaa,0xb2,0xaa,0x9f,0x9f,
   0x9f,0x9f,0xb5,0xa3,0xa3,0xa4,0xaa,0xaa,0xba,0xaa,0x96,0xaa,0xa8,0xaa,0xc3,
@@ -68,7 +68,7 @@ struct SHDE64
  static const uint16 DELTA_OP_ONLY_MEM  = 0x1d8;
  static const uint16 DELTA_OP2_ONLY_MEM = 0x1e7;
 
- static inline uint8 Table[] = {
+ static const inline uint8 Table[] = {
   0xa5,0xaa,0xa5,0xb8,0xa5,0xaa,0xa5,0xaa,0xa5,0xb8,0xa5,0xb8,0xa5,0xb8,0xa5,
   0xb8,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xac,0xc0,0xcc,0xc0,0xa1,0xa1,
   0xa1,0xa1,0xb1,0xa5,0xa5,0xa6,0xc0,0xc0,0xd7,0xda,0xe0,0xc0,0xe4,0xc0,0xea,
@@ -211,7 +211,7 @@ unsigned int Disasm(const void *code)
 {
  const bool bHDEx64	= (THde::DELTA_PREFIXES == SHDE64::DELTA_PREFIXES);  // NOTE: The compiler must optimize out this along with every check of this flag because it is static!
 
-    uint8 x, c, *p = (uint8 *)code, cflags, opcode, pref = 0;
+    uint8 x, c, *p = (uint8 *)code, cflags, opcd, pref = 0;
     uint8 *ht  = THde::Table, m_mod, m_reg, m_rm, disp_size = 0;
     uint8 op64 = 0;
 
@@ -261,7 +261,7 @@ unsigned int Disasm(const void *code)
         this->rex_x = (c & 3) >> 1;
         this->rex_b = c & 1;
         if (((c = *p++) & 0xf0) == 0x40) {
-            opcode = c;
+            opcd = c;
             goto error_opcode;
         }
      }
@@ -275,14 +275,14 @@ unsigned int Disasm(const void *code)
         else pref &= ~PRE_66;
     }
 
-    opcode = c;
-    cflags = ht[ht[opcode / 4] + (opcode % 4)];
+    opcd = c;
+    cflags = ht[ht[opcd / 4] + (opcd % 4)];
 
     if (cflags == C_ERROR) {
       error_opcode:
         this->flags |= F_ERROR | F_ERROR_OPCODE;
         cflags = 0;
-        if ((opcode & -3) == 0x24)cflags++;
+        if ((opcd & -3) == 0x24)cflags++;
     }
 
     x = 0;
@@ -295,7 +295,7 @@ unsigned int Disasm(const void *code)
 
     if (this->opcode2) {
         ht = THde::Table + THde::DELTA_PREFIXES;
-        if (ht[ht[opcode / 4] + (opcode % 4)] & pref)this->flags |= F_ERROR | F_ERROR_OPCODE;
+        if (ht[ht[opcd / 4] + (opcd % 4)] & pref)this->flags |= F_ERROR | F_ERROR_OPCODE;
     }
 
     if (cflags & C_MODRM) {
@@ -307,8 +307,8 @@ unsigned int Disasm(const void *code)
 
         if (x && ((x << m_reg) & 0x80))this->flags |= F_ERROR | F_ERROR_OPCODE;
 
-        if (!this->opcode2 && opcode >= 0xd9 && opcode <= 0xdf) {
-            uint8 t = opcode - 0xd9;
+        if (!this->opcode2 && opcd >= 0xd9 && opcd <= 0xdf) {
+            uint8 t = opcd - 0xd9;
             if (m_mod == 3) {
                 ht = THde::Table + THde::DELTA_FPU_MODRM + t*8;
                 t = ht[m_reg] << m_rm;
@@ -323,7 +323,7 @@ unsigned int Disasm(const void *code)
             if (m_mod == 3) {
                 this->flags |= F_ERROR | F_ERROR_LOCK;
             } else {
-                uint8 *table_end, op = opcode;
+                uint8 *table_end, op = opcd;
                 if (this->opcode2) {
                     ht = THde::Table + THde::DELTA_OP2_LOCK_OK;
                     table_end = ht + THde::DELTA_OP_ONLY_MEM - THde::DELTA_OP2_LOCK_OK;
@@ -344,7 +344,7 @@ unsigned int Disasm(const void *code)
         }
 
         if (this->opcode2) {
-            switch (opcode) {
+            switch (opcd) {
                 case 0x20: case 0x22:
                     m_mod = 3;
                     if (m_reg > 4 || m_reg == 1)goto error_operand;
@@ -355,7 +355,7 @@ unsigned int Disasm(const void *code)
                     else goto no_error_operand;
             }
         } else {
-            switch (opcode) {
+            switch (opcd) {
                 case 0x8c:
                     if (m_reg > 5)goto error_operand;
                     else goto no_error_operand;
@@ -375,13 +375,13 @@ unsigned int Disasm(const void *code)
                 table_end = ht + THde::DELTA_OP2_ONLY_MEM - THde::DELTA_OP_ONLY_MEM;
             }
             for (; ht < table_end; ht += 2)     // Fix: 'ht != table_end' crash on '41 0F B6 C6  movzx eax, r14b'
-                if (*ht++ == opcode) {
+                if (*ht++ == opcd) {
                     if (*ht++ & pref && !((*ht << m_reg) & 0x80))goto error_operand;
                     else break;
                 }
             goto no_error_operand;
         } else if (this->opcode2) {
-            switch (opcode) {
+            switch (opcd) {
                 case 0x50: case 0xd7: case 0xf7:
                     if (pref & (PRE_NONE | PRE_66))goto error_operand;
                     break;
@@ -401,8 +401,8 @@ unsigned int Disasm(const void *code)
 
         c = *p++;
         if (m_reg <= 1) {
-            if (opcode == 0xf6)cflags |= C_IMM8;
-            else if (opcode == 0xf7)cflags |= C_IMM_P66;
+            if (opcd == 0xf6)cflags |= C_IMM8;
+            else if (opcd == 0xf7)cflags |= C_IMM_P66;
         }
 
         switch (m_mod) {
