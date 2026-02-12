@@ -1,8 +1,9 @@
 
 //============================================================================================================
 // https://libc-alpha.sourceware.narkive.com/zVXSM4qu/using-clone-with-glibc
+// https://www.huntandhackett.com/blog/the-definitive-guide-to-process-cloning-on-windows
 //
-struct NTHD
+struct NTHD    // Multi-threading implementation (All platforms)
 {
 enum EThDefs: sint    // Internal
 {
@@ -16,18 +17,28 @@ enum EThDefs: sint    // Internal
  THD_MAX_STATUS   = sint((size_t)1 << ((sizeof(size_t)*8)-1)),
 };
 
+using thndl = usize;
+SCVR  thndl  CurrThndl = thndl(0);
+SCVR  thndl  MainThndl = thndl(-1);
+SCVR uint32  BadThID   = uint32(-1); // 0xFFFFFFFF (Max value of uint32)    // Windows: 0xFFFFFFFF is an invalid thread ID, and the system does not reuse thread IDs until the thread that was assigned that ID has terminated. On Linux, thread IDs are reused after a thread terminates, so the maximum value for a thread ID is typically 32768 (the default value of pid_max).
+
 // Linux: On 32-bit platforms, 32768 is the maximum value for pid_max. On 64-bit systems, pid_max can be set to any value up to 2^22 (4,194,304)
 union SHDesc
 {
-SCVR int SizeInBits = sizeof(size_t) * 8;    // All Windows handles are aligned to 4 so shifted left by 2 to get more bits 
-SCVR uint32 IdMsk = (1ull << ((SizeInBits/2) - 1)) - 1;  // 0x7FFFFFFF or 0x7FFF
+SCVR int SizeInBits = sizeof(usize) * 8;    // All Windows handles are aligned to 4 so shifted left by 2 to get more bits 
+SCVR int UnitSize   = SizeInBits / 2;       // 16 or 32
+SCVR uint32 IdMsk   = (1ull << (UnitSize - 1)) - 1;  // 0x7FFFFFFF or 0x7FFF
+using HdType = TypeForSizeT<sizeof(usize)/2>;
  struct
   {       
-   size_t PrHd : (SizeInBits / 2);
-   size_t TrHd : (SizeInBits / 2);  // NOTE: Should be high part (Perfomance, and may be trimmed)   // WINDOWS: Is ID should be actual Id or index in the thread array? (Probably the array - need to access threads from other threads)
+   usize PrHd : UnitSize;  // A Process packed Handle (Windows) / ID (Linux) 
+   usize TrHd : UnitSize;  // A Process packed Handle (Windows) / ID (Linux)   // NOTE: Should be high part (Performance, and may be trimmed)   // WINDOWS: Is ID should be actual Id or index in the thread array? (Probably the array - need to access threads from other threads)
   };
- PX::pid_t Id;    // Negative is an Error code
+ PX::pid_t Id;    // Negative is an Error code   // Can be cast to uint32 and still be an arbitrary unique identifier
 };
+static SHDesc::HdType _finline PackHandle(NT::HANDLE hnd) { return SHDesc::HdType(usize(hnd) >> 2);}
+static NT::HANDLE _finline UnpackHandle(SHDesc::HdType hnd) { return NT::HANDLE(usize(hnd) << 2);}
+
 
 // Must be two NULLs and a hack for Clang is required to force the compound literals to be built on stack instead of RDATA
 #define TERMARGLST nullptr,STR_NULL        // (const achar*[]){"-Hello","-World","123",TERMARGLST}
@@ -51,7 +62,7 @@ struct SThCtx
  uint   GroupID;     // Can be changed with setpgid
  uint   ThreadID;    // May be equal ProcesssID?
  uint   ProcesssID;
- uint   LastThrdID;  // Of prev thead that owned this memory (ThreadID is set to 0 already)
+ uint   LastThrdID;  // Of prev thread that owned this memory (ThreadID is set to 0 already)
  uint   LastThrdHnd;
  uint   ThreadHndl;  // Used on Windows instead of ThreadID in all thread_* functions    // MacOS?
  vptr   ThreadProc;
@@ -304,7 +315,7 @@ static _finline void ReleaseRec(SThCtx** rec)
 struct STDesc
 {
  NTHD::SThCtx  MainTh;      // Main(Init/Entry) thread // A thread from which the framework is initialized at main entry point for a module/app (For modules this is NOT the app`s process main thread)
- NTHD::SThInf* ThreadInfo;  // For additional threads (Null if only an entry thread is used)
+ NTHD::SThInf* ThreadInfo;  // For additional threads (Null if only an entry thread is used)  // TODO: atomic operations
 };
 
 using PThreadProc = ssize_t (*)(SThCtx*);	
@@ -326,14 +337,15 @@ enum EPrThCfg           // May be applicable to process creation too
 }; 
 
 // TODO: On windows use system allocated thread contexts (TEB)
+// NOTE: PX::pid_t is not a thread ID but an opaque handle that may contain thread ID inside or something that allows to quickly locate the thread context
 // ??? Who and where disposes of those threads? Especialy ones that died without reaching the normal exit point. Zombies?
-static PX::pid_t  PXCALL thread(PThreadProc Proc, PX::PVOID Data, PX::SIZE_T DatSize, PX::PSSIZE_T Config);     // Improvised  // Config is pairs of {Type,Value} or single {Flag}  // Actually allocates: PageAlign(Size+StkSize+TlsSize+ThreadRec)
-static sint       PXCALL thread_sleep(uint64 us);                     // nleepns??? // Prefer this over nanosleep in managed threads  // -1 - wait infinitely  // Sleeps on its futex	 // -1 sleep until termination
-static sint       PXCALL thread_exit(sint status);                    // Allows to exit without returning from ThreadProc directly	  // Deallocate the thread`s stack memory?
+static PX::pid_t  PXCALL thread_spawn(PThreadProc Proc, PX::PVOID Data, PX::SIZE_T DatSize, PX::PSSIZE_T Config);     // Improvised  // Config is pairs of {Type,Value} or single {Flag}  // Actually allocates: PageAlign(Size+StkSize+TlsSize+ThreadRec)
+static sint       PXCALL thread_sleep(uint64 us);                     // nleepns??? // Prefer this over nanosleep in managed threads  // -1 - wait infinitely  // Sleeps on its futex  // -1 sleep until termination
+static sint       PXCALL thread_exit(sint status);                    // Allows to exit without returning from ThreadProc directly    // Deallocate the thread`s stack memory?
 static sint       PXCALL thread_status(PX::pid_t tid);	              // Use after thread_wait if the thread has exited
-static sint       PXCALL thread_kill(PX::pid_t tid, sint status);     // Terminates the thread
-static sint       PXCALL thread_wait(PX::pid_t tid, uint32 wait_ms, sint* status);      // Wait for the a thread termination  // -1 - wait infinitely   // Optionally returns exit code if the thread has exited
-static sint       PXCALL thread_signal(PX::pid_t tid, uint32 code);   // Wakes the thread from any wait	(thread_sleep)	// Like pthread_cancel	 // Cancel IO?  
+static sint       PXCALL thread_kill(PX::pid_t tid, sint status);     // Terminates a single thread
+static sint       PXCALL thread_wait(PX::pid_t tid, sint64 wait_ms, sint* status);      // Wait for the a thread termination  // -1 - wait infinitely   // Optionally returns exit code if the thread has exited
+static sint       PXCALL thread_signal(PX::pid_t tid, uint32 code);   // Sends signal to a thread  // Wakes the thread from any wait (thread_sleep) // Like pthread_cancel // Cancel IO?  
 static sint       PXCALL thread_priority_set(PX::pid_t tid, sint32 level);              // The level is signed
 static sint       PXCALL thread_priority_get(PX::pid_t tid, sint32* level);
 static sint       PXCALL thread_affinity_set(PX::pid_t tid, uint64 mask, uint32 from); 
@@ -350,9 +362,11 @@ static sint       PXCALL thread_affinity_get(PX::pid_t tid, size_t buf_len, PX::
 // Why compound literals are always have some kind of global placement and can't be constexpr?
 // 'int* zx = (int []) {1, 2, 3, 4};' the array will always be in global memory. Why? C++ does not allow hidden stack object allocations?
 //
-static PX::pid_t  PXCALL spawn(PX::PCCHAR path, PX::PPCHAR argv, PX::PPCHAR envp, PX::PSSIZE_T Config);    // Improvised  // envp may be NULL to reuse the current one // Flags are additional flags for Clone, unused for now
-static sint       PXCALL spawn_signal(PX::pid_t pid, uint32 code);
-static sint       PXCALL spawn_wait(PX::pid_t pid, uint32 wait_ms, sint* status);
+static PX::pid_t  PXCALL process_spawn(PX::PCCHAR path, PX::PPCHAR argv, PX::PPCHAR envp, PX::PSSIZE_T Config);    // Improvised  // envp may be NULL to reuse the current one // Flags are additional flags for Clone, unused for now
+static sint       PXCALL process_kill(PX::pid_t pid, sint status);  // Always terminates the entire process, not a single thread  // May do some special handling - use it for a process termination
+static sint       PXCALL process_signal(PX::pid_t pid, uint32 code);                                               // Sends signal to a process   // Wake or Kill?   // Used for sending Ctrl-C and debuggers
+static sint       PXCALL process_wait(PX::pid_t pid, sint64 wait_ms, sint* status); // Negative wait is relative time, WAIT_INFINITE is infinite wait
+
 // Add 'priority' and 'affinity' functions?
 
 // CPU affinity
@@ -428,24 +442,31 @@ static vptr __emutls_get_address(vptr ptr)     // Must be made public because ca
  return nullptr;
 }
 
-};
+};    // NTHD
 //============================================================================================================
+// NOTE: All of these functions will CRASH for foreign threads
+static uint32 GetThreadID(void)    // Looks up on the stack  // Thread IDs are usually less than 30 bits   // May be faster than a syscall on Linux
+{
+ NTHD::SThCtx* th = GetThreadByAddr(GETSTKFRAME()); 
+ return th ? uint32(th->ThreadID) : NTHD::BadThID;
+} 
+//------------------------------------------------------------------------------------------------------------
 static NTHD::SThCtx* GetThreadSelf(void)     // Probably can find it faster by scanning stack pages forward and testing for SThCtx at beginning
 {
  return GetThreadByAddr(GETSTKFRAME());
 }
 //------------------------------------------------------------------------------------------------------------
-static NTHD::SThCtx* GetThreadByID(uint id)
+static NTHD::SThCtx* GetThreadByID(uint id)    // BEWARE of IDs being reused after termination
 {
  NTHD::STDesc* ThDsc = NPTM::GetThDesc();
- if((id == (uint)-1)||(id == ThDsc->MainTh.ThreadID))return &ThDsc->MainTh;
+ if(id == ThDsc->MainTh.ThreadID)return &ThDsc->MainTh;    // Where thread ID bits in pid_t?   // TODO: If -1 then try current thread
  if(!ThDsc->ThreadInfo)return nullptr; // No more threads
  NTHD::SThCtx** ptr = ThDsc->ThreadInfo->FindThByTID(id);
  if(!ptr)return nullptr;
  return NTHD::ReadRecPtr(ptr);
 }
 //------------------------------------------------------------------------------------------------------------
-static NTHD::SThCtx* GetThreadByHandle(uint hnd)
+static NTHD::SThCtx* GetThreadByHandle(uint hnd)    // By a handle lookup is faster than by ID
 {
  NTHD::STDesc* ThDsc = NPTM::GetThDesc();
  if((hnd == (uint)-1)||(hnd == ThDsc->MainTh.ThreadHndl))return &ThDsc->MainTh;
@@ -458,8 +479,8 @@ static NTHD::SThCtx* GetThreadByHandle(uint hnd)
 static NTHD::SThCtx* GetThreadByAddr(vptr addr)   // By an address on stack
 {
  NTHD::STDesc* ThDsc = NPTM::GetThDesc();
- if(((uint8*)addr >= (uint8*)ThDsc->MainTh.StkBase)&&((uint8*)addr < ((uint8*)ThDsc->MainTh.StkBase + ThDsc->MainTh.StkSize)))return &ThDsc->MainTh;
- if(!ThDsc->ThreadInfo)return nullptr; // No more threads
+ if(((uint8*)addr >= (uint8*)ThDsc->MainTh.StkBase) && ((uint8*)addr < ((uint8*)ThDsc->MainTh.StkBase + ThDsc->MainTh.StkSize)))return &ThDsc->MainTh;  // The addr is on main thread's stack
+ if(!ThDsc->ThreadInfo)return nullptr; // No additional threads
  NTHD::SThCtx** ptr = ThDsc->ThreadInfo->FindThByStack(addr);
  if(!ptr)return nullptr;
  return NTHD::ReadRecPtr(ptr);
@@ -474,6 +495,27 @@ static NTHD::SThCtx* GetThreadByAddr(vptr addr)   // By an address on stack
 // What about kernel threads?
 private:
 //------------------------------------------------------------------------------------------------------------
+static bool InitMainThreadRec(vptr StkAddr)
+{
+ NTHD::SThCtx* MainTh = &NPTM::GetThDesc()->MainTh;
+ if(MainTh->Self)return false;    // Already initialized
+ MainTh->Self       = MainTh;     // For checks
+ MainTh->SelfPtr    = nullptr;    // Not owned
+ MainTh->TlsBase    = nullptr;    // Allocate somewhere on demand?
+ MainTh->TlsSize    = 0;
+ MainTh->StkBase    = nullptr;    // Get from ELF header or proc/mem ???       // We treat any thread, which initializes the framework, as main
+ MainTh->StkSize    = 0;          // StkSize; ??? // Need full size for unmap  // Can a thread unmap its own stack before calling 'exit'?
+ MainTh->GroupID    = NAPI::getpgrp();   // pid
+ MainTh->ThreadID   = NAPI::gettid();
+ MainTh->ProcesssID = NAPI::getpid();
+ MainTh->ThreadProc = nullptr;    // Get it from ELF or set from arg?
+ MainTh->ThreadData = nullptr;
+ MainTh->ThDataSize = 0;
+ MainTh->Flags      = 0;    // ???
+ return true;
+}
+//------------------------------------------------------------------------------------------------------------
+// Adds an additional thread entry (allocated thread lis if it is NULL)
 static NTHD::SThCtx* InitThreadRec(vptr ThProc, vptr ThData, size_t StkSize, size_t TlsSize, size_t DatSize, size_t** StkFrame)
 {
  DatSize = AlignFrwdP2(DatSize, 16);

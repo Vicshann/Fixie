@@ -1,8 +1,8 @@
 
 #pragma once
 
-struct NDT
-{
+struct NDT {
+
 union FILETIME      // Windows, maps to uint64
 {
  struct
@@ -212,6 +212,48 @@ template<typename T, T FracPerSec> static _minline int TimeDiff(PX::STime<T, Fra
  return (result->sec < 0);     // Return 1 if result is negative    // return (result->sec < 0) || (!result->sec && result->frac < 0);
 }
 //---------------------------------------------------------------------------
+// Generalized elapsed time calculation
+template<PX::ETimeUnits TargetUnit, typename T, T FracPerSec> static inline sint64 CalcElapsed(const PX::STime<T,FracPerSec>& start, const PX::STime<T,FracPerSec>& end)
+{
+ PX::STime<T,FracPerSec> diff;
+ TimeDiff(&diff, &start, &end);
+ 
+ sint64 elapsed = ((sint64)diff.sec * TargetUnit) + (((sint64)diff.frac * TargetUnit) / FracPerSec);    // Convert normalized difference to target unit
+ return elapsed;
+}
+
+// Convenience wrappers
+template<typename T, T FracPerSec> static _finline sint64 CalcElapsedSec(const PX::STime<T,FracPerSec>& start, const PX::STime<T,FracPerSec>& end)
+{
+ return CalcElapsed<PX::ETimeUnits::tuSeconds>(start, end);
+}
+
+template<typename T, T FracPerSec> static _finline sint64 CalcElapsedMs(const PX::STime<T,FracPerSec>& start, const PX::STime<T,FracPerSec>& end)
+{
+ return CalcElapsed<PX::ETimeUnits::tuMilliseconds>(start, end);
+}
+
+template<typename T, T FracPerSec> static _finline sint64 CalcElapsedUs(const PX::STime<T,FracPerSec>& start, const PX::STime<T,FracPerSec>& end)
+{
+ return CalcElapsed<PX::ETimeUnits::tuMicroseconds>(start, end);
+}
+
+template<typename T, T FracPerSec> static _finline sint64 CalcElapsedNs(const PX::STime<T,FracPerSec>& start, const PX::STime<T,FracPerSec>& end)
+{
+ return CalcElapsed<PX::ETimeUnits::tuNanoseconds>(start, end);
+}
+//---------------------------------------------------------------------------
+template<PX::ETimeUnits TargetUnit, typename T, T FracPerSec> static _minline PX::timeout_t CalcRemainingTimeout(const PX::STime<T,FracPerSec>& start, PX::timeout_t initial_timeout)
+{
+ if(initial_timeout == PX::WAIT_INFINITE) return PX::WAIT_INFINITE;
+
+ PX::STime<T,FracPerSec> tnow;
+ NAPI::gettime(&tnow, PX::CLOCK_MONOTONIC);
+ PX::timeout_t elapsed = CalcElapsed<TargetUnit,T,FracPerSec>(start, tnow);
+ if(elapsed >= initial_timeout) return 0;  // Timeout expired
+ return (PX::timeout_t)(initial_timeout - elapsed);
+}
+//---------------------------------------------------------------------------
 /*void UnixTimeToSystemTime(UINT64 ut, SYSTEMTIME* pst)
 {
  uint64 ft = UnixTimeToFileTime(ut);
@@ -259,11 +301,6 @@ template<typename T, T FracPerSec> static _minline int TimeDiff(PX::STime<T, Fra
  wsprintf(Buffer,"%.4u-%.2u-%.2u %.2u:%.2u:%.2u",systime.wYear,systime.wMonth,systime.wDay,systime.wHour,systime.wMinute,systime.wSecond);
  return Buffer;
 } */
-//---------------------------------------------------------------------------
-static void DoTests(void)
-{
-
-}
 //---------------------------------------------------------------------------
 };
 

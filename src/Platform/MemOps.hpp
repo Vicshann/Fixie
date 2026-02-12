@@ -194,11 +194,11 @@ template<typename T> constexpr _finline static T* ZeroObject(T* _RST pDst){retur
 //---------------------------------------------------------------------------
 template<typename T, uint ASize> constexpr _finline static void InitFillPattern(uint32* FillArr, const T& Val)
 {
- if constexpr((sizeof(T) < sizeof(u512)) || !NCFG::VectorizeMemOps)
+ if constexpr((sizeof(T) < sizeof(u512)) || !NCFG.VectorizeMemOps)
   {
-   if constexpr((sizeof(T) < sizeof(u256)) || !NCFG::VectorizeMemOps)
+   if constexpr((sizeof(T) < sizeof(u256)) || !NCFG.VectorizeMemOps)
     {
-     if constexpr((sizeof(T) < sizeof(u128)) || !NCFG::VectorizeMemOps)
+     if constexpr((sizeof(T) < sizeof(u128)) || !NCFG.VectorizeMemOps)
       {
        if constexpr(sizeof(T) < sizeof(uint64))
         {
@@ -290,7 +290,7 @@ template<bool rev=false> constexpr static size_t MemCopySync(void* _RST* _RST Ds
       {
        if(Mask & 0x07)return Size;   // Will never sync above 4, may be split copy will be better
 // --- VECTORIZED
-       if constexpr(NCFG::VectorizeMemOps)  // VECTORIZED
+       if constexpr(NCFG.VectorizeMemOps)  // VECTORIZED
         {
          if(Mask & 0x0F){Size=CopyAs<uint64,rev>(Dst, Src, Size); Mask = ((size_t)*Dst|(size_t)*Src);}   // u64
          if((Size >= sizeof(u128)) && !(Mask & 0x0F))  // May never sync above 8 but copy by 8 is fast enough (Only if there is no way for fast splitting for vector types)
@@ -332,7 +332,7 @@ template<uint AMin, bool rev=false> constexpr static size_t MemCopyMSync(void* _
        if constexpr (AMin > sizeof(uint64))
         {
 // --- VECTORIZED
-         if constexpr(NCFG::VectorizeMemOps)  // VECTORIZED
+         if constexpr(NCFG.VectorizeMemOps)  // VECTORIZED
           {
            if constexpr (AMin > sizeof(u128))
             {
@@ -468,7 +468,7 @@ template<bool rev=false> constexpr _ninline static void* MemCopy(void* _RST Dst,
  else if(AlMax & sizeof(uint32))Size=SplitCopy<uint32,rev>(&Dst, &Src, Size, AlMin);  // To u32
  else
   {
-   if constexpr(NCFG::VectorizeMemOps)
+   if constexpr(NCFG.VectorizeMemOps)
     {
      if(AlMax & sizeof(uint64))Size=SplitCopy<uint64,rev>(&Dst, &Src, Size, AlMin);   // To u64
      else if(AlMax & sizeof(u128))Size=SplitCopy<u128,rev>(&Dst, &Src, Size, AlMin);  // To u128
@@ -499,7 +499,7 @@ _ninline static void* MemZero(void* _RST Dst, size_t Size)             // Too bi
      if(Size >= sizeof(uint64))
       {
 // --- VECTORIZED
-       if constexpr(NCFG::VectorizeMemOps)  // VECTORIZED
+       if constexpr(NCFG.VectorizeMemOps)  // VECTORIZED
         {
          if((size_t)Dst & sizeof(uint64))Size=StoreAs<uint64>(0, &Dst, Size);    // Align to u128
          if(Size >= sizeof(u128))
@@ -543,7 +543,7 @@ constexpr static void* MemRotRight(void* _RST Dst, size_t Size, size_t Bytes)
 template<typename T=uint8> constexpr _ninline static void* MemFill(void* _RST Dst, size_t Size, const T Val)   // Too complex to inline // TODO: Obj Type version to make alignment detection constexpr (MemFillObj)
 {
  if(!Val)return MemZero(Dst, Size);
- alignas(NCFG::VectorizeMemOps?sizeof(u512):sizeof(uint64)) uint32 ValArr[NCFG::VectorizeMemOps?(sizeof(u512)/sizeof(uint32)):(sizeof(uint64)/sizeof(uint32))];   // TODO: Expand from Val
+ alignas(NCFG.VectorizeMemOps?sizeof(u512):sizeof(uint64)) uint32 ValArr[NCFG.VectorizeMemOps?(sizeof(u512)/sizeof(uint32)):(sizeof(uint64)/sizeof(uint32))];   // TODO: Expand from Val
  InitFillPattern<T,sizeof(ValArr)>(ValArr, Val);
 
 // if constexpr(NCFG::IsBigEnd)val = SwapBytes(val);    // TODO: Fix Swap to work with arrays by ref
@@ -557,7 +557,7 @@ template<typename T=uint8> constexpr _ninline static void* MemFill(void* _RST Ds
      if(Size >= sizeof(uint64))
       {
 // --- VECTORIZED
-       if constexpr(NCFG::VectorizeMemOps)  // VECTORIZED
+       if constexpr(NCFG.VectorizeMemOps)  // VECTORIZED
         {
          if((size_t)Dst & sizeof(uint64)){Size=StoreAs<uint64>(*(uint64*)&ValArr, &Dst, Size); if constexpr(sizeof(T) > sizeof(uint64))MemRotLeft(&ValArr, sizeof(ValArr), sizeof(uint64));}    // Align to u128
          if(Size >= sizeof(u128))

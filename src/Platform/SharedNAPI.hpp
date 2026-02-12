@@ -10,7 +10,7 @@ FUNC_WRAPPERFI(PX::nsleep,  nsleep  )     // Nanoseconds
  bool  canint = Flags & PX::CLKFG_INTRABLE;
  rts = canint?pts:&tts;
  int res = 0;
- while((res=NAPI::clocksleep(pts, rts, Flags)) == PXERR(EINTR))    // Abs no need Ret, just pput it again
+ while((res=NAPI::clocksleep(pts, rts, Flags)) == PXERR(EINTR))    // Abs no need Ret, just put it again
   {
    if(canint)return 1;
    pts = rts;  // Resume with remaining time     // Is it enough to just reuse the pointers?

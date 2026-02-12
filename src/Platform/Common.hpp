@@ -21,6 +21,8 @@
 // https://github.com/DaemonEngine/Daemon/blob/master/src/common/Compiler.h
 //------------------------------------------------------------------------------------------------------------
 
+// NOTE: It is still possible to take an address of a 'constexpr' variable (which will make it actually allocated).
+// Can't be 'inline' instead of 'static' - won't compile in function bodies.
 #define SCVR static constexpr const
 
 #ifdef __GNUC__              // CLANG defines it too
@@ -156,6 +158,7 @@ static constexpr bool IsBigEndian = false;     // Since the Framework is for x86
 // __attribute__((pass_object_size(0)))  // __builtin_object_size(p, 0)
 // [[clang::no_destroy]]  __attribute__((no_destroy))
 
+#define _MaySkip [[maybe_unused]]
 
 
 // TODO: Check that we have compatible PLT_* definitions
@@ -190,7 +193,7 @@ static constexpr bool IsSysLinux = false;
 
 #if defined(__APPLE__) && defined(__MACH__)    // __APPLE__  // Clang, GCC mode at least
 #pragma message(">>> OS is MacOS")
-#define SYS_MACOS
+#define SYS_MACOS                          // TODO: Replace with SYS_XNU  (MacOS, iOS)
 static constexpr bool IsSysMacOS = true;
 #else
 static constexpr bool IsSysMacOS = false;
@@ -315,6 +318,12 @@ static constexpr bool IsDbgBuild = false;
 #else
 #define _SYSENTRY extern "C"
 #endif
+
+//#if defined(CPU_X86)
+//#define YieldCPU() _mm_pause    //  __asm { rep nop }
+//#elif defined(CPU_ARM)
+//#define YieldCPU() __yield      // asm volatile("yield")
+//#endif
 
 #ifdef SYS_LINUX
 // Will create .init_array (dlopen on modern linux will not use old method)  // init_array does not use relative offets and will cause a reloc section creation
@@ -455,7 +464,7 @@ constexpr const char* My__builtin_FUNCSIG(auto* rt = __builtin_source_location()
 
 #define CALL_RIFEXISTR(fchk,falt,farg,faarg) if constexpr(requires { Y::fchk; })res = Y::fchk farg; else res = Y::falt faarg;
 
-struct SEmptyType {};
+struct SEmptyType {};    // [[no_unique_address]]  ?
 using ETYPE = SEmptyType[0];   // As a member // This works plain and simple with ICC, GCC, CLANG (You can get a completely empty struct with such members and no annoying padding rules) but MSVC reports an error 'error C2229: struct has an illegal zero-sized array'
 // MSVC: sizeof(ETYPE) : error C2070: 'ETYPE': illegal sizeof operand
 // CLANG: With '--target=x86_64-windows-msvc' you cannot get an empty struct with such members, its size will be at least 1 byte
@@ -535,6 +544,17 @@ template<typename T> consteval static auto ChangeTypeSign(T Val=0)  // Should be
 //------------------------------------------------------------------------------------------------------------
 
 constexpr static bool Is64BitBuild(void){return sizeof(void*) == 8;}   // To be used in constexpr expressions instead of __amd64__ macro
+//------------------------------------------------------------------------------------------------------------
+static _finline void YieldCPU()
+{
+#if defined(CPU_X86)
+ _mm_pause();    //  __asm { rep nop }
+#elif defined(CPU_ARM)
+ __yield();      // asm volatile("yield")
+#else
+ //  __asm__ volatile("" ::: "memory");
+#endif
+}
 //------------------------------------------------------------------------------------------------------------
 // NOTE: You must use these types if you want code randomization to be applied
 namespace NGT   // NGenericTypes (Shortenrd to have shorter type dumps) // You should do 'using' for it yourselves if you want to bring these types to global name space   // If this is not Namespace than this would not be possible: 'using namespace NFWK::NGenericTypes;'
@@ -622,6 +642,8 @@ using sint128 = decltype(sizeof(void*)) __attribute__((__vector_size__(16), __al
 
 };
 
+static_assert(sizeof(NGT::uint) == sizeof(void*));   // Make sure that the compiler behaves properly
+
 using PTRTYPE64  = typename NGT::uint64;
 using PTRTYPE32  = typename NGT::uint32;
 using PTRCURRENT = typename NGT::uint;
@@ -645,6 +667,19 @@ typedef __builtin_va_list va_list;        // Requires stack alignment by 16
 #endif
 //------------------------------------------------------------------------------------------------------------
 
+#if defined(SYS_MACOS) || defined(SYS_BSD)    // Proprocessor should be faster than 'if constexpr' (probably)
+ static consteval auto VSLB(_MaySkip auto vLINUX, auto vBSD_MAC) { return vBSD_MAC; }   // Value select Linux/BSD(MacOS)
+#else
+ static consteval auto VSLB(auto vLINUX, _MaySkip auto vBSD_MAC) { return vLINUX; }
+#endif
+
+#if defined(CPU_ARM)   // Proprocessor should be faster than 'if constexpr' (probably)
+ static consteval auto VSIA(auto vARM, _MaySkip auto vX86) { return vARM; }    // Value select ARM/x86
+#else
+ static consteval auto VSIA(_MaySkip auto vARM, auto vX86) { return vX86; }
+#endif
+
+//------------------------------------------------------------------------------------------------------------
 // NOTE:  Dump here any implementations that should be accessible early and have no personal HPP yet >>>
 
 //------------------------------------------------------------------------------------------------------------
@@ -755,17 +790,17 @@ template<typename Ty> struct RemovePtr<Ty* const volatile> { using T = Ty; };
 template<typename Ty> using RemovePtrT = typename RemovePtr<Ty>::T;
 //--------------
 
-template <int Size> struct TypeForSizeU
+template <int SizeInBytes> struct TypeForSizeU
 {
- using T = typename TSW<(Size < 8), typename TSW<Size < 4, typename TSW<Size < 2, uint8, uint16>::T, uint32>::T, uint64>::T;    // without 'typename' the compiler refuses to look for TSW type
+ using T = typename TSW<(SizeInBytes < 8), typename TSW<SizeInBytes < 4, typename TSW<SizeInBytes < 2, uint8, uint16>::T, uint32>::T, uint64>::T;    // without 'typename' the compiler refuses to look for TSW type
 };
 
-template <int Size> struct TypeForSizeS
+template <int SizeInBytes> struct TypeForSizeS
 {
- using T = typename TSW<(Size < 8), typename TSW<Size < 4, typename TSW<Size < 2, sint8, sint16>::T, sint32>::T, sint64>::T;    // without 'typename' the compiler refuses to look for TSW type
+ using T = typename TSW<(SizeInBytes < 8), typename TSW<SizeInBytes < 4, typename TSW<SizeInBytes < 2, sint8, sint16>::T, sint32>::T, sint64>::T;    // without 'typename' the compiler refuses to look for TSW type
 };
 
-template<int Size, bool Unsign=true> using TypeForSizeT = typename TSW<Unsign, typename TypeForSizeU<Size>::T, typename TypeForSizeS<Size>::T>::T;
+template<int SizeInBytes, bool Unsign=true> using TypeForSizeT = typename TSW<Unsign, typename TypeForSizeU<SizeInBytes>::T, typename TypeForSizeS<SizeInBytes>::T>::T;
 //------------------------------------------------------------------------------------------------------------
 // https://stackoverflow.com/questions/46404503/can-i-implement-maxa-maxb-maxc-d-using-fold-expressions
 
@@ -1134,11 +1169,6 @@ consteval uint32 cc4(const char (&s)[5])    // exactly 4 chars + '\0'  // NOTE: 
    else return uint32((uint8)s[3]) | (uint32((uint8)s[2]) << 8) | (uint32((uint8)s[1]) << 16) | (uint32((uint8)s[0]) << 24);
 }
 //------------------------------------------------------------------------------------------------------------
- _finline constexpr void SetFlags(auto& Value, auto Flags){Value |= Flags;}
- _finline constexpr void RemoveFlags(auto& Value, auto Flags){Value &= ~Flags;}
- _finline constexpr bool IsSetFlags(auto Value, auto Flags){return ((Value & Flags) == Flags);}
- _finline constexpr bool IsSetAnyFlag(auto Value, auto Flags){return (Value & Flags);}
-//-----------------------------------------------------
 // This handles all cases correctly:
 // NumBits == 0:        returns 0 (the & 0xFFFF... zeros it)
 // NumBits == MaxBits:  shift by 0, returns T(-1)

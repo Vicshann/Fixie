@@ -139,7 +139,7 @@ static sint _finline GetModulePath(achar* DstBuf, size_t BufSize=uint(-1))   // 
  return len;
 }
 //------------------------------------------------------------------------------------------------------------
-static vptr LoadModule(const achar* Path)
+static vptr LoadLibrary(const achar* Path, bool Init=true)      // TODO: Should initialize ld.so
 {
  return nullptr;
 }

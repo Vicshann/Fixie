@@ -1,0 +1,101 @@
+Error Name,FreeBSD,OpenBSD,NetBSD,DragonFly BSD,XNU (macOS),Linux,Description
+EPERM,1,1,1,1,1,1,Operation not permitted
+ENOENT,2,2,2,2,2,2,No such file or directory
+ESRCH,3,3,3,3,3,3,No such process
+EINTR,4,4,4,4,4,4,Interrupted system call
+EIO,5,5,5,5,5,5,Input/output error
+ENXIO,6,6,6,6,6,6,Device not configured
+E2BIG,7,7,7,7,7,7,Argument list too long
+ENOEXEC,8,8,8,8,8,8,Exec format error
+EBADF,9,9,9,9,9,9,Bad file descriptor
+ECHILD,10,10,10,10,10,10,No child processes
+EDEADLK,11,11,11,11,11,35,Resource deadlock avoided
+ENOMEM,12,12,12,12,12,12,Cannot allocate memory
+EACCES,13,13,13,13,13,13,Permission denied
+EFAULT,14,14,14,14,14,14,Bad address
+ENOTBLK,15,15,15,15,15,15,Block device required
+EBUSY,16,16,16,16,16,16,Device busy
+EEXIST,17,17,17,17,17,17,File exists
+EXDEV,18,18,18,18,18,18,Cross-device link
+ENODEV,19,19,19,19,19,19,Operation not supported by device
+ENOTDIR,20,20,20,20,20,20,Not a directory
+EISDIR,21,21,21,21,21,21,Is a directory
+EINVAL,22,22,22,22,22,22,Invalid argument
+ENFILE,23,23,23,23,23,23,Too many open files in system
+EMFILE,24,24,24,24,24,24,Too many open files
+ENOTTY,25,25,25,25,25,25,Inappropriate ioctl for device
+ETXTBSY,26,26,26,26,26,26,Text file busy
+EFBIG,27,27,27,27,27,27,File too large
+ENOSPC,28,28,28,28,28,28,No space left on device
+ESPIPE,29,29,29,29,29,29,Illegal seek
+EROFS,30,30,30,30,30,30,Read-only file system
+EMLINK,31,31,31,31,31,31,Too many links
+EPIPE,32,32,32,32,32,32,Broken pipe
+EDOM,33,33,33,33,33,33,Numerical argument out of domain
+ERANGE,34,34,34,34,34,34,Result too large
+EAGAIN,35,35,35,35,35,11,Resource temporarily unavailable
+EWOULDBLOCK,35,35,35,35,35,11,Operation would block (same as EAGAIN)
+EINPROGRESS,36,36,36,36,36,115,Operation now in progress
+EALREADY,37,37,37,37,37,114,Operation already in progress
+ENOTSOCK,38,38,38,38,38,88,Socket operation on non-socket
+EDESTADDRREQ,39,39,39,39,39,89,Destination address required
+EMSGSIZE,40,40,40,40,40,90,Message too long
+EPROTOTYPE,41,41,41,41,41,91,Protocol wrong type for socket
+ENOPROTOOPT,42,42,42,42,42,92,Protocol not available
+EPROTONOSUPPORT,43,43,43,43,43,93,Protocol not supported
+ESOCKTNOSUPPORT,44,44,44,44,44,94,Socket type not supported
+EOPNOTSUPP,45,45,91,45,45,95,Operation not supported
+EPFNOSUPPORT,46,46,46,46,46,96,Protocol family not supported
+EAFNOSUPPORT,47,47,47,47,47,97,Address family not supported by protocol family
+EADDRINUSE,48,48,48,48,48,98,Address already in use
+EADDRNOTAVAIL,49,49,49,49,49,99,Can't assign requested address
+ENETDOWN,50,50,50,50,50,100,Network is down
+ENETUNREACH,51,51,51,51,51,101,Network is unreachable
+ENETRESET,52,52,52,52,52,102,Network dropped connection on reset
+ECONNABORTED,53,53,53,53,53,103,Software caused connection abort
+ECONNRESET,54,54,54,54,54,104,Connection reset by peer
+ENOBUFS,55,55,55,55,55,105,No buffer space available
+EISCONN,56,56,56,56,56,106,Socket is already connected
+ENOTCONN,57,57,57,57,57,107,Socket is not connected
+ESHUTDOWN,58,58,58,58,58,108,Can't send after socket shutdown
+ETOOMANYREFS,59,59,59,59,59,109,Too many references: can't splice
+ETIMEDOUT,60,60,60,60,60,110,Operation timed out
+ECONNREFUSED,61,61,61,61,61,111,Connection refused
+ELOOP,62,62,62,62,62,40,Too many levels of symbolic links
+ENAMETOOLONG,63,63,63,63,63,36,File name too long
+EHOSTDOWN,64,64,64,64,64,112,Host is down
+EHOSTUNREACH,65,65,65,65,65,113,No route to host
+ENOTEMPTY,66,66,66,66,66,39,Directory not empty
+EPROCLIM,67,67,67,67,67,-,Too many processes (BSD only)
+EUSERS,68,68,68,68,68,-,Too many users (BSD only)
+EDQUOT,69,69,69,69,69,122,Disc quota exceeded
+ESTALE,70,70,70,70,70,116,Stale NFS file handle
+EREMOTE,71,71,71,71,71,-,Too many levels of remote in path (BSD only)
+EBADRPC,72,72,72,72,72,-,RPC struct is bad (BSD only)
+ERPCMISMATCH,73,73,73,73,73,-,RPC version wrong (BSD only)
+EPROGUNAVAIL,74,74,74,74,74,-,RPC prog. not avail (BSD only)
+EPROGMISMATCH,75,75,75,75,75,-,Program version wrong (BSD only)
+EPROCUNAVAIL,76,76,76,76,76,-,Bad procedure for program (BSD only)
+ENOLCK,77,77,77,77,77,37,No locks available
+ENOSYS,78,78,78,78,78,38,Function not implemented
+EFTYPE,79,79,79,79,79,-,Inappropriate file type or format (BSD only)
+EAUTH,80,80,80,80,80,-,Authentication error (BSD only)
+ENEEDAUTH,81,81,81,81,81,-,Need authenticator (BSD only)
+EIDRM,82,82,82,82,82,43,Identifier removed
+ENOMSG,83,83,83,83,83,42,No message of desired type
+EOVERFLOW,84,84,84,84,84,75,Value too large to be stored in data type
+ECANCELED,85,85,87,85,85,125,Operation canceled
+EILSEQ,86,86,85,86,86,84,Illegal byte sequence
+ENOATTR,87,83,-,87,93,-,Attribute not found (BSD only)
+EDOOFUS,88,-,-,88,88,-,Programming error (FreeBSD/DragonFly/XNU)
+EBADMSG,89,84,88,89,94,74,Bad message
+EMULTIHOP,90,85,89,90,95,72,Multihop attempted
+ENOLINK,91,86,90,91,96,67,Link has been severed
+EPROTO,92,87,96,92,100,71,Protocol error
+ENOTCAPABLE,93,-,-,93,93,-,Capabilities insufficient (FreeBSD/XNU)
+ECAPMODE,94,-,-,94,94,-,Not permitted in capability mode (FreeBSD/XNU)
+ENOTRECOVERABLE,95,88,93,95,104,131,State not recoverable
+EOWNERDEAD,96,89,94,96,105,130,Previous owner died
+EINTEGRITY,97,-,-,-,-,-,Integrity check failed (FreeBSD 14+ only)
+ENOTSUP,-,91,86,-,45,95,Not supported
+EDEADLOCK,-,-,-,-,-,35,Same as EDEADLK on Linux

@@ -356,7 +356,7 @@ static NT::NTSTATUS FindDosDevForPath(wchar* DosPart, const wchar* NtPath, uint3
   {
    PrvIdx = RecIdx;
    NT::NTSTATUS stat = SAPI::NtQueryDirectoryObject(hODir, &RecBuf, sizeof(RecBuf), false, false, &RecIdx, &RetLen);   // STATUS_MORE_ENTRIES
-   if(!NT::NT_SUCCESS(stat)){SAPI::NtClose(hODir); return stat;}
+   if(!NT::IsSuccess(stat)){SAPI::NtClose(hODir); return stat;}
    auto Recs = (NT::OBJECT_DIRECTORY_INFORMATION*)RecBuf;
    for(uint32 idx=0,tot=RecIdx-PrvIdx;idx < tot;idx++)       // TypeName: SymbolicLink  // Only SymLinks in \\GLOBAL??
     {
@@ -366,11 +366,11 @@ static NT::NTSTATUS FindDosDevForPath(wchar* DosPart, const wchar* NtPath, uint3
      path.Buffer[onslen] = rec->Name.Buffer[0];   // Drive letter
      NT::HANDLE hSObj = 0;
      res = SAPI::NtOpenSymbolicLinkObject(&hSObj, NT::SYMBOLIC_LINK_QUERY, &oattr);
-     if(!NT::NT_SUCCESS(res))continue;
+     if(!NT::IsSuccess(res))continue;
      lnkpath.Length = 0; 
      res = SAPI::NtQuerySymbolicLinkObject(hSObj, &lnkpath, &RetLen);
      SAPI::NtClose(hSObj);
-     if(!NT::NT_SUCCESS(res))continue;
+     if(!NT::IsSuccess(res))continue;
 
      ssize clen;
      bool Match;
@@ -442,7 +442,7 @@ static NT::NTSTATUS FindPathForDosDev(wchar* NtPart, const wchar* DosPath, uint3
  lnkpath.MaximumLength = sizeof(pathbuf);
  res = SAPI::NtQuerySymbolicLinkObject(hSObj, &lnkpath, &RetLen);
  SAPI::NtClose(hSObj);
- if(!NT::NT_SUCCESS(res))return res;
+ if(!NT::IsSuccess(res))return res;
  uint32 dlen = NSTR::StrCopy(NtPart, lnkpath.Buffer, DstLen >> 1);
  if(NewPLen)*NewPLen = dlen;
  if(OldPLen)*OldPLen = plen;
@@ -536,7 +536,7 @@ static NT::NTSTATUS SetCurrentDir(const achar* sDir, bool CaseSens=false)
    res = SAPI::NtCreateFile(&hDir, DesiredAccess, &oattr, &iosb, nullptr, FileAttributes, ShareAccess, CreateDisposition, CreateOptions, nullptr, 0);    // This will open network shares (mapped drives)
    gls = 0;
   }
- if(!NT::NT_SUCCESS(res))return res;
+ if(!NT::IsSuccess(res))return res;
  if(gls > 0){FilePathUS.Buffer += 10; FilePathUS.Length -= (10*2);}
   else if(!gls){FilePathUS.Buffer += 4; FilePathUS.Length -= (4*2);}             
  return SetCurrentDirNT(hDir, FilePathUS.Buffer, FilePathUS.Length >> 1);
@@ -562,7 +562,7 @@ static NT::NTSTATUS SetCurrentDir(NT::HANDLE hDir)
    usize size = AlignFrwdP2(PathLen,16);
    FullPath = (wchar*)StkAlloc(size);
    res = SAPI::NtQueryObject(hDir, NT::ObjectNameInformation, FullPath, size, &PathLen);
-   if(!NT::NT_SUCCESS(res))return res;
+   if(!NT::IsSuccess(res))return res;
   }
    else FullPath = (wchar*)&PathBuf;
 
@@ -571,7 +571,7 @@ static NT::NTSTATUS SetCurrentDir(NT::HANDLE hDir)
  uint32 NewPLen = 0;
  wchar DriveLnk[64];
  res = GetDosDevForPath(DriveLnk, str->Buffer, sizeof(DriveLnk), &OldPLen, &NewPLen);     
- if(!NT::NT_SUCCESS(res))return res;
+ if(!NT::IsSuccess(res))return res;
  if(NewPLen > OldPLen)return NT::STATUS_UNSUCCESSFUL;
 
  NT::OBJECT_ATTRIBUTES oattr = {};
@@ -584,7 +584,7 @@ static NT::NTSTATUS SetCurrentDir(NT::HANDLE hDir)
  oattr.SecurityDescriptor = nullptr;            // TODO: Arg3: mode_t mode
  oattr.SecurityQualityOfService = nullptr;
  res = SAPI::NtCreateFile(&hDir, uint32(NT::FILE_TRAVERSE) | NT::SYNCHRONIZE, &oattr, &iosb, nullptr, NT::FILE_ATTRIBUTE_NORMAL, NT::FILE_SHARE_READ | NT::FILE_SHARE_WRITE, NT::FILE_OPEN, NT::FILE_DIRECTORY_FILE | NT::FILE_SYNCHRONOUS_IO_NONALERT, nullptr, 0);   
- if(!NT::NT_SUCCESS(res))return res;
+ if(!NT::IsSuccess(res))return res;
 
  uint32 plen = OldPLen - NewPLen;
  str->Buffer += plen;
@@ -854,26 +854,26 @@ static NT::NTSTATUS DeleteFileObject(const achar* Path, int AsDir=-1, NT::HANDLE
  res = OpenFileObject(&hFileObj, Path, DesiredAccess, ObjAttributes, NT::FILE_ATTRIBUTE_NORMAL, ShareAccess, NT::FILE_OPEN, CreateOptions, &iosb, RootDir);
  if(res == NT::STATUS_DELETE_PENDING)return NT::STATUS_PENDING;  // Already deleting  // Return a positive to pass NT_SUCCESS() 
  if(res == NT::STATUS_SHARING_VIOLATION)return res;     // Failed to open  // Nothing can be done about that?
- if(!NT::NT_SUCCESS(res))return res;  
+ if(!NT::IsSuccess(res))return res;  
            
  NT::FILE_DISPOSITION_INFORMATION fdi = {NT::FILE_DISPOSITION_DELETE | NT::FILE_DISPOSITION_POSIX_SEMANTICS | NT::FILE_DISPOSITION_IGNORE_READONLY_ATTRIBUTE};  // this can't get around the shared-access mode, and most applications do not open files with delete sharing.
  res = SAPI::NtSetInformationFile(hFileObj, &iosb, &fdi, sizeof(fdi), NT::FileDispositionInformationEx);
  if(res == NT::STATUS_DIRECTORY_NOT_EMPTY)break;
- if(NT::NT_SUCCESS(res))break;     
+ if(NT::IsSuccess(res))break;     
    
 // Probably unsupported (WinVer is too low?) - trying old approach
  fdi.DeleteFile = true;  // puts the file into a "delete pending" state. It will be deleted once all existing handles are closed. No new handles will be possible to open
  res = SAPI::NtSetInformationFile(hFileObj, &iosb, &fdi, sizeof(fdi), NT::FileDispositionInformation);
- if(NT::NT_SUCCESS(res) || (res != NT::STATUS_CANNOT_DELETE))break;      // If Success or not ReadOnly
+ if(NT::IsSuccess(res) || (res != NT::STATUS_CANNOT_DELETE))break;      // If Success or not ReadOnly
 
  NT::FILE_BASIC_INFORMATION fBasicInfo;
  res = SAPI::NtQueryInformationFile(hFileObj, &iosb, &fBasicInfo, sizeof(fBasicInfo), NT::FileBasicInformation);    // STATUS_ACCESS_DENIED if no access to attrs
- if(!NT::NT_SUCCESS(res))break;   
+ if(!NT::IsSuccess(res))break;   
  if(!(fBasicInfo.FileAttributes & NT::FILE_ATTRIBUTE_READONLY))break;    // Probably mapped somewhere
  //fBasicInfo.FileAttributes = NT::FILE_ATTRIBUTE_NORMAL;    // FILE_ATTRIBUTE_NORMAL flag cannot be set or returned in combination with any other attributes.
  fBasicInfo.FileAttributes &= ~NT::FILE_ATTRIBUTE_READONLY;
  res = SAPI::NtSetInformationFile(hFileObj, &iosb, &fBasicInfo, sizeof(fBasicInfo), NT::FileBasicInformation);
- if(!NT::NT_SUCCESS(res))break; 
+ if(!NT::IsSuccess(res))break; 
  res = SAPI::NtSetInformationFile(hFileObj, &iosb, &fdi, sizeof(fdi), NT::FileDispositionInformation);   // Try again
   
  //if(res == NT::STATUS_CANNOT_DELETE){}   // The file is ReadOnly or mapped     // Nothing can be done here?
@@ -918,7 +918,7 @@ static NT::NTSTATUS RenameFileObject(const achar* SrcFile, const achar* DstFile,
  if(!CaseSens)ObjAttributes |= NT::OBJ_CASE_INSENSITIVE; 
                   
  res = OpenFileObject(&hFileObj, SrcFile, DesiredAccess, ObjAttributes, NT::FILE_ATTRIBUTE_NORMAL, ShareAccess, NT::FILE_OPEN, CreateOptions, &iosb, SrcRootDir);
- if(!NT::NT_SUCCESS(res))return res;
+ if(!NT::IsSuccess(res))return res;
  bool  ForceRel = !IsSepOnPath(DstFile);
  AllocaObjectAttrs(DstFile, DstRootDir, ObjAttributes|NT::OBJ_PATH_GLOBAL_NS, &oattr, ForceRel)
  usize  PathLen = oattr.ObjectName->Length;   // In bytes
@@ -932,7 +932,7 @@ static NT::NTSTATUS RenameFileObject(const achar* SrcFile, const achar* DstFile,
  RenameInfo->FileNameLength = PathLen;
  if(Replace)RenameInfo->Flags |= NT::FILE_RENAME_REPLACE_IF_EXISTS;
  res = SAPI::NtSetInformationFile(hFileObj, &iosb, RenameInfo, InfoSize, NT::FileRenameInformationEx);
- if(NT::NT_SUCCESS(res))break;          // TODO: Break only on a specific error code when the FileRenameInformationEx is not supported. // NOTE: FS driver decides how to respond if it does not support FileRenameInformationEx
+ if(NT::IsSuccess(res))break;          // TODO: Break only on a specific error code when the FileRenameInformationEx is not supported. // NOTE: FS driver decides how to respond if it does not support FileRenameInformationEx
  if((res = NT::STATUS_OBJECT_PATH_NOT_FOUND) && (IsGlobalObjectNS(RenameInfo->FileName) > 0))
   {
    ONSGlobalToLocalPtr(PathPtr, PathLen);
@@ -994,7 +994,7 @@ static NT::NTSTATUS ReadFileObjectSLink(achar* DstBuf, usize* DstLen, const acha
  if(!CaseSens)ObjAttributes |= NT::OBJ_CASE_INSENSITIVE; 
                   
  res = OpenFileObject(&hFileObj, FilePath, DesiredAccess, ObjAttributes, NT::FILE_ATTRIBUTE_NORMAL, ShareAccess, NT::FILE_OPEN, CreateOptions, &iosb, RootDir);
- if(!NT::NT_SUCCESS(res))return res;
+ if(!NT::IsSuccess(res))return res;
 
  for(;;){
  res = SAPI::NtFsControlFile(hFileObj, 0, nullptr, nullptr, &iosb, NT::FSCTL_GET_REPARSE_POINT, nullptr, 0, &BigBuf, sizeof(BigBuf));  // Returns STATUS_BUFFER_OVERFLOW if buffer is too small (Does not report required size)
@@ -1002,11 +1002,11 @@ static NT::NTSTATUS ReadFileObjectSLink(achar* DstBuf, usize* DstLen, const acha
   {
    usize Size = 0x10000;   // Network shares have problems with buffers larger than 64K
    res = SAPI::NtAllocateVirtualMemory(NT::NtCurrentProcess, &BufPtr, 0, &Size, NT::MEM_COMMIT, NT::PAGE_READWRITE); 
-   if(!NT::NT_SUCCESS(res))return res;
+   if(!NT::IsSuccess(res))return res;
    AllocatedBuf = true;
    continue;
   }
- if(!NT::NT_SUCCESS(res))break;
+ if(!NT::IsSuccess(res))break;
  NT::REPARSE_DATA_BUFFER* rpd = (NT::REPARSE_DATA_BUFFER*)BufPtr;
  wchar* Buf;
  usize  Len;   // In chars
@@ -1057,7 +1057,7 @@ static NT::NTSTATUS CreateFileObjectSLink(const achar* LnkFile, const achar* Tgt
  if(!LnkFollow)CreateOptions |= NT::FILE_OPEN_REPARSE_POINT;
                   
  res = OpenFileObject(&hFileObj, TgtFile, DesiredAccess, ObjAttributes, NT::FILE_ATTRIBUTE_NORMAL, ShareAccess, NT::FILE_OPEN, CreateOptions, &iosb, TgtRootDir);
- if(!NT::NT_SUCCESS(res))return res;
+ if(!NT::IsSuccess(res))return res;
 
  usize FullLen = PATH_MAX*2;
  // TODO: Convert the hFileObj path to DOS path TgtFile   // How to preserve it without reading by a syscall?
@@ -1117,7 +1117,7 @@ static NT::NTSTATUS CreateFileObjectHLink(const achar* LnkFile, const achar* Tgt
  if(!LnkFollow)CreateOptions |= NT::FILE_OPEN_REPARSE_POINT;
                   
  res = OpenFileObject(&hFileObj, TgtFile, DesiredAccess, ObjAttributes, NT::FILE_ATTRIBUTE_NORMAL, ShareAccess, NT::FILE_OPEN, CreateOptions, &iosb, TgtRootDir);
- if(!NT::NT_SUCCESS(res))return res;
+ if(!NT::IsSuccess(res))return res;
 
  bool  ForceRel = !IsSepOnPath(LnkFile);
  AllocaObjectAttrs(LnkFile, LnkRootDir, ObjAttributes|NT::OBJ_PATH_GLOBAL_NS, &oattr, ForceRel)
@@ -1132,7 +1132,7 @@ static NT::NTSTATUS CreateFileObjectHLink(const achar* LnkFile, const achar* Tgt
  HLinkInfo->FileNameLength = PathLen;
  if(Replace)HLinkInfo->Flags |= NT::FILE_LINK_REPLACE_IF_EXISTS;
  res = SAPI::NtSetInformationFile(hFileObj, &iosb, HLinkInfo, InfoSize, NT::FileLinkInformationEx);
- if(NT::NT_SUCCESS(res))break;          // TODO: Break only on a specific error code when the FilLinkInformationEx is not supported. // NOTE: FS driver decides how to respond if it does not support FileRenameInformationEx
+ if(NT::IsSuccess(res))break;          // TODO: Break only on a specific error code when the FilLinkInformationEx is not supported. // NOTE: FS driver decides how to respond if it does not support FileRenameInformationEx
  if((res = NT::STATUS_OBJECT_PATH_NOT_FOUND) && (IsGlobalObjectNS(HLinkInfo->FileName) > 0))
   {
    ONSGlobalToLocalPtr(PathPtr, PathLen);
@@ -1307,7 +1307,7 @@ static NT::NTSTATUS NativeCreateThread(PNT_THREAD_PROC ThreadRoutine, NT::PVOID 
    if(*StackSize)*StackSize = AlignFrwdP2(*StackSize + PAGE_SIZE, MEMGRANSIZE);    // Must allocate by 64k to avoid address space wasting
     else *StackSize = PAGE_SIZE * 256;   // 1Mb as default stack size (Including a guard page)
    Status = SAPI::NtAllocateVirtualMemory(ProcessHandle, StackBase, 0, StackSize, NT::MEM_RESERVE, NT::PAGE_READWRITE);   // Reserve the memory first
-   if(!NT::NT_SUCCESS(Status)){DBGMSG("AVM Failed 1"); return Status;}
+   if(!NT::IsSuccess(Status)){DBGMSG("AVM Failed 1"); return Status;}
 
    // NOTE: Growing of a reserved stack space is not used but a guard page is still placed because kernel may check for it
    UserStack.ExpandableStackBase   = &((uint8*)*StackBase)[*StackSize];   // Where the stack memory block ends (entire reserved region) // ESP is usually points here initially
@@ -1317,7 +1317,7 @@ static NT::NTSTATUS NativeCreateThread(PNT_THREAD_PROC ThreadRoutine, NT::PVOID 
    NT::SIZE_T StackCommit = *StackSize;         // Use 2 guard pages
    NT::PVOID  CommitBase  = *StackBase;
    Status = SAPI::NtAllocateVirtualMemory(ProcessHandle, &CommitBase, 0, &StackCommit, NT::MEM_COMMIT, NT::PAGE_READWRITE);    // Stack commit, includes one guard page
-   if(!NT::NT_SUCCESS(Status)){DBGMSG("AVM Failed 2"); return Status;}
+   if(!NT::IsSuccess(Status)){DBGMSG("AVM Failed 2"); return Status;}
   }
    else    // Assume that there may be some data on the stack already
     {
@@ -1330,7 +1330,7 @@ static NT::NTSTATUS NativeCreateThread(PNT_THREAD_PROC ThreadRoutine, NT::PVOID 
   NT::SIZE_T GuardSize = PAGE_SIZE;
   NT::PVOID  GuardBase = *StackBase;
   Status = SAPI::NtProtectVirtualMemory(ProcessHandle, &GuardBase, &GuardSize, NT::PAGE_READWRITE | NT::PAGE_GUARD, &OldProtect);   // create a GUARD page
-  if(!NT::NT_SUCCESS(Status)){DBGMSG("PVM Failed"); return Status;}
+  if(!NT::IsSuccess(Status)){DBGMSG("PVM Failed"); return Status;}
  }
 
 // Avoiding RtlInitializeContext because it uses NtWriteVirtualMemory for a Parameter on x32 (A remote process may be opened without rights to do that)
@@ -1375,7 +1375,7 @@ static NT::NTSTATUS NativeCreateThread(PNT_THREAD_PROC ThreadRoutine, NT::PVOID 
 #ifdef ARCH_X32
 // Always use native syscalls // if((Status == STATUS_ACCESS_DENIED) && (FixWinTenWow64NtCreateThread() > 0))Status = NtCreateThread(ThreadHandle, ThAcc, nullptr, ProcessHandle, &ClientId, &Context, (PINITIAL_TEB)&UserStack, CrtSusp);     // Try to fix Wow64NtCreateThread bug in latest versions of Windows 10
 #endif
- if(!NT::NT_SUCCESS(Status)){DBGMSG("CreateThread Failed"); return Status;}
+ if(!NT::IsSuccess(Status)){DBGMSG("CreateThread Failed"); return Status;}
  if(ThreadID)*ThreadID = NT::ULONG(ClientId.UniqueThread);
  return Status;
 }
@@ -1680,7 +1680,40 @@ static SIZE_T IsMemAvailable(PVOID Addr, bool* IsImage=nullptr)      // Helps to
  if(IsImage)*IsImage = (minf.Type & MEM_IMAGE);  // (minf.Type & MEM_MAPPED)
  return minf.RegionSize;
 }
+//------------------------------------------------------------------------------------
+Key Differences from Linux
+Immutability: On Windows, once a process is assigned to a Job Object, it generally cannot be moved to a different one (unless they are nested, which is supported on Windows 8+).
+Automatic Cleanup: If you use NtSetInformationJobObject to set the KillOnJobClose flag, closing the job handle will terminate all processes in that group—useful for cleaning up child processes.
+Console Groups: If you specifically need setpgid for signal handling (like Ctrl+C), Windows uses "Console Process Groups." This is managed during process creation via the CREATE_NEW_PROCESS_GROUP flag in CreateProcess, but it is much harder to manipulate via ntdll after the process has started. 
+
+void NativeSetJobGroup(HANDLE hProcess) {
+    auto hNtdll = GetModuleHandleA("ntdll.dll");
+    auto NtCreateJobObject = (_NtCreateJobObject)GetProcAddress(hNtdll, "NtCreateJobObject");
+    auto NtAssignProcessToJobObject = (_NtAssignProcessToJobObject)GetProcAddress(hNtdll, "NtAssignProcessToJobObject");
+
+    if (NtCreateJobObject && NtAssignProcessToJobObject) {
+        HANDLE hJob = NULL;
+        OBJECT_ATTRIBUTES objAttr;
+        InitializeObjectAttributes(&objAttr, NULL, 0, NULL, NULL);
+
+        // 1. Create the "Process Group" (Job Object)
+        NTSTATUS status = NtCreateJobObject(&hJob, JOB_OBJECT_ALL_ACCESS, &objAttr);
+        
+        if (status == 0) { // STATUS_SUCCESS
+            // 2. Assign the process to the group (setpgid equivalent)
+            NtAssignProcessToJobObject(hJob, hProcess);
+        }
+    }
+}
 */
+// A PID can be recycled the instant the last thread of a process terminates. However, a Process Object in the kernel is not destroyed until the last Handle to it is closed.
+int GetProcessState(NT::HANDLE hProcess)   // Returns 1 if the process is in a state of termination
+{
+ NT::PROCESS_BASIC_INFORMATION pbi;
+ NT::NTSTATUS status = SAPI::NtQueryInformationProcess(hProcess, NT::ProcessBasicInformation, &pbi, sizeof(pbi), nullptr);
+ if(!NT::IsSuccess(status)) return -1;        // The process is dead or we have no access to it, either way we cannot get its state
+ return (pbi.ExitStatus == NT::STATUS_PENDING);   // If status is success, check if ExitStatus is still pending (Beware of Zombies which is forever pending their termination on some broken I/O operation)
+}
 //------------------------------------------------------------------------------------
 // NOTE: LdrInitializeThunk will crash without this
 // CreateProcessParameters(hProcess, pbi.PebBaseAddress, name);     // Do not forget that the we can be a X32 process and the target process is X64 or vice versa
@@ -1826,9 +1859,9 @@ static NT::NTSTATUS GetMappedFilePath(NT::HANDLE ProcH, usize Addr, achar* Buf, 
    usize blen = AlignFrwdP2(RetLen, 16);
    PathBuf = (uint8*)StkAlloc(blen);   //uint8 FullPath[blen];    // NOTE: VLA
    res = SAPI::NtQueryVirtualMemory(ProcH, (vptr)Addr, NT::MemoryMappedFilenameInformation, PathBuf, blen, &RetLen);  
-   if(!NT::NT_SUCCESS(res))return res;
+   if(!NT::IsSuccess(res))return res;
   }
-   else if(!NT::NT_SUCCESS(res))return res;
+   else if(!NT::IsSuccess(res))return res;
 
  NT::UNICODE_STRING* str = (NT::UNICODE_STRING*)PathBuf;
  usize SrcLen = str->Length >> 1;     // In chars
@@ -1847,7 +1880,7 @@ static sint FindMappedRangeByAddr(NT::HANDLE ProcH, usize Addr, SMemRange* Range
  Range->FMOffs = Range->INode = Range->DevH = Range->DevL = 0;
  NT::MEMORY_BASIC_INFORMATION mbi;
  NT::NTSTATUS res = SAPI::NtQueryVirtualMemory(ProcH, (vptr)Addr, NT::MemoryBasicInformation, &mbi, sizeof mbi, nullptr);  
- if(!NT::NT_SUCCESS(res))return -9;
+ if(!NT::IsSuccess(res))return -9;
  if(!(mbi.State & NT::MEM_COMMIT))return -1;  // Not present
  Range->RangeBeg = (usize)mbi.BaseAddress;
  Range->RangeEnd = Range->RangeBeg + mbi.RegionSize; 
@@ -1857,7 +1890,7 @@ static sint FindMappedRangeByAddr(NT::HANDLE ProcH, usize Addr, SMemRange* Range
   {
    usize Len = Range->FPathLen;
    res = GetMappedFilePath(ProcH, (usize)mbi.BaseAddress, Range->FPath, &Len);
-   if(NT::NT_SUCCESS(res) || (res == NT::STATUS_BUFFER_OVERFLOW))Range->FPathLen = Len-1;
+   if(NT::IsSuccess(res) || (res == NT::STATUS_BUFFER_OVERFLOW))Range->FPathLen = Len-1;
      else Range->FPathLen = 0;
    return Range->FPathLen + sizeof(SMemRange) + (bool)Range->FPathLen; 
   }
@@ -1870,7 +1903,7 @@ static sint FindMappedRangeByAddr(sint32 ProcId, usize Addr, SMemRange* Range)
  if(ProcId > 0)
   {                                                         
    NT::NTSTATUS nres = OpenProcess(&PrHndl, NT::PROCESS_QUERY_INFORMATION, (uint32)ProcId);
-   if(!NT::NT_SUCCESS(nres))return -1;
+   if(!NT::IsSuccess(nres))return -1;
   }
  sint res = FindMappedRangeByAddr(PrHndl, Addr, Range);
  if(ProcId > 0)SAPI::NtClose(PrHndl);
@@ -1888,7 +1921,7 @@ static sint FindMappedRangesByPath(sint32 ProcId, usize Addr, const achar* ModPa
  if(ProcId > 0)
   {                                                         
    NT::NTSTATUS nres = OpenProcess(&PrHndl, NT::PROCESS_QUERY_INFORMATION, (uint32)ProcId);
-   if(!NT::NT_SUCCESS(nres))return -1;
+   if(!NT::IsSuccess(nres))return -1;
   }
  sint res = FindMappedRangesByPath(PrHndl, Addr, ModPath, MappedRanges, BufSize);
  if(ProcId > 0)SAPI::NtClose(PrHndl);
@@ -1909,7 +1942,7 @@ static sint ReadMappedRanges(NT::HANDLE ProcH, usize AddrFrom, usize AddrTo, SMe
   {
    NT::MEMORY_BASIC_INFORMATION mbi;
    NT::NTSTATUS nres = SAPI::NtQueryVirtualMemory(ProcH, (vptr)AddrFrom, NT::MemoryBasicInformation, &mbi, sizeof mbi, nullptr);
-   if(!NT::NT_SUCCESS(nres))return -9;
+   if(!NT::IsSuccess(nres))return -9;
    if((usize)mbi.BaseAddress >= AddrTo)break;
    if(!(mbi.State & NT::MEM_COMMIT))continue;  // Not present
    Range->RangeBeg = (usize)mbi.BaseAddress;
@@ -1922,7 +1955,7 @@ static sint ReadMappedRanges(NT::HANDLE ProcH, usize AddrFrom, usize AddrTo, SMe
        // TODO: Request the path
        usize Len = MappedRanges->TmpBufLen;
        nres = GetMappedFilePath(ProcH, (usize)mbi.BaseAddress, (achar*)MappedRanges->TmpBufPtr, &Len);
-       if(NT::NT_SUCCESS(nres))       // Check if Len < TmpBufLen ?
+       if(NT::IsSuccess(nres))       // Check if Len < TmpBufLen ?
         {
          uint len = Range->FPathLen + 1;
          if((len + sizeof(SMemRange)) > BufSize){MappedRanges->NextAddr = Range->RangeBeg; break;}  // No space left
@@ -1957,7 +1990,7 @@ static sint ReadMappedRanges(sint32 ProcId, usize AddrFrom, usize AddrTo, SMemMa
  if(ProcId > 0)
   {                                                         
    NT::NTSTATUS res = OpenProcess(&PrHndl, NT::PROCESS_QUERY_INFORMATION, (uint32)ProcId);
-   if(!NT::NT_SUCCESS(res))return -1;
+   if(!NT::IsSuccess(res))return -1;
   }
  sint res = ReadMappedRanges(PrHndl, AddrFrom, AddrTo, MappedRanges, BufSize);
  if(ProcId > 0)SAPI::NtClose(PrHndl);
@@ -2041,6 +2074,12 @@ static uint NTStatusToLinuxErr(NT::NTSTATUS err, uint Default=PX::EPERM)
     return PX::ECHILD;
 
   case NT::STATUS_TIMEOUT:
+    return PX::ETIMEDOUT;
+
+  case NT::STATUS_ALERTED:    // NtWaitForAlertByThreadId returns it after NtAlertThreadByThreadId  // FUTEX_WAIT returns 0 if the caller was woken up
+  case NT::STATUS_USER_APC:   // More fitting EINTR
+    return PX::EINTR;         // since Linux 2.6.22 does not returned for a spurious wakeup
+
   case NT::STATUS_DEVICE_BUSY:
   case NT::STATUS_SHARING_VIOLATION:
   case NT::STATUS_FILE_LOCK_CONFLICT:
@@ -2051,7 +2090,7 @@ static uint NTStatusToLinuxErr(NT::NTSTATUS err, uint Default=PX::EPERM)
   case NT::STATUS_PIPE_CONNECTED:
     return PX::EBUSY;
 
-  case NT::STATUS_PENDING:
+  case NT::STATUS_PENDING:                // ???
   case NT::STATUS_ALREADY_DISCONNECTED:
   case NT::STATUS_PAGEFILE_QUOTA:
   case NT::STATUS_WORKING_SET_QUOTA:

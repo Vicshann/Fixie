@@ -72,17 +72,13 @@ namespace NFWK      // Must be a namespace because we are adding some namespaces
 // NOTE: CD is set to $PRJROOT which may have all of its sources under SRC
 // No several projects in a folder - Dumb '__has_include' implementation is not affected by macro substitution! 
 
-#if __has_include ("AppCfg.hpp")
-#include "AppCfg.hpp"
-#else
-#include "Platform/DefaultCfg.hpp"
-#pragma message(">>> No AppCfg.hpp is found - using default config!")
-#endif
+#include "Platform/Configuration.hpp"
 
 #undef _APPNAMECFG
 
 #include "Platform/Common.hpp"       // Contains type definitions, must be in namespace to allow their inclusion with 'using namespace'
 #include "Platform/Intrin.hpp"       // Must be included after definition of NGenericTypes
+#include "Platform/Atomic.hpp"
 #include "Platform/BitOps.hpp"
 #include "Platform/MemOps.hpp"
 namespace NCRYPT

@@ -464,6 +464,15 @@ template<typename T, bool NeedBE> static _finline constexpr T ChangeByteOrder(T 
   }
 }
 //------------------------------------------------------------------------------------
+template<typename T> _finline constexpr T MakeFlag(uint8 FlagIdx) {return (T(1) << FlagIdx);}
+_finline constexpr auto AddFlag(auto Value, uint8 FlagIdx) {return (Value | ((decltype(Value))(1) << FlagIdx));}
+_finline constexpr auto AddFlags(auto Value, auto FlagMsk) {return (Value | FlagMsk);}
+_finline constexpr void SetFlag(auto& Value, uint8 FlagIdx) {Value |= ((RemoveRefT<decltype(Value)>)(1) << FlagIdx);}
+_finline constexpr void SetFlags(auto& Value, auto FlagMsk) {Value |= FlagMsk;}
+_finline constexpr void RemoveFlags(auto& Value, auto FlagMsk) {Value &= ~FlagMsk;}
+_finline constexpr bool IsSetFlag(auto Value, uint8 FlagIdx) {return bool(Value & ((decltype(Value))(1) << FlagIdx));}
+_finline constexpr bool IsSetFlags(auto Value, auto FlagMsk) {return ((Value & FlagMsk) == FlagMsk);}    // TRUE If all flags is set
+_finline constexpr bool IsSetAnyFlag(auto Value, auto FlagMsk) {return bool(Value & FlagMsk);}
 //====================================================================================
 // This one is used in several bit-manipulating classes, like bit array or ArbiNum
 enum EBitOp: uint8

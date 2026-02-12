@@ -279,7 +279,7 @@ static size_t PXCALL ptrace(EPTraceCommands op, PX::pid_t pid, size_t addr, size
 #define ARM_ORIG_r0	uregs[17]
 */
 //---------------------------------------------------------------------------
-struct STElapsed
+struct STElapsed  // TODO: Move in Time Utils
 {
  NPTM::PX::timespec start, end, diff;
 
@@ -294,7 +294,7 @@ void Measure(void)
 {
  NPTM::NAPI::gettime(&this->end, NPTM::PX::CLOCK_MONOTONIC);
  NPTM::NDT::TimeDiff(&this->diff, &this->start, &this->end);
- uint ms = this->diff.frac / 1000000L;
+ uint ms = this->diff.frac / 1000000L;  // TODO: Adjustable
  LOGMSG("Elapsed time: %u.%03u seconds\n", this->diff.sec, ms);
  this->start = this->end;
 }

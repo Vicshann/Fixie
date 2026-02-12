@@ -45,6 +45,9 @@ DECL_WSYSCALL(WPROCID(HashNtDll,"NtOpenSymbolicLinkObject"),     NtOpenSymbolicL
 DECL_WSYSCALL(WPROCID(HashNtDll,"NtQuerySymbolicLinkObject"),    NtQuerySymbolicLinkObject    )
 DECL_WSYSCALL(WPROCID(HashNtDll,"NtQueryInformationProcess"),    NtQueryInformationProcess    )   
 DECL_WSYSCALL(WPROCID(HashNtDll,"NtQueryInformationThread"),     NtQueryInformationThread     ) 
+DECL_WSYSCALL(WPROCID(HashNtDll,"NtSetInformationThread"),       NtSetInformationThread       ) 
+DECL_WSYSCALL(WPROCID(HashNtDll,"NtSetInformationProcess"),      NtSetInformationProcess      ) 
+
                                                                                               
 DECL_WSYSCALL(WPROCID(HashNtDll,"NtClose"),                      NtClose                      )
 DECL_WSYSCALL(WPROCID(HashNtDll,"NtQueryObject"),                NtQueryObject                )
@@ -71,10 +74,19 @@ DECL_WSYSCALL(WPROCID(HashNtDll,"NtUnloadDriver"),               NtUnloadDriver 
 DECL_WSYSCALL(WPROCID(HashNtDll,"NtFsControlFile"),              NtFsControlFile              )   // FSCTL_XXX
 DECL_WSYSCALL(WPROCID(HashNtDll,"NtDeviceIoControlFile"),        NtDeviceIoControlFile        )   // IOCTL_XXX
 
+DECL_WSYSCALL(WPROCID(HashNtDll,"NtOpenKeyedEvent"),             NtOpenKeyedEvent             )
+DECL_WSYSCALL(WPROCID(HashNtDll,"NtCreateKeyedEvent"),           NtCreateKeyedEvent           )
+DECL_WSYSCALL(WPROCID(HashNtDll,"NtWaitForKeyedEvent"),          NtWaitForKeyedEvent          )
+DECL_WSYSCALL(WPROCID(HashNtDll,"NtReleaseKeyedEvent"),          NtReleaseKeyedEvent          )
+
+DECL_WSYSCALL(WPROCID(HashNtDll,"NtAlertThreadByThreadId"),      NtAlertThreadByThreadId      )   // Win8+
+DECL_WSYSCALL(WPROCID(HashNtDll,"NtWaitForAlertByThreadId"),     NtWaitForAlertByThreadId     )   // Win8+
+
 } static constexpr inline SysApi alignas(16);   // Declared to know exact address(?), its size is ALWAYS 1   // Volatile? (static volatile constexpr inline)
 //============================================================================================================
 #include "../UtilsFmtPE.hpp"
 #include "../NtSysEx.hpp"
+#include "../WSync.hpp" 
 #include "../CSRSS.hpp"
 #include "../Console.hpp"
 #include "Startup.hpp"
@@ -92,19 +104,62 @@ FUNC_WRAPPERNI(PX::vfork,      vfork      ) {return 0;}   // Useless
 //FUNC_WRAPPERNI(PX::execve,     execve     ) {return 0;}   // Not applicable
 
 //FUNC_WRAPPERNI(PX::wait4,      wait       ) {return 0;}     // using spawn_cleanup
-FUNC_WRAPPERNI(PX::gettid,     gettid     ) {return 0;}
-FUNC_WRAPPERNI(PX::getpid,     getpid     ) {return 0;}
-FUNC_WRAPPERNI(PX::getppid,    getppid    ) {return 0;}
-FUNC_WRAPPERNI(PX::getpgrp,    getpgrp    ) {return 0;}
-FUNC_WRAPPERNI(PX::getpgid,    getpgid    ) {return 0;}
-FUNC_WRAPPERNI(PX::setpgid,    setpgid    ) {return 0;}
+FUNC_WRAPPERNI(PX::gettid,     gettid     ) 
+{
+ PX::pid_t tid = uint32(NT::NtCurrentTeb()->ClientId.UniqueThread);
+ if(!tid)
+  {
+   NT::THREAD_BASIC_INFORMATION tbi;
+   NT::NTSTATUS status = SAPI::NtQueryInformationThread(NT::NtCurrentThread, NT::ThreadBasicInformation, &tbi, sizeof(tbi), nullptr);
+   if(NT::IsSuccess(status))tid = PX::pid_t(tbi.ClientId.UniqueThread);
+  }
+ return tid;
+}    
+FUNC_WRAPPERNI(PX::getpid,     getpid     ) 
+{
+ PX::pid_t pid = uint32(NT::NtCurrentTeb()->ClientId.UniqueProcess);
+ if(!pid)
+  {
+   NT::PROCESS_BASIC_INFORMATION pbi;
+   NT::NTSTATUS status = SAPI::NtQueryInformationThread(NT::NtCurrentThread, NT::ThreadBasicInformation, &pbi, sizeof(pbi), nullptr);
+   if(NT::IsSuccess(status))pid = PX::pid_t(pbi.UniqueProcessId);
+  }
+ return pid;
+}
+FUNC_WRAPPERNI(PX::getppid,    getppid    ) 
+{
+ NT::PROCESS_BASIC_INFORMATION pbi;
+ NT::NTSTATUS status = SAPI::NtQueryInformationThread(NT::NtCurrentThread, NT::ThreadBasicInformation, &pbi, sizeof(pbi), nullptr);
+ if(NT::IsSuccess(status))return uint32(pbi.InheritedFromUniqueProcessId);
+ return PX::pid_t(-1);
+}
+// On Windows, when a process is started, it can belong to a "Console Control Group." The ID of this group is almost always the PID of the first process created in that console session.
+// On Windows, GenerateConsoleCtrlEvent is the equivalent of kill(-pgid, SIGINT). It takes a Process Group ID. If you pass 0 as the ID, it targets all processes sharing the current console.
+// Ctrl+C Sending: If you need to "kill the group," use GenerateConsoleCtrlEvent(CTRL_C_EVENT, target_pgid). Note that target_pgid must be the PID of a process that started a new group (using CREATE_NEW_PROCESS_GROUP).
+// SIGKILL (9): Use NtTerminateProcess. This is immediate and cannot be caught.
+// SIGTERM (15): There is no native equivalent. Standard practice is to use NtOpenEvent to trigger a named event the target process is listening for, or simply use NtTerminateProcess if "soft kill" isn't required.
+//
+// For Ctrl+C targeting, Windows defines the Process Group ID as the PID of the root process. If you didn't create the process with CREATE_NEW_PROCESS_GROUP, the "Group ID" is effectively the PID of the first process in the console session. 
+
+FUNC_WRAPPERNI(PX::getpgrp,    getpgrp    )  // Not portable? //{return NAPI::getpgid(0);}
+{
+// NT::ULONG SessionId;      // PROCESS_SESSION_INFORMATION
+// NT::NTSTATUS status = SAPI::NtQueryInformationProcess(NT::NtCurrentProcess, NT::ProcessSessionInformation, &SessionId, sizeof(SessionId), nullptr);
+// if(NT::IsSuccess(status))return PX::pid_t(SessionId);
+// return PX::pid_t(-1);
+// 
+ return NAPI::getpid();  // In many framework implementations, returning the Current PID is the most compatible 'Group Leader' logic for GenerateConsoleCtrlEvent.
+}
+//FUNC_WRAPPERNI(PX::getpgid,    getpgid    ) {return 0;} // not portable
+//FUNC_WRAPPERNI(PX::setpgid,    setpgid    ) {return 0;} // not portable // NtCreateJobObject + NtAssignProcessToJobObject ?
+
 //------------------------------------------------------------------------------------------------------------
 // https://learn.microsoft.com/en-us/windows-hardware/drivers/kernel/waits-and-apcs
 //
 FUNC_WRAPPERFI(PX::gettime,  gettime  ) 
 {
  PX::timespec* ts = GetParFromPk<0>(args...);
- uint32 clkid = GetParFromPk<1>(args...) & PX::CLK_LOWMSK;
+ uint32 clkid = GetParFromPk<1>(args...) & PX::CLK_LOWMSK;   // 0 is CLOCK_REALTIME
  uint64 tval  = clkid ? NTX::GetInterruptTime() : NTX::GetSystemTime();    // CLOCK_MONOTONIC if not 0 (CLOCK_REALTIME)
  ts->sec  = tval / 10000000;                        // 1000000000 nanosecs in a second;  10000000 100-ns intervals in a second
  ts->frac = (tval % 10000000) * 100;
@@ -136,7 +191,7 @@ FUNC_WRAPPERFI(PX::clocksleep,  clocksleep  )
  if(!(type & PX::CLKFG_ABSOLUTE) && rem && !inf)
   {
    uint64 tbefore = NTX::GetInterruptTime();          // Relative only
-   status = SAPI::NtDelayExecution(true, &delay);     // Always alertable to be compatible with Linux in this behaviour     
+   status = SAPI::NtDelayExecution(true, &delay);     // Always alertable to be compatible with Linux in this behavior     
    uint64 tdelta  = NTX::GetInterruptTime() - tbefore;
    if(tdelta < val)
     {
@@ -1111,7 +1166,7 @@ FUNC_WRAPPERNI(PX::ioctl,      ioctl      )    // NtDeviceIoControlFile   // Jus
 //  Handles that can be shared include handles to user objects such as windows (HWND), handles to GDI objects such as pens and brushes (HBRUSH and HPEN), 
 //  and handles to named objects such as mutexes, semaphores, and file handles.
 //
-FUNC_WRAPPERNI(NTHD::spawn,      spawn      )
+FUNC_WRAPPERNI(NTHD::process_spawn,      process_spawn      )
 {
  PX::PCCHAR pathname = GetParFromPk<0>(args...);             
  PX::PPCHAR argv     = GetParFromPk<1>(args...);             // Can be put in args as (const achar*[]){"-Hello","-World","123",nullptr}
@@ -1227,7 +1282,7 @@ if(PtrArgs)         // cmd.exe puts full exe path as first arg on command line
  uint32 res = NCON::CreateProcess(PtrExePath, PtrArgs, CrtPrFlg, &StartupInfo, &ProcessInformation, PtrCurDir, PtrEnvs);     // NOTE: Will fail if PtrCurDir path does not exist
  NT::NTSTATUS LstErr = NT::NtCurrentTeb()->LastStatusValue;
  NPTM::NAPI::munmap(DataBlk, BlkSize);
- if(res)return NTHD::SHDesc{.PrHd=(uint32)ProcessInformation.hProcess >> 2,.TrHd=(uint32)ProcessInformation.hThread >> 2}.Id;   //  PX::NOERROR;  // 2 low bits are not used
+ if(res)return NTHD::SHDesc{.PrHd=NTHD::PackHandle(ProcessInformation.hProcess),.TrHd=NTHD::PackHandle(ProcessInformation.hThread)}.Id;   //  PX::NOERROR;  // 2 low bits are not used
  return -NTX::NTStatusToLinuxErr(LstErr);
 }
 //------------------------------------------------------------------------------------------------------------
@@ -1235,7 +1290,7 @@ if(PtrArgs)         // cmd.exe puts full exe path as first arg on command line
 // On linux, probably waiting on PID actually waits on entire group (including any children processes). On Windows this is Job Objects
 // https://stackoverflow.com/questions/71343143/how-to-interpret-process-termination-status-issued-by-waitpid-function
 //
-FUNC_WRAPPERNI(NTHD::spawn_wait,       spawn_wait       )   
+FUNC_WRAPPERNI(NTHD::process_wait,       process_wait       )   
 {
  NTHD::SHDesc pid {.Id = GetParFromPk<0>(args...)};
  uint32 wait_ms = GetParFromPk<1>(args...);
@@ -1250,8 +1305,8 @@ FUNC_WRAPPERNI(NTHD::spawn_wait,       spawn_wait       )
      else ptv = nullptr;    // Infinite
   }  
  tbefore = NTX::GetInterruptTime();
- NT::HANDLE phd = (NT::HANDLE)(uint32(pid.PrHd) << 2); // Restore unused bits 
- NT::HANDLE thd = (NT::HANDLE)(uint32(pid.TrHd) << 2); 
+ NT::HANDLE phd = NTHD::UnpackHandle(pid.PrHd); // Restore unused bits 
+ NT::HANDLE thd = NTHD::UnpackHandle(pid.TrHd); 
  for(;;)
   {                                      
    NT::NTSTATUS status = SAPI::NtWaitForSingleObject(phd, true, ptv);      // If the process is already terminated but its handle is not closed then STATUS_WAIT_0 will be returned again  
@@ -1278,15 +1333,57 @@ FUNC_WRAPPERNI(NTHD::spawn_wait,       spawn_wait       )
  return 1; // Exited for sure?  // WIFEXITED(wstatus)
 }
 //------------------------------------------------------------------------------------------------------------
-FUNC_WRAPPERNI(NTHD::thread,     thread   )
+// When you use CREATE_NEW_PROCESS_GROUP flag, Windows does two things:
+// Logical Grouping: It makes the child the "leader" of its own group (enabling GenerateConsoleCtrlEvent to target it specifically).
+// Signal Masking: It disables CTRL_C_EVENT for the child process. The child will ignore Ctrl+C until it explicitly calls SetConsoleCtrlHandler(NULL, FALSE).
+// Case A: Standard Child (Omit the flag):   If you are running a tool (like make or gcc), you usually want it to die when you press Ctrl+C in your terminal. By not using the flag, the child shares your console group and receives the signal automatically from the OS.
+// Case B: Independent Group (Use the flag): Use this if you want to be able to "Ctrl+C" the child via process_signal(pid, SIGINT) without the signal killing your parent process too. This is necessary for implementing job control.
+// If you use DETACHED_PROCESS, the child has no console at all. GenerateConsoleCtrlEvent will always fail. For detached processes (daemons), the only way to signal them is through IPC (Named Pipes/Events) or SIGKILL (NtTerminateProcess).
+//
+FUNC_WRAPPERNI(NTHD::process_signal,       process_signal       ) 
+{
+ NTHD::SHDesc desc {.Id = GetParFromPk<0>(args...)};  
+ sint code = GetParFromPk<1>(args...);   
+ NT::HANDLE hProc = NTHD::UnpackHandle(desc.PrHd); 
+ if(!hProc || (hProc == NT::NtInvalidHandle)) return  -PX::EINVAL;
+   
+ NT::PROCESS_BASIC_INFORMATION pinf;
+ NT::NTSTATUS res = SAPI::NtQueryInformationProcess(hProc, NT::ProcessBasicInformation, &pinf, sizeof(pinf), nullptr);
+ if(!NT::IsSuccess(res)) return -PX::ESRCH;  // -NTX::NTStatusToLinuxErr(res);  //  Handle invalid or process gone
+ if(pinf.ExitStatus != NT::STATUS_PENDING) return -PX::ESRCH;   // Already exited (Process is a zombie)
+   
+ switch (code)    // Handle Signals
+  {
+   case 0:  // Null signal (liveness check)
+       return 0;
+
+   case PX::SIG_KILL:  // SIGKILL
+       res = SAPI::NtTerminateProcess(hProc, (NT::NTSTATUS)PX::SIG_KILL); // Use 9 as exit code to indicate signal ??? // NOTE: The handle must be waited on to be released
+       return NT::IsSuccess(res) ? 0 : -NTX::NTStatusToLinuxErr(res);
+
+   case PX::SIG_INT:   // SIGINT
+   case PX::SIG_QUIT:  // SIGQUIT
+    {
+       // Note: GenerateConsoleCtrlEvent uses the PID, not the Handle.
+       // Because we hold 'hProc', this PID is guaranteed not to be recycled yet.
+       uint32 winSig = (code == PX::SIG_INT) ? 0 : 1; // CTRL_C_EVENT = 0, CTRL_BREAK_EVENT = 1
+      // if(SAPI::GenerateConsoleCtrlEvent(winSig, (uint32)pinf.UniqueProcessId)) return 0;      // TODO !!!!!!!!!!!!!!!!!!!!!!
+       return -PX::ENOTTY;  // Inappropriate ioctl for device / No console // General failure (likely no console attached)   // In POSIX, you might escalate to SIGTERM or just return an error.
+    }
+
+   default: return PX::ENOSYS; // -ENOSYS (Unsupported signal)
+  }
+}
+//------------------------------------------------------------------------------------------------------------
+FUNC_WRAPPERNI(NTHD::thread_spawn,     thread_spawn   )
 {
  auto    ThProc  = GetParFromPk<0>(args...);
  vptr    ThData  = GetParFromPk<1>(args...);
  if(!ThProc)return PXERR(ENOEXEC);     // Nothing to execute
  size_t  DatSize = GetParFromPk<2>(args...);
  size_t* Configs = (size_t*)GetParFromPk<3>(args...);
- size_t  StkSize = NCFG::DefStkSize;   // NOTE: As StkSize is aligned to a page size, there will be at least one page wasted for ThreadContext struct (Assume it always available for some thread local data?)
- size_t  TlsSize = NCFG::DefTlsSize;   // Slots is at least of pointer size
+ size_t  StkSize = NCFG.DefStkSize;   // NOTE: As StkSize is aligned to a page size, there will be at least one page wasted for ThreadContext struct (Assume it always available for some thread local data?)
+ size_t  TlsSize = NCFG.DefTlsSize;   // Slots is at least of pointer size
 
  if(Configs)                    // Add an option to create a thread by Kernel32 so it will be CSRSS registered? (GUI Thread) // TODO: Test with GUI (CreateWindowEx) (No control over stack allocation!)
   {
@@ -1313,7 +1410,7 @@ FUNC_WRAPPERNI(NTHD::thread,     thread   )
  NT::NTSTATUS res = NTX::NativeCreateThread(NPTM::ThProcCallStub, ThrFrame, 0, NT::NtCurrentProcess, false, &StackBase, &StackSize, (NT::PHANDLE)&ThrFrame->ThreadHndl, (NT::PULONG)&ThrFrame->ThreadID);   // NOTE: Probably not a GUI compatible thread
  DBGMSG("NativeCreateThread: %08X",res);
  if(!res)return -NTX::NTStatusToLinuxErr(res);
- return NTHD::SHDesc{.PrHd=(uint32)0,.TrHd=(uint32)ThrFrame->ThreadHndl >> 2}.Id;    // Use handle instead of ID (Must be closed)   // GetExitCodeThread have problems with return codes(STILL_ACTIVE) // TODO: Store the thread index in PrHd
+ return NTHD::SHDesc{.PrHd=(uint32)0,.TrHd=NTHD::PackHandle(ThrFrame->ThreadHndl)}.Id;    // Use handle instead of ID (Must be closed later)   // GetExitCodeThread have problems with return codes(STILL_ACTIVE) // TODO: Store the thread index in PrHd
 }
 //------------------------------------------------------------------------------------------------------------
 FUNC_WRAPPERNI(NTHD::thread_sleep,      thread_sleep     )   // Waits on its own handle (Any advantages over NtDelayExecution?)
@@ -1466,6 +1563,104 @@ FUNC_WRAPPERNI(PX::gettimeofday,  gettimeofday  )
 //------------------------------------------------------------------------------------------------------------
 FUNC_WRAPPERNI(PX::settimeofday,  settimeofday  ) {return 0;}
 //------------------------------------------------------------------------------------------------------------
+FUNC_WRAPPERNI(PX::futex_wait, futex_wait)
+{
+ PX::futex_t* obj = GetParFromPk<0>(args...);   
+ sint32 expect  = GetParFromPk<1>(args...);  
+ sint64 timeout = GetParFromPk<2>(args...); 
+ uint32 flags   = GetParFromPk<3>(args...);    
+ if(flags & PX::fxfNoWakeFIFO)  // No FIFO wake required
+  {
+   //if(flags & PX::fxfNoExpected) return ((WSYN::CWaitList<0>*)obj)->Wait(timeout, &expect);     // No the variable check required
+   //  else 
+   return ((WSYN::CWaitList<WSYN::wlfCheckVar>*)obj)->Wait(timeout, &expect);                                     
+  }                          
+ else
+  {
+   //if(flags & PX::fxfNoExpected) return ((WSYN::CWaitList<WSYN::wlfWakeInFIFO>*)obj)->Wait(timeout, &expect);     // No the variable check required
+   //  else 
+   return ((WSYN::CWaitList<WSYN::wlfWakeInFIFO|WSYN::wlfCheckVar>*)obj)->Wait(timeout, &expect);    
+  }
+}
+//------------------------------------------------------------------------------------------------------------
+FUNC_WRAPPERNI(PX::futex_wake, futex_wake)
+{
+ PX::futex_t* obj = GetParFromPk<0>(args...);  
+ usize  addr  = usize(GetParFromPk<0>(args...));     
+ uint32 count = GetParFromPk<1>(args...);    
+ uint32 flags = GetParFromPk<2>(args...);
+ if(flags & PX::fxfNoWakeFIFO)  // No FIFO wake required
+  {
+   //if(flags & PX::fxfNoExpected) return ((WSYN::CWaitList<0>*)obj)->Wake(count);     // No the variable check required
+   //  else 
+   return ((WSYN::CWaitList<WSYN::wlfCheckVar>*)obj)->Wake(count);                                     
+  }                          
+ else
+  {
+   //if(flags & PX::fxfNoExpected) return ((WSYN::CWaitList<WSYN::wlfWakeInFIFO>*)obj)->Wake(count);     // No the variable check required
+   //  else 
+   return ((WSYN::CWaitList<WSYN::wlfWakeInFIFO|WSYN::wlfCheckVar>*)obj)->Wake(count);    
+  }
+}
+//------------------------------------------------------------------------------------------------------------
+FUNC_WRAPPERNI(NSIG::HandleSignals, HandleSignals)   // Not thread safe
+{
+ SCVR uint64 GuiMask = PX::SIG_TERM;   // Only if the app is running as a service
+ SCVR uint64 ConMask = GuiMask | PX::SIG_QUIT | PX::SIG_INT;
+ SCVR uint64 ExpMask = PX::SIG_TRAP | PX::SIG_SEGV | PX::SIG_BUS | PX::SIG_ILL | PX::SIG_FPE | PX::SIG_SYS | PX::SIG_ABRT; 
+ fwsinf.SigHandler = GetParFromPk<0>(args...); 
+ fwsinf.SigHndlArg = GetParFromPk<1>(args...); 
+ uint64 Mask = GetParFromPk<2>(args...);
+
+ AtomicStore(&fwsinf.SigMask, Mask);    // Should it be here?
+ if(Mask & ExpMask) 
+  {
+   if(!(AtomicOr(&fwsinf.Flags, sfExpHandled) & sfExpHandled))
+    {
+     if(NCON::SConCtx::pRtlAddVectoredExceptionHandler)NCON::SConCtx::pRtlAddVectoredExceptionHandler(1, &NCON::ExceptionHandlerProc);         // First or last?
+    }
+  }
+ else   // Remove all exception handlers
+  {
+   if(AtomicAnd(&fwsinf.Flags, ~sfExpHandled) & sfExpHandled)
+    {
+     if(NCON::SConCtx::pRtlRemoveVectoredExceptionHandler)NCON::SConCtx::pRtlRemoveVectoredExceptionHandler(&NCON::ExceptionHandlerProc);
+    }
+  }
+
+ if(Mask & ConMask)   // Includes GuiMask
+  {
+   if((AtomicLoad(&fwsinf.Flags) & (sfServiceApp|sfLoadedGUI)) && (Mask & GuiMask))     // Need to handle those with a hidden window
+    {
+     if(!(AtomicOr(&fwsinf.Flags, sfWndHandled) & sfWndHandled))
+      { 
+       // TODO: Install the hidden window
+      }
+    }
+   if(!(AtomicOr(&fwsinf.Flags, sfConHandled) & sfConHandled))
+    {
+     // Calling AttachConsole, AllocConsole, or FreeConsole will reset the table of control handlers in the client process to its initial state. 
+     // Handlers must be registered again when the attached console session changes.
+     // The SetConsoleMode function can disable the ENABLE_PROCESSED_INPUT input mode for a console's input buffer, so CTRL+C is reported as keyboard input rather than as a signal.
+     if(NCON::SConCtx::pSetConsoleCtrlHandler)NCON::SConCtx::pSetConsoleCtrlHandler((vptr)&NCON::ConsoleHandlerProc, 1);   // Add the handler   
+    }
+  }
+ else    // Removing all console handlers
+  {
+   if(AtomicAnd(&fwsinf.Flags, ~sfWndHandled) & sfWndHandled)   // Someone may still replace the window with a new one unless we lock the thread in HandleSignals
+    {
+     // TODO: Remove the hidden window (or keep it)
+    }
+   if(AtomicAnd(&fwsinf.Flags, ~sfConHandled) & sfConHandled)
+    {
+     if(NCON::SConCtx::pSetConsoleCtrlHandler)NCON::SConCtx::pSetConsoleCtrlHandler((vptr)&NCON::ConsoleHandlerProc, 0);   // Remove the handler
+    }
+  }
+
+ return PX::NOERROR;
+}
+
+//------------------------------------------------------------------------------------------------------------
 // >>>>> MEMORY <<<<<
 //#include "Impl_Mem.hpp"
 // >>>>> NETWORK <<<<<
@@ -1491,46 +1686,22 @@ static sint Initialize(vptr StkFrame=nullptr, vptr ArgA=nullptr, vptr ArgB=nullp
    NPTM::NLOG::GLog.ConsHandle = NPTM::GetStdErr();
   }
 
-  //uint64 xxx = 0x48A462600000170ull;
-  //static uint64 yyy = xxx / 56732478;     // = 5766556714
- // yyy++;
-  /*{    //  TEEEEEEEEEEEEEEESSSTTTTTTTT
-   char Test[] = {"Test Message Hello World!"};
-   char buf[256] = {};
-  // vptr ptr = NTX::LdrGetModuleBase("ntdll.dll");
-   uint64 base = NWOW64E::GetModuleHandle64("ntdll.dll");
-   uint64 addr = NWOW64E::GetProcAddressSimpleX64(base, "LdrGetProcedureAddress");
-   uint64 res  = 0;
-   uint32 stat = NWOW64E::ReadVirtualMemory(NT64::NtCurrentProcess, (uint64)&Test, &buf, sizeof(buf), &res);
-     NWOW64E::UnmapViewOfSection(0, 0);
-   base++;
-  } */
-
  InitSyscalls();
- InitConsole(InitConLog);                   
+ if(InitConLog)InitConsole(NCFG.DefConState, true);                   
  if(InitConLog && !NPTM::NLOG::GLog.ConsHandle) NPTM::NLOG::GLog.ConsHandle = NPTM::GetStdErr();
  InitStartupInfo(StkFrame, ArgA, ArgB, ArgC);
  if(IsDynamicLib())NTX::LdrDisableThreadDllCalls(GetModuleBase());    // Not cross-platform and useless
  SetErrorHandlers();
                     
  IFDBG{ DbgLogStartupInfo(); }
- if(NTHD::SThCtx* MainTh=&NPTM::GetThDesc()->MainTh; !MainTh->Self)
+ InitMainThreadRec(StkFrame);
+
+ if(uint32 ErrMode = 0;!IsDynamicLib() && !SAPI::NtQueryInformationProcess(NT::NtCurrentProcess, NT::ProcessDefaultHardErrorMode, &ErrMode, sizeof(ErrMode), nullptr))
   {
-   MainTh->Self       = MainTh;     // For checks
-   MainTh->SelfPtr    = nullptr;    // Not owned
-   MainTh->TlsBase    = nullptr;    // Allocate somewhere on demand?
-   MainTh->TlsSize    = 0;
-   MainTh->StkBase    = nullptr;    // Get from ELF header or proc/mem ???
-   MainTh->StkSize    = 0;          // StkSize; ??? // Need full size for unmap  // Can a thread unmap its own stack before calling 'exit'?
-   MainTh->GroupID    = NAPI::getpgrp();   // pid
-   MainTh->ThreadID   = NAPI::gettid();
-   MainTh->ProcesssID = NAPI::getpid();
-   MainTh->ThreadProc = nullptr;    // Get it from ELF or set from arg?
-   MainTh->ThreadData = nullptr;
-   MainTh->ThDataSize = 0;
-   MainTh->Flags      = 0;    // ???
+   ErrMode |= 0x0001|0x0002;  // SetErrorMode: SEM_FAILCRITICALERRORS|SEM_NOGPFAULTERRORBOX   // If you find that the "Crash" dialog still appears during your testing, it is likely because the system's Windows Error Reporting (WER) service is configured to override process-level requests.
+   SAPI::NtSetInformationProcess(NT::NtCurrentProcess, NT::ProcessDefaultHardErrorMode, &ErrMode, sizeof(ErrMode));
   }
- return 0;// crc;
+ return 0;  // crc;
 }
 //============================================================================================================
 /*

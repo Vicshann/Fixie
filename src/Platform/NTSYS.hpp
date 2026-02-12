@@ -73,8 +73,8 @@ SCVR HANDLE NtInvalidHandle  = ((HANDLE)(SIZE_T)-1);
 SCVR HANDLE NtCurrentThread  = ((HANDLE)(SIZE_T)-2);   // HANDLE had to be made SIZE_T instead of PVOID because such constants is forbidden to create
 SCVR HANDLE NtCurrentProcess = ((HANDLE)(SIZE_T)-1);   // HACK: static constexpr const void* ptr = __builtin_constant_p( reinterpret_cast<const void*>(0x1) ) ? reinterpret_cast<const void*>(0x1) : reinterpret_cast<const void*>(0x1)  ;
 
-static _finline bool NT_SUCCESS(NTSTATUS Status){return (LONG)Status >= 0;}        //#define NT_SUCCESS(Status)              ((NT::NTSTATUS)(Status) >= 0)
-static _finline bool NT_ERROR(NTSTATUS Status){return (Status >> 30) == 3;}  //#define NT_ERROR(Status)                ((((NT::NTSTATUS)(Status)) >> 30) == 3)
+static _finline bool IsSuccess(NTSTATUS Status){return (LONG)Status >= 0;}        //#define NT_SUCCESS(Status)              ((NT::NTSTATUS)(Status) >= 0)
+static _finline bool IsError(NTSTATUS Status){return (Status >> 30) == 3;}  //#define NT_ERROR(Status)                ((((NT::NTSTATUS)(Status)) >> 30) == 3)
 //============================================================================================================
 //                                          CORE FUNCTIONS
 //============================================================================================================
@@ -2992,6 +2992,31 @@ enum WAIT_TYPE
 };
 // WaitForMultipleObjects() scans the handle array from 0 onwards and returns as soon as it finds a signalled handle. Only that first found handle is reset to the unsignalled state; the others are untouched.
 static NTSTATUS _scall NtWaitForMultipleObjects(ULONG Count, PHANDLE Handles, WAIT_TYPE WaitType, BOOLEAN Alertable, PLARGE_INTEGER Timeout);  // WaitAll or WaitAny
+
+
+// https://locklessinc.com/articles/keyed_events/
+// The event object itself is shared (created once by the system)
+// The key value you pass determines which wait queue you join
+// Any thread in any process can wait or wake — if it uses the same key
+static NTSTATUS _scall NtOpenKeyedEvent(PHANDLE handle, ACCESS_MASK access, POBJECT_ATTRIBUTES attr);
+static NTSTATUS _scall NtCreateKeyedEvent(PHANDLE handle, ACCESS_MASK access, POBJECT_ATTRIBUTES attr, ULONG flags);
+
+// The major different between this API and the Futex API is that there is no comparison value that is checked as the thread goes to sleep. 
+// Instead, the NtReleaseKeyedEvent() function blocks, waiting for a thread to wake if there is none. (Compared to the Futex wake function which will immediately return.) 
+// Thus to use this API we need to keep track of how many waiters there are to prevent the release function from hanging.
+// Returns: STATUS_ALERTED - If wait was interrupted by an alert (if Alertable was set to TRUE); STATUS_SUCCESS - The thread successfully waited and was released
+static NTSTATUS _scall NtWaitForKeyedEvent(HANDLE handle, PVOID key, BOOLEAN alertable, PLARGE_INTEGER mstimeout);	
+static NTSTATUS _scall NtReleaseKeyedEvent(HANDLE handle, PVOID key, BOOLEAN alertable, PLARGE_INTEGER mstimeout);
+
+// https://ntdoc.m417z.com/
+//
+static NTSTATUS _scall NtAlertThreadByThreadId(HANDLE ThreadId);
+
+// The NtWaitForAlertByThreadId routine waits for an alert (From NtAlertThreadByThreadId only, not APC or NtAlertThread) to be delivered to the specified thread.
+// Address: The address to wait for an alert on. the user-provided value that serves as a key. (Same as 'Key' in NtWaitForKeyedEvent ?)
+// Timeout: The timeout value for waiting, or NULL for no timeout. A negative value indicates relative timeout for the specified number of 100-nanosecond intervals. To wait for a specific number of milliseconds, multiply them by -10,000. Positive values indicate an absolute time.
+// return:  NTSTATUS Successful or errant status.  (STATUS_ALERTED, STATUS_TIMEOUT)
+static NTSTATUS _scall NtWaitForAlertByThreadId(PVOID Address, PLARGE_INTEGER Timeout);
 //---------------------------------------- From Windows Vista ---------------------------------------------------------
 enum PS_ATTRIBUTE_NUM
 {
@@ -3203,21 +3228,28 @@ static NTSTATUS _scall NtCreateUserProcess(
 			 PPS_ATTRIBUTE_LIST AttributeList
 		);
 //--------------------------------------------- Not Syscalls -------------------------------------------------
-struct EXCEPTION_POINTERS
+struct EXCEPTION_POINTERS     // TODO: ARM
 {
  PEXCEPTION_RECORD ExceptionRecord;
  PCONTEXT          ContextRecord;
 };
 
-SCVR LONG EXCEPTION_EXECUTE_HANDLER = 1;
-SCVR LONG EXCEPTION_CONTINUE_SEARCH = 0;
-SCVR LONG EXCEPTION_CONTINUE_EXECUTION = -1;
+enum EExceptionCodes: LONG
+{
+ EXCEPTION_CONTINUE_SEARCH    = 0,
+ EXCEPTION_EXECUTE_HANDLER    = 1,
+ EXCEPTION_CONTINUE_EXECUTION = -1,
+
+ EXCEPTION_NONCONTINUABLE     = 0x01,
+ EXCEPTION_SOFTWARE_ORIGINATE = 0x80
+
+};
 
 using PEXCEPTION_POINTERS = MPTR<EXCEPTION_POINTERS, PHT>;
 
 using PVECTORED_EXCEPTION_HANDLER = LONG (_scall *)(PEXCEPTION_POINTERS);
 
-static ULONG    _scall RtlRemoveVectoredExceptionHandler(PVOID VectoredHandlerHandle);
+static ULONG    _scall RtlRemoveVectoredExceptionHandler(PVECTORED_EXCEPTION_HANDLER Handler);
 static PVOID    _scall RtlAddVectoredExceptionHandler(ULONG First, PVECTORED_EXCEPTION_HANDLER Handler);
 static NTSTATUS _scall LdrLoadDll(const PWSTR DllPath, PULONG DllCharacteristics, PUNICODE_STRING DllName, PVOID* DllHandle);
 //------------------------------------------------------------------------------------------------------------

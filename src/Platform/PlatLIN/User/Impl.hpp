@@ -70,7 +70,7 @@ DECL_SYSCALL(NSYSC::ESysCNum::flock,      PX::flock,      flock      )
 DECL_SYSCALL(NSYSC::ESysCNum::fsync,      PX::fsync,      fsync      )
 DECL_SYSCALL(NSYSC::ESysCNum::fdatasync,  PX::fdatasync,  fdatasync  )
 DECL_SYSCALL(NSYSC::ESysCNum::pipe2,      PX::pipe2,      pipe2      )
-DECL_SYSCALL(NSYSC::ESysCNum::ppoll,      PX::ppoll,      ppoll      )
+DECL_SYSCALL(NSYSC::ESysCNum::ppoll,      PX::ppoll,      ppoll      )     // Use only for Linux ARM X64!
 DECL_SYSCALL(NSYSC::ESysCNum::dup3,       PX::dup3,       dup3       )
 DECL_SYSCALL(NSYSC::ESysCNum::dup,        PX::dup,        dup        )     // Does not allow to pass any flags (O_CLOEXEC), can be replaced with fcntl
 
@@ -329,7 +329,7 @@ FUNC_WRAPPERFI(PX::pollGD,     poll       )
   }
  for(;;)
   {
-   int res = SAPI::ppoll(fds, nfds, pts, nullptr, 0); 
+   int res = SAPI::ppoll(fds, nfds, pts, nullptr, 0);      // !!!!!!!! May be missing   // Last arg is sigsetsize, can it be because sigmask is nullptr
    if((res == PXERR(EINTR)) && time_rem)   // Break only if we expect to receive remaining time
     {
      if(timeout ==  0){*time_rem = 0; return res;}   // No wait
@@ -432,7 +432,7 @@ sigaction, etc. are safe to use after vfork. */
 // TODO: This function should be moved to SharedNixNAPI.hpp and be reused for BSD/MacOS too
 // 
 //
-FUNC_WRAPPERNI(NTHD::spawn,       spawn       )         // TODO: !!! Create as a child, not sibling so that waitpid could work!!!
+FUNC_WRAPPERNI(NTHD::process_spawn,       process_spawn       )         // TODO: !!! Create as a child, not sibling so that waitpid could work!!!
 {
  SCVR uint32 BaseFlags  = PX::CLONE_VM | PX::CLONE_VFORK | PX::SIGCHLD;    // CLONE_PARENT  // if CLONE_PARENT is set, then the parent of the calling process, rather than the calling process itself, is signaled.
  SCVR uint32 LinuxFlags = PX::CLONE_PIDFD;      // Old kernels should ignore CLONE_PIDFD (What about old Android kernels?)
@@ -598,7 +598,7 @@ FUNC_WRAPPERNI(NTHD::spawn,       spawn       )         // TODO: !!! Create as a
 //   bit 7 is set if the process was killed by a signal and dumped core;
 //   bits 8-15 are the process's exit code if the process exited normally, or 0 if the process was killed by a signal.
 //
-FUNC_WRAPPERNI(NTHD::spawn_wait,       spawn_wait       )      // PX::pid_t pid, uint64 wait_ns, sint* status
+FUNC_WRAPPERNI(NTHD::process_wait,       process_wait       )      // PX::pid_t pid, uint64 wait_ns, sint* status
 {
  NTHD::SHDesc pid {.Id = GetParFromPk<0>(args...)};
  uint32 wait_ms = GetParFromPk<1>(args...);
@@ -664,7 +664,7 @@ FUNC_WRAPPERNI(NTHD::spawn_wait,       spawn_wait       )      // PX::pid_t pid,
 // User Data
 // TLS Block
 //
-FUNC_WRAPPERNI(NTHD::thread,       thread       )
+FUNC_WRAPPERNI(NTHD::thread_spawn,       thread_spawn       )
 {
  auto    ThProc   = GetParFromPk<0>(args...);
  vptr    ThData   = GetParFromPk<1>(args...);
@@ -845,22 +845,7 @@ static sint Initialize(void* StkFrame=nullptr, void* ArgA=nullptr, void* ArgB=nu
  // NOTE: Init syscalls before InitStartupInfo if required
  InitStartupInfo(StkFrame, ArgA, ArgB, ArgC);
  IFDBG{DbgLogStartupInfo();}
- if(NTHD::SThCtx* MainTh=&NPTM::GetThDesc()->MainTh; !MainTh->Self)
-  {
-   MainTh->Self       = MainTh;     // For checks
-   MainTh->SelfPtr    = nullptr;    // Not owned
-   MainTh->TlsBase    = nullptr;    // Allocate somewhere on demand?
-   MainTh->TlsSize    = 0;
-   MainTh->StkBase    = nullptr;    // Get from ELF header or proc/mem ???
-   MainTh->StkSize    = 0;          // StkSize; ??? // Need full size for unmap  // Can a thread unmap its own stack before calling 'exit'?
-   MainTh->GroupID    = NAPI::getpgrp();   // pid
-   MainTh->ThreadID   = NAPI::gettid();
-   MainTh->ProcesssID = NAPI::getpid();
-   MainTh->ThreadProc = nullptr;    // Get it from ELF or set from arg?
-   MainTh->ThreadData = nullptr;
-   MainTh->ThDataSize = 0;
-   MainTh->Flags      = 0;    // ???
-  }
+ InitMainThreadRec(StkFrame);
  return 0;
 }
 //============================================================================================================

@@ -1,6 +1,9 @@
 
 #pragma once
 
+// https://cloud.google.com/blog/topics/threat-intelligence/wow64-subsystem-internals-and-hooking-techniques/
+// https://wbenny.github.io/2018/11/04/wow64-internals.html
+// 
 // NOTE: Clang just refuses to accept __asm { } blocks even with -fasm-blocks
 //============================================================================================================
 class WOW64E

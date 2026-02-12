@@ -14,7 +14,7 @@
 
 _SYSENTRY MODERN_INIT sint _scall _ENTRY_POINT_NAME(vptr ArgA, vptr ArgB, vptr ArgC) noexcept  // On Windows ArgA is PEB ptr
 {
- if(NPTM::Initialize(GETSTKFRAME(), ArgA, ArgB, ArgC, NCFG::InitCon))return 0;  // The entry point has ben called already
+ if(NPTM::Initialize(GETSTKFRAME(), ArgA, ArgB, ArgC, NCFG.InitCon))return 0;  // The entry point has ben called already
  DBGMSG("Framework initialized");
  CAppMain app;           // Included somewhere above  // Optionally Store in static/dynamic memory id this is a DLL (And have a global ptr for it (Static: App::Instance))?
  sint stat = -10000;

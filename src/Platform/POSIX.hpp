@@ -22,29 +22,17 @@ template<typename PHT> struct NPOSIX  // For members: alignas(sizeof(PHT))
 template<typename T, typename H=uint> using MPTR = TSW< (sizeof(PHT)==sizeof(void*)),T*,SPTR<T,H> >::T;   // SPTR is too unstable to be used by default 
 
 // Which Linux?
-template<uint vLinux, uint BSD_MAC> struct DCV   // Can be used for Kernel too
+// Creates: VSLB(7,10>, VSLB(10,30>, VSLB(17,20>, etc.  // Result: N unique template instantiations
+/*template<uint vLINUX, uint vBSD_MAC, typename T=int> struct DCV   // Can be used for Kernel too
 {
- static constexpr int
+ enum : T {
 #if defined(SYS_MACOS) || defined(SYS_BSD)
- V = (int)BSD_MAC
+ V = (T)vBSD_MAC
 #else       // Linux and Windows(emulation)
- V = (int)vLinux
+ V = (T)vLINUX
 #endif
-;
-};
-
-template<uint vARM, uint vX86> struct ASV
-{
- static constexpr int
-#  if defined(CPU_ARM)
- V = (int)vARM
-#else
- V = (int)vX86
-#endif
-;
-};
-
-
+ };
+}; */
 
  using PVOID    = MPTR<void,   PHT>;    // All of this is to be able to call X64 syscalls from X32 code
  using PCHAR    = MPTR<achar,  PHT>;  //MPTR<pchar,  PHT>;
@@ -60,20 +48,24 @@ template<uint vARM, uint vX86> struct ASV
 //using PSIZE_T  = SIZE_T*;
 //using PULONG   = ULONG*;
 //using NTSTATUS = LONG;
- using PSSIZE_T = MPTR<SSIZE_T, PHT>;
- using PSIZE_T  = MPTR<SIZE_T, PHT>;
- using PUINT32  = MPTR<uint32, PHT>;
- using PUINT64  = MPTR<uint64, PHT>;
- using PINT32   = MPTR<int32, PHT>;
- using PINT64   = MPTR<int64, PHT>;
- using PUINT8   = MPTR<uint8, PHT>;
- using mode_t   = int32;     //uint32;
- using fdsc_t   = SSIZE_T;	 // NOTE: Should be of a pointer size for platform compatibility    // NOTE: Do not place in structs that expect it to be 'int'
- using dev_t    = uint32;    // See makedev macro
- //using off_t    = int64;
- using pid_t    = SSIZE_T;   // Should be of size_t size to contain extra info on x64 if needed
- //using fd_t     = int;
- using time_t   = SSIZE_T;   // Old time_t which is 32-bit on x32 platforms
+ using PSSIZE_T  = MPTR<SSIZE_T, PHT>;
+ using PSIZE_T   = MPTR<SIZE_T, PHT>;
+ using PUINT32   = MPTR<uint32, PHT>;
+ using PUINT64   = MPTR<uint64, PHT>;
+ using PINT32    = MPTR<int32, PHT>;
+ using PINT64    = MPTR<int64, PHT>;
+ using PUINT8    = MPTR<uint8, PHT>;
+ using mode_t    = int32;     //uint32;
+ using fdsc_t    = SSIZE_T;	 // NOTE: Should be of a pointer size for platform compatibility    // NOTE: Do not place in structs that expect it to be 'int'
+ using dev_t     = uint32;    // See makedev macro
+ //using off_t     = int64;
+ using pid_t     = SSIZE_T;   // Should be of size_t size to contain extra info on x64 if needed  // Actual pid_t is a signed 32-bit integer (int) on both 32-bit and 64-bit systems
+ //using fd_t      = int;
+ using time_t    = SSIZE_T;   // Old time_t which is 32-bit on x32 platforms
+ using time64_t  = sint64;  
+ using timeout_t = sint64;    // For timeouts. Positive: Relative wait (0 - no wait). Negative: Absolute time (since epoch). WAIT_INFINITE is max negative value
+
+ SCVR timeout_t WAIT_INFINITE = timeout_t(-1); // Max absolute time bot won't be threated as one anyway
 
 SCVR int EOF    = -1;
 SCVR int BadFD  = -1;
@@ -93,169 +85,314 @@ enum EDFD  // These are just for convenience. These descriptors don`t have to be
  FD_TEMP  // A temp file or a temp directory(Relative open, may be virtual(WASM))
 };
 
-enum EErrs   // Linux
+// NOTE: BSD codes are taken from 'https://github.com/apple-oss-distributions/xnu/blob/main/bsd/sys/errno.h'
+enum EErrs   // Linux / XNU (Darwin/MacOS)
 {
- NOERROR         = 0  ,
- EPERM           = 1  , // Operation not permitted
- ENOENT          = 2  , // No such file or directory
- ESRCH           = 3  , // No such process
- EINTR           = 4  , // Interrupted system call
- EIO             = 5  , // I/O error
- ENXIO           = 6  , // No such device or address
- E2BIG           = 7  , // Arg list too long
- ENOEXEC         = 8  , // Exec format error
- EBADF           = 9  , // Bad file number
- ECHILD          = 10 , // No child processes
- EAGAIN          = 11 , // Try again
- ENOMEM          = 12 , // Out of memory
- EACCES          = 13 , // Permission denied
- EFAULT          = 14 , // Bad address
- ENOTBLK         = 15 , // Block device required
- EBUSY           = 16 , // Device or resource busy
- EEXIST          = 17 , // File exists
- EXDEV           = 18 , // Cross-device link
- ENODEV          = 19 , // No such device
- ENOTDIR         = 20 , // Not a directory
- EISDIR          = 21 , // Is a directory       // Non POSIX
- EINVAL          = 22 , // Invalid argument
- ENFILE          = 23 , // File table overflow
- EMFILE          = 24 , // Too many open files
- ENOTTY          = 25 , // Not a typewriter
- ETXTBSY         = 26 , // Text file busy
- EFBIG           = 27 , // File too large
- ENOSPC          = 28 , // No space left on device
- ESPIPE          = 29 , // Illegal seek
- EROFS           = 30 , // Read-only file system
- EMLINK          = 31 , // Too many links
- EPIPE           = 32 , // Broken pipe
- EDOM            = 33 , // Math argument out of domain of func
- ERANGE          = 34 , // Math result not representable
- EDEADLK         = 35 , // Resource deadlock would occur
- ENAMETOOLONG    = 36 , // File name too long
- ENOLCK          = 37 , // No record locks available
- ENOSYS          = 38 , // Function not implemented
- ENOTEMPTY       = 39 , // Directory not empty
- ELOOP           = 40 , // Too many symbolic links encountered
- EWOULDBLOCK     = 41 , // Operation would block
- ENOMSG          = 42 , // No message of desired type
- EIDRM           = 43 , // Identifier removed
- ECHRNG          = 44 , // Channel number out of range
- EL2NSYNC        = 45 , // Level 2 not synchronized
- EL3HLT          = 46 , // Level 3 halted
- EL3RST          = 47 , // Level 3 reset
- ELNRNG          = 48 , // Link number out of range
- EUNATCH         = 49 , // Protocol driver not attached
- ENOCSI          = 50 , // No CSI structure available
- EL2HLT          = 51 , // Level 2 halted
- EBADE           = 52 , // Invalid exchange
- EBADR           = 53 , // Invalid request descriptor
- EXFULL          = 54 , // Exchange full
- ENOANO          = 55 , // No anode
- EBADRQC         = 56 , // Invalid request code
- EBADSLT         = 57 , // Invalid slot
- EDEADLOCK       = 58 , // File locking deadlock error
- EBFONT          = 59 , // Bad font file format
- ENOSTR          = 60 , // Device not a stream
- ENODATA         = 61 , // No data available
- ETIME           = 62 , // Timer expired
- ENOSR           = 63 , // Out of streams resources
- ENONET          = 64 , // Machine is not on the network
- ENOPKG          = 65 , // Package not installed
- EREMOTE         = 66 , // Object is remote
- ENOLINK         = 67 , // Link has been severed
- EADV            = 68 , // Advertise error
- ESRMNT          = 69 , // Srmount error
- ECOMM           = 70 , // Communication error on send
- EPROTO          = 71 , // Protocol error
- EMULTIHOP       = 72 , // Multihop attempted
- EDOTDOT         = 73 , // RFS specific error
- EBADMSG         = 74 , // Not a data message
- EOVERFLOW       = 75 , // Value too large for defined data type
- ENOTUNIQ        = 76 , // Name not unique on network
- EBADFD          = 77 , // File descriptor in bad state
- EREMCHG         = 78 , // Remote address changed
- ELIBACC         = 79 , // Can not access a needed shared library
- ELIBBAD         = 80 , // Accessing a corrupted shared library
- ELIBSCN         = 81 , // .lib section in a.out corrupted
- ELIBMAX         = 82 , // Attempting to link in too many shared libraries
- ELIBEXEC        = 83 , // Cannot exec a shared library directly
- EILSEQ          = 84 , // Illegal byte sequence
- ERESTART        = 85 , // Interrupted system call should be restarted
- ESTRPIPE        = 86 , // Streams pipe error
- EUSERS          = 87 , // Too many users
- ENOTSOCK        = 88 , // Socket operation on non-socket
- EDESTADDRREQ    = 89 , // Destination address required
- EMSGSIZE        = 90 , // Message too long
- EPROTOTYPE      = 91 , // Protocol wrong type for socket
- ENOPROTOOPT     = 92 , // Protocol not available
- EPROTONOSUPPORT = 93 , // Protocol not supported
- ESOCKTNOSUPPORT = 94 , // Socket type not supported
- EOPNOTSUPP      = 95 , // Operation not supported on transport endpoint
- EPFNOSUPPORT    = 96 , // Protocol family not supported
- EAFNOSUPPORT    = 97 , // Address family not supported by protocol
- EADDRINUSE      = 98 , // Address already in use
- EADDRNOTAVAIL   = 99 , // Cannot assign requested address
- ENETDOWN        = 100, // Network is down
- ENETUNREACH     = 101, // Network is unreachable
- ENETRESET       = 102, // Network dropped connection because of reset
- ECONNABORTED    = 103, // Software caused connection abort
- ECONNRESET      = 104, // Connection reset by peer
- ENOBUFS         = 105, // No buffer space available
- EISCONN         = 106, // Transport endpoint is already connected
- ENOTCONN        = 107, // Transport endpoint is not connected
- ESHUTDOWN       = 108, // Cannot send after transport endpoint shutdown
- ETOOMANYREFS    = 109, // Too many references: cannot splice
- ETIMEDOUT       = 110, // Connection timed out
- ECONNREFUSED    = 111, // Connection refused
- EHOSTDOWN       = 112, // Host is down
- EHOSTUNREACH    = 113, // No route to host
- EALREADY        = 114, // Operation already in progress
- EINPROGRESS     = 115, // Operation now in progress
- ESTALE          = 116, // Stale NFS file handle
- EUCLEAN         = 117, // Structure needs cleaning
- ENOTNAM         = 118, // Not a XENIX named type file
- ENAVAIL         = 119, // No XENIX semaphores available
- EISNAM          = 120, // Is a named type file
- EREMOTEIO       = 121, // Remote I/O error
+ NOERROR         = 0,
+ 
+ // POSIX standard errors (1-34) - identical on all platforms
+ EPERM           = 1,                      // Operation not permitted
+ ENOENT          = 2,                      // No such file or directory
+ ESRCH           = 3,                      // No such process
+ EINTR           = 4,                      // Interrupted system call
+ EIO             = 5,                      // I/O error
+ ENXIO           = 6,                      // No such device or address  ( Device not configured )
+ E2BIG           = 7,                      // Argument list too long
+ ENOEXEC         = 8,                      // Exec format error
+ EBADF           = 9,                      // Bad file number
+ ECHILD          = 10,                     // No child processes
+ EAGAIN          = VSLB(11, 35),           // Try again / Would block  (Resource deadlock avoided) // BSD: EDEADLK ( 11 was EAGAIN )
+ ENOMEM          = 12,                     // Out of memory
+ EACCES          = 13,                     // Permission denied
+ EFAULT          = 14,                     // Bad address
+ ENOTBLK         = 15,                     // Block device required
+ EBUSY           = 16,                     // Device or resource busy
+ EEXIST          = 17,                     // File exists
+ EXDEV           = 18,                     // Cross-device link
+ ENODEV          = 19,                     // Operation not supported by device  (No such device)
+ ENOTDIR         = 20,                     // Not a directory
+ EISDIR          = 21,                     // Is a directory
+ EINVAL          = 22,                     // Invalid argument
+ ENFILE          = 23,                     // Too many open files in system  (File table overflow)
+ EMFILE          = 24,                     // Too many open files
+ ENOTTY          = 25,                     // Inappropriate ioctl for device  (Not a typewriter)
+ ETXTBSY         = 26,                     // Text file busy
+ EFBIG           = 27,                     // File too large
+ ENOSPC          = 28,                     // No space left on device
+ ESPIPE          = 29,                     // Illegal seek
+ EROFS           = 30,                     // Read-only file system
+ EMLINK          = 31,                     // Too many links
+ EPIPE           = 32,                     // Broken pipe
+ // Math software
+ EDOM            = 33,                     // Math argument out of domain
+ ERANGE          = 34,                     // Math result not representable
+ 
+ // File locking / IPC
+ EDEADLK         = VSLB(35, 11),           // Resource deadlock would occur     // EAGAIN, EWOULDBLOCK  ??? 
+ ENOLCK          = VSLB(37, 77),           // No record locks available
+ EIDRM           = VSLB(43, 90),           // Identifier removed
+ ENOMSG          = VSLB(42, 91),           // No message of desired type
+ 
+ // Filesystem
+ ENAMETOOLONG    = VSLB(36, 63),           // File name too long
+ ENOSYS          = VSLB(38, 78),           // Function not implemented
+ ENOTEMPTY       = VSLB(39, 66),           // Directory not empty
+ ELOOP           = VSLB(40, 62),           // Too many symbolic links
+ ESTALE          = VSLB(116, 70),          // Stale NFS file handle
+ EREMOTE         = VSLB(66, 71),           // Object is remote
+ 
+ EWOULDBLOCK     = EAGAIN,                 // Operation would block (same as EAGAIN)
+ 
+ // X.25 protocol (obsolete - never seen in userland)
+ ECHRNG          = VSLB(44, -1),           // Channel number out of range
+ EL2NSYNC        = VSLB(45, -1),           // Level 2 not synchronized
+ EL3HLT          = VSLB(46, -1),           // Level 3 halted
+ EL3RST          = VSLB(47, -1),           // Level 3 reset
+ ELNRNG          = VSLB(48, -1),           // Link number out of range
+ EUNATCH         = VSLB(49, -1),           // Protocol driver not attached
+ ENOCSI          = VSLB(50, -1),           // No CSI structure available
+ EL2HLT          = VSLB(51, -1),           // Level 2 halted
+ 
+ // STREAMS tape/exchange (obsolete)
+ EBADE           = VSLB(52, -1),           // Invalid exchange
+ EBADR           = VSLB(53, -1),           // Invalid request descriptor
+ EXFULL          = VSLB(54, -1),           // Exchange full
+ ENOANO          = VSLB(55, -1),           // No anode
+ EBADRQC         = VSLB(56, -1),           // Invalid request code
+ EBADSLT         = VSLB(57, -1),           // Invalid slot
+ 
+ EDEADLOCK       = VSLB(EDEADLK, -1),      // File locking deadlock (same as EDEADLK on Linux)   // 58 ???
+ 
+ // Font/display (obsolete)
+ EBFONT          = VSLB(59, -1),           // Bad font file format
+ 
+ // STREAMS API (obsolete - removed from Linux)
+ ENOSTR          = VSLB(60, 99),           // Device not a stream
+ ENODATA         = VSLB(61, 96),           // No data available
+ ETIME           = VSLB(62, 101),          // Timer expired   // macOS: 92 (not 101)
+ ENOSR           = VSLB(63, 98),           // Out of streams resources
+ ESTRPIPE        = VSLB(86, -1),           // Streams pipe error
+ 
+ // Ancient networking (obsolete)
+ ENONET          = VSLB(64, -1),           // Machine is not on the network
+ ENOPKG          = VSLB(65, -1),           // Package not installed
+ EADV            = VSLB(68, -1),           // Advertise error  // RFS - obsolete
+ ESRMNT          = VSLB(69, -1),           // Srmount error   // RFS - obsolete
+ ECOMM           = VSLB(70, -1),           // Communication error on send
+ EDOTDOT         = VSLB(73, -1),           // RFS specific error  // RFS - obsolete
+ EREMCHG         = VSLB(78, -1),           // Remote address changed   // RFS - obsolete
+ 
+ // Message passing / protocols
+ ENOLINK         = VSLB(67, 97),           // Link has been severed
+ EPROTO          = VSLB(71, 100),          // Protocol error
+ EMULTIHOP       = VSLB(72, 95),           // Multihop attempted
+ EBADMSG         = VSLB(74, 94),           // Not a data message
+ 
+ // Data overflow
+ EOVERFLOW       = VSLB(75, 84),           // Value too large for defined data type
+ 
+ // Network naming (obsolete/rare)
+ ENOTUNIQ        = VSLB(76, -1),           // Name not unique on network
+ 
+ // File descriptor state (rare but real)
+ EBADFD          = VSLB(77, -1),           // File descriptor in bad state
+ 
+ // Shared library loading (rare)
+ ELIBACC         = VSLB(79, -1),           // Can not access a needed shared library
+ ELIBBAD         = VSLB(80, -1),           // Accessing a corrupted shared library
+ ELIBSCN         = VSLB(81, -1),           // .lib section in a.out corrupted
+ ELIBMAX         = VSLB(82, -1),           // Attempting to link in too many shared libraries
+ ELIBEXEC        = VSLB(83, -1),           // Cannot exec a shared library directly
+ 
+ // Character encoding
+ EILSEQ          = VSLB(84, 92),           // Illegal byte sequence   // macOS: 92 (Illegal byte sequence)
+ 
+ // Kernel internal (never reaches userland)
+ ERESTART        = VSLB(85, -1),           // Interrupted system call should be restarted
+ 
+ // Quotas / limits
+ EUSERS          = VSLB(87, 68),           // Too many users
+  
+ // Network errors
+ ENETDOWN        = VSLB(100, 50),          // Network is down
+ ENETUNREACH     = VSLB(101, 51),          // Network is unreachable
+ ENETRESET       = VSLB(102, 52),          // Network dropped connection because of reset
+ ECONNABORTED    = VSLB(103, 53),          // Software caused connection abort
+ ECONNRESET      = VSLB(104, 54),          // Connection reset by peer
+ ENOBUFS         = VSLB(105, 55),          // No buffer space available
+ EISCONN         = VSLB(106, 56),          // Transport endpoint is already connected
+ ENOTCONN        = VSLB(107, 57),          // Transport endpoint is not connected
+ ESHUTDOWN       = VSLB(108, 58),          // Cannot send after transport endpoint shutdown
+ ETOOMANYREFS    = VSLB(109, 59),          // Too many references: cannot splice
+ ETIMEDOUT       = VSLB(110, 60),          // Connection timed out
+ ECONNREFUSED    = VSLB(111, 61),          // Connection refused
+ EHOSTDOWN       = VSLB(112, 64),          // Host is down
+ EHOSTUNREACH    = VSLB(113, 65),          // No route to host
+ EALREADY        = VSLB(114, 37),          // Operation already in progress
+ EINPROGRESS     = VSLB(115, 36),          // Operation now in progress
+ 
+ // Filesystem corruption (actually used)
+ EUCLEAN         = VSLB(117, -1),          // Structure needs cleaning (ext2/3/4, XFS)
+ 
+ // XENIX compatibility (obsolete)
+ ENOTNAM         = VSLB(118, -1),          // Not a XENIX named type file
+ ENAVAIL         = VSLB(119, -1),          // No XENIX semaphores available
+ EISNAM          = VSLB(120, -1),          // Is a named type file
+ 
+ // Remote I/O (actually used - NFS, FUSE)
+ EREMOTEIO       = VSLB(121, -1),
+ 
+ // macOS-specific additional errors (beyond what Linux has)
+ ENOTSUP         = VSLB(-1, 45),           // Operation not supported (macOS differs from EOPNOTSUPP)
+ EPROCLIM        = VSLB(-1, 67),           // Too many processes
+ EBADRPC         = VSLB(-1, 72),           // RPC struct is bad
+ ERPCMISMATCH    = VSLB(-1, 73),           // RPC version wrong
+ EPROGUNAVAIL    = VSLB(-1, 74),           // RPC prog. not avail
+ EPROGMISMATCH   = VSLB(-1, 75),           // Program version wrong
+ EPROCUNAVAIL    = VSLB(-1, 76),           // Bad procedure for program
+ EFTYPE          = VSLB(-1, 79),           // Inappropriate file type or format
+ EAUTH           = VSLB(-1, 80),           // Authentication error
+ ENEEDAUTH       = VSLB(-1, 81),           // Need authenticator
+ // Intelligent device errors
+ EPWROFF         = VSLB(-1, 82),           // Device power is off
+ EDEVERR         = VSLB(-1, 83),           // Device error
+ // Program loading errors 
+ EBADEXEC        = VSLB(-1, 85),           // Bad executable
+ EBADARCH        = VSLB(-1, 86),           // Bad CPU type in executable
+ ESHLIBVERS      = VSLB(-1, 87),           // Shared library version mismatch
+ EBADMACHO       = VSLB(-1, 88),           // Malformed Mach-o file
+
+ ECANCELED       = VSLB(125, 89),          // Operation canceled
+ EOWNERDEAD      = VSLB(130, 105),         // Owner died (robust mutexes)
+ ENOTRECOVERABLE = VSLB(131, 104),         // State not recoverable (robust mutexes)
+ EQFULL          = VSLB(-1, 106),          // Interface output queue is full (macOS)
+
+ // Socket errors - Berkeley sockets (all platforms)
+ ENOTSOCK        = VSLB(88, 38),           // Socket operation on non-socket
+ EDESTADDRREQ    = VSLB(89, 39),           // Destination address required
+ EMSGSIZE        = VSLB(90, 40),           // Message too long
+ EPROTOTYPE      = VSLB(91, 41),           // Protocol wrong type for socket
+ ENOPROTOOPT     = VSLB(92, 42),           // Protocol not available
+ EPROTONOSUPPORT = VSLB(93, 43),           // Protocol not supported
+ ESOCKTNOSUPPORT = VSLB(94, 44),           // Socket type not supported
+ EOPNOTSUPP      = VSLB(95, ENOTSUP),      // Operation not supported on transport endpoint  // macOS: 102 (not 45!)
+ EPFNOSUPPORT    = VSLB(96, 46),           // Protocol family not supported
+ EAFNOSUPPORT    = VSLB(97, 47),           // Address family not supported by protocol
+ EADDRINUSE      = VSLB(98, 48),           // Address already in use
+ EADDRNOTAVAIL   = VSLB(99, 49),           // Cannot assign requested address
 };
 
 // https://android.googlesource.com/platform/bionic/+/master/libc/include/bits/signal_types.h
-enum ESignals
+// Signal 0 has special meaning: kill(pid, 0) tests if a process exists without sending a signal. 
+enum ESignal 
 {
- SIGHUP    = 1,
- SIGINT    = 2,
- SIGQUIT   = 3,
- SIGILL    = 4,
- SIGTRAP   = 5,
- SIGABRT   = 6,
- SIGIOT    = 6,
- SIGBUS    = 7,
- SIGFPE    = 8,
- SIGKILL   = 9,
- SIGUSR1   = 10,
- SIGSEGV   = 11,
- SIGUSR2   = 12,
- SIGPIPE   = 13,
- SIGALRM   = 14,
- SIGTERM   = 15,
- SIGSTKFLT = 16,
- SIGCHLD   = 17,
- SIGCONT   = 18,
- SIGSTOP   = 19,
- SIGTSTP   = 20,
- SIGTTIN   = 21,
- SIGTTOU   = 22,
- SIGURG    = 23,
- SIGXCPU   = 24,
- SIGXFSZ   = 25,
- SIGVTALRM = 26,
- SIGPROF   = 27,
- SIGWINCH  = 28,
- SIGIO     = 29,
- SIGPOLL   = SIGIO,
- SIGPWR    = 30,
- SIGSYS    = 31,
- SIGUNUSED = 31
+ SIG_HUP    = 1,                     // terminate  // terminal hangup / config reload / daemon restart
+ SIG_INT    = 2,                     // terminate  // Ctrl+C
+ SIG_QUIT   = 3,                     // coredump   // Ctrl+\ (usually generates core)
+ SIG_ILL    = 4,                     // coredump   // illegal instruction
+ SIG_TRAP   = 5,                     // coredump   // trace trap (not reset when caught)
+ SIG_ABRT   = 6,                     // coredump   // abort()
+ SIG_BUS    = VSLB(7,  10),          // coredump   // alignment / unmapped access (more common on BSD/macOS) // BSD: SIGBUS happens FAR more than Linux (alignment faults, mmap edge cases)
+ SIG_FPE    = 8,                     // coredump   // divide-by-zero etc
+ SIG_KILL   = 9,                     // terminate  // kill (cannot be caught or ignored) 
+ SIG_USR1   = VSLB(10, 30),          // terminate  // a free custom interrupt
+ SIG_SEGV   = 11,                    // coredump   // invalid memory access
+ SIG_USR2   = VSLB(12, 31),          // terminate  // a free custom interrupt
+ SIG_PIPE   = 13,                    // terminate  // write to closed pipe/socket (macOS/BSD this bites hard if unhandled)  // Most frameworks just: signal(SIGPIPE, SIG_IGN);
+ SIG_ALRM   = 14,                    // terminate  // alarm()
+ SIG_TERM   = 15,                    // terminate  // Polite shutdown request (your primary 'please exit' signal)
+ SIG_STKFLT = VSLB(16, -1),          // terminate  // Linux-only (0 = invalid on BSD)
+ SIG_CHLD   = VSLB(17, 20),          // ignore     // child exited / stopped / continued
+ SIG_CONT   = VSLB(18, 19),          // ignore     // continue a stopped process
+ SIG_STOP   = VSLB(19, 17),          // stop       // cannot be caught
+ SIG_TSTP   = VSLB(20, 18),          // stop       // If the framework runs daemons or services: ignore all three. Otherwise background writes to stdout can suspend your process.
+ SIG_TTIN   = 21,                    // stop       // Terminal I/O signals (BSD/macOS have more of these, Linux only has 2)
+ SIG_TTOU   = 22,                    // stop       // Terminal I/O signals (BSD/macOS have more of these, Linux only has 2)
+ SIG_URG    = VSLB(23, 16),          // ignore     // Urgent I/O (4.2BSD)  // Linux only ? 
+ SIG_XCPU   = 24,                    // coredump   // CPU limit exceeded. Mostly from ulimit. - Ignore
+ SIG_XFSZ   = 25,                    // coredump   // File size limit exceeded. Much better to ignore and handle write() failure.
+ SIG_VTALRM = 26,                    // terminate  // virtual time alarm
+ SIG_PROF   = 27,                    // terminate  // profiling time alarm
+ SIG_WINCH  = 28,                    // ignore     // window size changes ( It is a signal sent to a process when its controlling terminal changes its size.)
+ SIG_IO     = VSLB(29, 23),          // terminate  // input/output possible signal  // Different! (SIGIO/SIGPOLL)  // macOS doesn’t implement realtime signals at all.
+ SIG_POLL   = SIG_IO,                // terminate  
+ SIG_PWR    = VSLB(30, -1),          // terminate  // Linux-only
+ SIG_SYS    = VSLB(31, 12),          // SIGUNUSED 
+ SIG_EMT    = VSLB(-1, 7),           // coredump   // BSD-only (use -1 for "doesn't exist" on Linux)
+};
+
+// Signal codes (Values for si_code)
+enum ESigCode 
+{
+ // Generic codes
+ SI_USER    = VSLB(0,  0x10001),     // Sent via kill, sigsend, or raise.
+ SI_QUEUE   = VSLB(-1, 0x10002),     // Sent via sigqueue.
+ SI_TIMER   = VSLB(-2, 0x10003),     // Timer expiration (POSIX timers).
+ SI_MESGQ	= VSLB(-3, 0x10005),     // sent by real time mesq state change
+ SI_ASYNCIO = VSLB(-4, 0x10004),     // sent by AIO completion 
+ SI_SIGIO	= VSLB(-5, 0),           // Linux only sent by queued SIGIO 
+ SI_TKILL   = VSLB(-6, 0),           // Linux only Sent via tkill or tgkill (Linux specific)   
+ SI_KERNEL  = VSLB(0x80, 0x10006),   // XNU/Darwin doesn't have this
+ 
+ // SIGILL codes
+ ILL_NOOP   = 0,                // if only I knew... 
+ ILL_ILLOPC = 1,                // illegal opcode 
+ ILL_ILLOPN = 2,                // illegal trap
+ ILL_ILLADR = 3,                // privileged opcode
+ ILL_ILLTRP = 4,                // illegal operand 
+ ILL_PRVOPC = 5,                // illegal addressing mode 
+ ILL_PRVREG = 6,                // privileged register  
+ ILL_COPROC = 7,                // coprocessor error 
+ ILL_BADSTK = 8,                // internal stack error 
+                                
+ // SIGFPE codes                
+ FPE_NOOP   = 0,                // if only I knew...
+ FPE_INTDIV = 1,                // floating point divide by zero
+ FPE_INTOVF = 2,                // floating point overflow
+ FPE_FLTDIV = 3,                // floating point underflow
+ FPE_FLTOVF = 4,                // floating point inexact result
+ FPE_FLTUND = 5,                // invalid floating point operation
+ FPE_FLTRES = 6,                // subscript out of range
+ FPE_FLTINV = 7,                // integer divide by zero
+ FPE_FLTSUB = 8,                // integer overflow 
+                                
+ // SIGSEGV codes               
+ SEGV_NOOP   = 0,               // if only I knew... 
+ SEGV_MAPERR = 1,               // address not mapped to object
+ SEGV_ACCERR = 2,               // invalid permission for mapped object
+ SEGV_BNDERR = VSLB(3, 0),      // failed address bound checks    // Linux only
+ SEGV_PKUERR = VSLB(4, 0),      // failed protection key checks   // Linux only
+ 
+ // SIGBUS codes
+ BUS_NOOP      = 0,             // if only I knew... 
+ BUS_ADRALN    = 1,             // Invalid address alignment
+ BUS_ADRERR    = 2,             // Nonexistent physical address
+ BUS_OBJERR    = 3,             // Object-specific HW error 
+ BUS_MCEERR_AR = VSLB(4, 0),
+ BUS_MCEERR_AO = VSLB(5, 0),
+ 
+ // SIGTRAP codes
+ TRAP_BRKPT  = 1,               // Process breakpoint 
+ TRAP_TRACE  = 2,               // Process trace trap
+ TRAP_BRANCH = VSLB(3, 0),      // codes 3-4 might exist on some BSD variants
+ TRAP_HWBKPT = VSLB(4, 0),
+ 
+ // SIGCHLD codes
+ CLD_NOOP      = 0,             // if only I knew...
+ CLD_EXITED    = 1,             // Child has exited 
+ CLD_KILLED    = 2,             // Child was killed, no core file 
+ CLD_DUMPED    = 3,             // Child terminated abnormally, core file 
+ CLD_TRAPPED   = 4,             // Traced child has trapped  
+ CLD_STOPPED   = 5,             // Child has stopped
+ CLD_CONTINUED = 6,             // Stopped child has continued
+
+ // Codes for SIGPOLL (BSD/XNU?)
+ POLL_IN       = 1,             // Data input available
+ POLL_OUT      = 2,             // Output buffers available 
+ POLL_MSG      = 3,             // Input message available 
+ POLL_ERR      = 4,             // I/O error 
+ POLL_PRI      = 5,             // High priority input available 
+ POLL_HUP      = 6,             // Device disconnected 
 };
 
 // =========================================== FILE/DIRECTORY ===========================================
@@ -277,27 +414,27 @@ enum EOpnFlg    // For 'flags' field    // Platform/Arch dependant?
 
 //O_SHLOCK    = 0x00000010,    // BSD/MacOS ???
 //O_EXLOCK    = 0x00000020,    // BSD/MacOS ???
-  O_ASYNC     = DCV< 0         , 0x00000040 >::V,    // Sends SIGIO or SIGPOLL
-  O_SYMLINK   = DCV< 0x80000000, 0x00200000 >::V,    // WinNT+: BSD/MacOS: allow open of symlinks: if the target file passed to open() is a symbolic link then the open() will be for the symbolic link itself, not what it links to.
+  O_ASYNC     = VSLB( 0         , 0x00000040 ),    // Sends SIGIO or SIGPOLL
+  O_SYMLINK   = VSLB( 0x80000000, 0x00200000 ),    // WinNT+: BSD/MacOS: allow open of symlinks: if the target file passed to open() is a symbolic link then the open() will be for the symbolic link itself, not what it links to.
 
-  O_CREAT     = DCV< 0x00000040, 0x00000200 >::V,    // If the file exists, this flag has no effect. Otherwise, the owner ID of the file is set to the user ID of the c_actor, the group ID of the file is set to the group ID of the c_actor, and the low-order 12 bits of the file mode are set to the value of mode.
-  O_EXCL      = DCV< 0x00000080, 0x00000800 >::V,    // Ensure that this call creates the file. If O_EXCL and O_CREAT are set, open will fail if the file exists. In general, the behavior of O_EXCL is undefined if it is used without O_CREAT
+  O_CREAT     = VSLB( 0x00000040, 0x00000200 ),    // If the file exists, this flag has no effect. Otherwise, the owner ID of the file is set to the user ID of the c_actor, the group ID of the file is set to the group ID of the c_actor, and the low-order 12 bits of the file mode are set to the value of mode.
+  O_EXCL      = VSLB( 0x00000080, 0x00000800 ),    // Ensure that this call creates the file. If O_EXCL and O_CREAT are set, open will fail if the file exists. In general, the behavior of O_EXCL is undefined if it is used without O_CREAT
 
-  O_NOCTTY    = DCV< 0x00000100, 0          >::V,    // If pathname refers to a terminal device - see tty(4) - it will not become the process's controlling terminal even if the process does not have one. // On GNU/Hurd systems and 4.4 BSD, opening a file never makes it the controlling terminal and O_NOCTTY is zero. 
-  O_TRUNC     = DCV< 0x00000200, 0x00000400 >::V,    // If the file exists, its length is truncated to 0 and the mode and owner are unchanged.
-  O_APPEND    = DCV< 0x00000400, 0x00000008 >::V,    // If set, the file pointer will be set to the end of the file prior to each write.
-  O_NONBLOCK  = DCV< 0x00000800, 0x00000004 >::V,    // If O_NONBLOCK is set, the open will return without waiting for the device to be ready or available. Subsequent behavior of the device is device-specific.
+  O_NOCTTY    = VSLB( 0x00000100, 0          ),    // If pathname refers to a terminal device - see tty(4) - it will not become the process's controlling terminal even if the process does not have one. // On GNU/Hurd systems and 4.4 BSD, opening a file never makes it the controlling terminal and O_NOCTTY is zero. 
+  O_TRUNC     = VSLB( 0x00000200, 0x00000400 ),    // If the file exists, its length is truncated to 0 and the mode and owner are unchanged.
+  O_APPEND    = VSLB( 0x00000400, 0x00000008 ),    // If set, the file pointer will be set to the end of the file prior to each write.
+  O_NONBLOCK  = VSLB( 0x00000800, 0x00000004 ),    // If O_NONBLOCK is set, the open will return without waiting for the device to be ready or available. Subsequent behavior of the device is device-specific.
  // Additional:
-  O_DSYNC     = DCV< 0x00001000, 0          >::V,
-  O_DIRECT    = DCV< ASV<0x00010000,0x00004000>::V, 0          >::V,    // direct disk access hint - currently ignored
-  O_LARGEFILE = DCV< ASV<0x00020000,0x00008000>::V, 0          >::V,
-  O_DIRECTORY = DCV< ASV<0x00004000,0x00010000>::V, 0x00100000 >::V,    // must be a directory  // This flag is unreliable: X86=0x00010000, ARM=0x00004000 (Probably)    // NOTE: Required to open directories on Windows
-  O_NOFOLLOW  = DCV< ASV<0x00008000,0x00020000>::V, 0x00000100 >::V,    // don't follow links: if the target file passed to open() is a symbolic link then the open() will fail
-  O_NOATIME   = DCV< 0x00040000, 0          >::V,
-  O_CLOEXEC   = DCV< 0x00080000, 0x01000000 >::V,    // set close_on_exec    // DARWIN LEVEL >= 200809
-  O_PATH      = DCV< 0x00200000, 0          >::V,
-  O_TMPFILE   = DCV< 0x00410000, 0          >::V,    // Create an unnamed temporary regular file. The pathname argument specifies a directory; an unnamed inode will be created in that directory's filesystem.
-  O_SYNC      = DCV< 0x00101000, 0x00000080 >::V,    // By the time write(2) (or similar) returns, the output data and associated file metadata have been transferred to the underlying hardware (i.e., as though each write(2) was followed by a call to fsync(2))
+  O_DSYNC     = VSLB( 0x00001000, 0          ),
+  O_DIRECT    = VSLB( VSIA(0x00010000,0x00004000), 0          ),    // direct disk access hint - currently ignored
+  O_LARGEFILE = VSLB( VSIA(0x00020000,0x00008000), 0          ),
+  O_DIRECTORY = VSLB( VSIA(0x00004000,0x00010000), 0x00100000 ),    // must be a directory  // This flag is unreliable: X86=0x00010000, ARM=0x00004000 (Probably)    // NOTE: Required to open directories on Windows
+  O_NOFOLLOW  = VSLB( VSIA(0x00008000,0x00020000), 0x00000100 ),    // don't follow links: if the target file passed to open() is a symbolic link then the open() will fail
+  O_NOATIME   = VSLB( 0x00040000, 0          ),
+  O_CLOEXEC   = VSLB( 0x00080000, 0x01000000 ),    // set close_on_exec    // DARWIN LEVEL >= 200809
+  O_PATH      = VSLB( 0x00200000, 0          ),
+  O_TMPFILE   = VSLB( 0x00410000, 0          ),    // Create an unnamed temporary regular file. The pathname argument specifies a directory; an unnamed inode will be created in that directory's filesystem.
+  O_SYNC      = VSLB( 0x00101000, 0x00000080 ),    // By the time write(2) (or similar) returns, the output data and associated file metadata have been transferred to the underlying hardware (i.e., as though each write(2) was followed by a call to fsync(2))
 };
 
 // https://github.com/torvalds/linux/blob/master/include/uapi/linux/stat.h
@@ -540,10 +677,18 @@ template<typename T, T FracPerSec> struct STime
 template<typename T = time_t> using STVal  = STime<T, 1000000>;     // microseconds    // suseconds_t (long)          // gettimeofday
 template<typename T = time_t> using STSpec = STime<T, 1000000000>;  // nanoseconds     // valid values are [0, 999999999]   // long (long long on some platforms?)    // nanosleep, fstat (SFStat)
 
-using timespec = STSpec<time_t>;
+using timespec = STSpec<time_t>;       // time_t is 32-bit on x32!
 using timeval  = STVal<time_t>;
 using PTiSp    = MPTR<timespec,   PHT>;
 using PTiVl    = MPTR<timeval,   PHT>;
+
+enum ETimeUnits: time64_t
+{
+ tuSeconds      = 1,
+ tuMilliseconds = 1000,
+ tuMicroseconds = 1000000,
+ tuNanoseconds  = 1000000000
+};
 
 struct timezone
 {
@@ -588,11 +733,12 @@ struct fd_set      // Each bit represents a triggered file descriptor. Total bit
 };
 // typedef size_t fd_set[1024 / sizeof(size_t)];
 
-struct sigset_t
+struct sigset_safe_t    // Old was single uint32   // XNU: always uint32 
 {
- uint64 sig[2];
+ uint32 Mask[4];
 };
-using PSigSet = MPTR<sigset_t,   PHT>;
+
+using PSigSet = MPTR<sigset_safe_t,   PHT>;
 
 // A return value of zero indicates that the system call timed out before any file descriptors became ready. Negative is an error code.
 // On some other UNIX systems, poll() can fail with the error EAGAIN if the system fails to allocate kernel-internal resources, rather than ENOMEM as Linux does. 
@@ -604,7 +750,7 @@ static int PXCALL poll(pollfd* fds, uint32 nfds, int timeout);   // Volatile (Fl
 static int PXCALL pollGD(pollfd* fds, uint32 nfds, sint64 timeout, PINT64 time_rem);   // Extension   // Will not break on signalls (loops)     // -1 is infinite, negative timeout - use ppoll with microsec timeout
 static int PXCALL spollGD(fdsc_t fd, uint32 events, sint64 timeout, PINT64 time_rem);  // Extension   // Returns Events, Error if negative      // Will not return on signals if wait_rem is NULL
 // Does it writes remaining time if an event received?
-static int PXCALL ppoll(pollfd* fds, uint32 nfds, PTiSp tmo_p, const PSigSet sigmask, SIZE_T sigsetsize);   // Updates tmo_p with remaining time if interrupted
+static int PXCALL ppoll(pollfd* fds, uint32 nfds, PTiSp tmo_p, const PSigSet sigmask, SIZE_T sigsetsize);   // Updates tmo_p with remaining time if interrupted  // 'sigsetsize' is Linux only
 
 // https://unix.stackexchange.com/questions/84227/limits-on-the-number-of-file-descriptors
 // https://stackoverflow.com/questions/18952564/understanding-fd-set-in-unix-sys-select-h
@@ -772,10 +918,10 @@ static int PXCALL fstatat64(fdsc_t dirfd, PCCHAR pathname, PFStat64 buf, int fla
 
 enum EATExtra
 {
- AT_FDCWD            = IsSysWindows?0:DCV< (uint)-100, (uint)-2 >::V,  // Special value used to indicate openat should use the current working directory.
- AT_SYMLINK_NOFOLLOW = DCV< 0x100, 0x0020 >::V,  // Do not follow symbolic links.
- AT_REMOVEDIR        = DCV< 0x200, 0x0080 >::V,  // Remove directory instead of unlinking file.
- AT_SYMLINK_FOLLOW   = DCV< 0x400, 0x0040 >::V,  // Follow symbolic links.
+ AT_FDCWD            = IsSysWindows?0:VSLB( (uint)-100, (uint)-2 ),  // Special value used to indicate openat should use the current working directory.
+ AT_SYMLINK_NOFOLLOW = VSLB( 0x100, 0x0020 ),  // Do not follow symbolic links.
+ AT_REMOVEDIR        = VSLB( 0x200, 0x0080 ),  // Remove directory instead of unlinking file.
+ AT_SYMLINK_FOLLOW   = VSLB( 0x400, 0x0040 ),  // Follow symbolic links.
 };
 
 
@@ -903,23 +1049,23 @@ enum EMapFlg
  MAP_PRIVATE    = 0x02,                // Changes are private.
 
  MAP_FIXED      = 0x10,                // Interpret addr exactly.  MAP_FIXED_NOREPLACE is preferrable (since Linux 4.17)
- MAP_ANONYMOUS  = DCV< 0x20, 0x1000  >::V,                 // Don't use a file.  // BSD?
+ MAP_ANONYMOUS  = VSLB( 0x20, 0x1000  ),                 // Don't use a file.  // BSD?
  MAP_ANON       = MAP_ANONYMOUS,       // allocated from memory, swap space
- MAP_32BIT      = DCV< 0x40, 0x8000  >::V,                 // Only give out 32-bit addresses(< 4GB). // BSD?
+ MAP_32BIT      = VSLB( 0x40, 0x8000  ),                 // Only give out 32-bit addresses(< 4GB). // BSD?
  MAP_FILE       = 0x00,                // map from file (default)
 
- MAP_GROWSDOWN  = DCV< 0x00100, 0  >::V,              // Stack-like segment.
- MAP_LOCKED     = DCV< 0x02000, 0  >::V,              // Lock the mapping.
- MAP_NORESERVE  = DCV< 0x04000, 0x0040 >::V,          // Don't check for reservations.
- MAP_POPULATE   = DCV< 0x08000, 0  >::V,              // Populate (prefault) pagetables.
- MAP_NONBLOCK   = DCV< 0x10000, 0  >::V,              // Do not block on IO.
- MAP_STACK      = DCV< 0x20000, 0  >::V,              // Allocation is for a stack.
- MAP_HUGETLB    = DCV< 0x40000, 0  >::V,              // arch specific
- MAP_SYNC       = DCV< 0x80000, 0  >::V,              // perform synchronous page faults for the mapping
- MAP_JIT        = DCV< 0,  0x0800    >::V, // MacOS only // Allocate a region that will be used for JIT purposes  // BSD?
- MAP_NOCACHE    = DCV< 0,  0x0400    >::V, // don't cache pages for this mapping
+ MAP_GROWSDOWN  = VSLB( 0x00100, 0  ),              // Stack-like segment.
+ MAP_LOCKED     = VSLB( 0x02000, 0  ),              // Lock the mapping.
+ MAP_NORESERVE  = VSLB( 0x04000, 0x0040 ),          // Don't check for reservations.
+ MAP_POPULATE   = VSLB( 0x08000, 0  ),              // Populate (prefault) pagetables.
+ MAP_NONBLOCK   = VSLB( 0x10000, 0  ),              // Do not block on IO.
+ MAP_STACK      = VSLB( 0x20000, 0  ),              // Allocation is for a stack.
+ MAP_HUGETLB    = VSLB( 0x40000, 0  ),              // arch specific
+ MAP_SYNC       = VSLB( 0x80000, 0  ),              // perform synchronous page faults for the mapping
+ MAP_JIT        = VSLB( 0,  0x0800    ), // MacOS only // Allocate a region that will be used for JIT purposes  // BSD?
+ MAP_NOCACHE    = VSLB( 0,  0x0400    ), // don't cache pages for this mapping
 
- MAP_UNINITIALIZED = DCV< 0x4000000, 0 >::V,
+ MAP_UNINITIALIZED = VSLB( 0x4000000, 0 ),
 
 // MacOS: MAP_RESILIENT_MEDIA=0x4000, MAP_RESILIENT_CODESIGN=0x2000
 };
@@ -967,20 +1113,20 @@ enum EMadv
  MADV_SEQUENTIAL  = 2,         // Expect sequential page references.
  MADV_WILLNEED    = 3,         // Will need these pages.
  MADV_DONTNEED    = 4,         // Don't need these pages.
- MADV_FREE        = DCV< 8,   5 >::V,      // Free pages only if memory pressure(or immediately?).
+ MADV_FREE        = VSLB( 8,   5 ),      // Free pages only if memory pressure(or immediately?).
 // Linux-cpecific
- MADV_REMOVE      = DCV< 9,   0 >::V,      // Remove these pages and resources.
- MADV_DONTFORK    = DCV< 10,  0 >::V,      // Do not inherit across fork.
- MADV_DOFORK      = DCV< 11,  0 >::V,      // Do inherit across fork.
- MADV_MERGEABLE   = DCV< 12,  0 >::V,      // KSM may merge identical pages.
- MADV_UNMERGEABLE = DCV< 13,  0 >::V,      // KSM may not merge identical pages.
- MADV_HUGEPAGE    = DCV< 14,  0 >::V,      // Worth backing with hugepages.
- MADV_NOHUGEPAGE  = DCV< 15,  0 >::V,      // Not worth backing with hugepages.
- MADV_DONTDUMP    = DCV< 16,  0 >::V,      // Explicity exclude from the core dump, overrides the coredump filter bits.
- MADV_DODUMP      = DCV< 17,  0 >::V,      // Clear the MADV_DONTDUMP flag.
- MADV_WIPEONFORK  = DCV< 18,  0 >::V,      // Zero memory on fork, child only.
- MADV_KEEPONFORK  = DCV< 19,  0 >::V,      // Undo MADV_WIPEONFORK.
- MADV_HWPOISON    = DCV< 100, 0 >::V,      // Poison a page for testing.
+ MADV_REMOVE      = VSLB( 9,   0 ),      // Remove these pages and resources.
+ MADV_DONTFORK    = VSLB( 10,  0 ),      // Do not inherit across fork.
+ MADV_DOFORK      = VSLB( 11,  0 ),      // Do inherit across fork.
+ MADV_MERGEABLE   = VSLB( 12,  0 ),      // KSM may merge identical pages.
+ MADV_UNMERGEABLE = VSLB( 13,  0 ),      // KSM may not merge identical pages.
+ MADV_HUGEPAGE    = VSLB( 14,  0 ),      // Worth backing with hugepages.
+ MADV_NOHUGEPAGE  = VSLB( 15,  0 ),      // Not worth backing with hugepages.
+ MADV_DONTDUMP    = VSLB( 16,  0 ),      // Explicity exclude from the core dump, overrides the coredump filter bits.
+ MADV_DODUMP      = VSLB( 17,  0 ),      // Clear the MADV_DONTDUMP flag.
+ MADV_WIPEONFORK  = VSLB( 18,  0 ),      // Zero memory on fork, child only.
+ MADV_KEEPONFORK  = VSLB( 19,  0 ),      // Undo MADV_WIPEONFORK.
+ MADV_HWPOISON    = VSLB( 100, 0 ),      // Poison a page for testing.
 };
 
 enum EMSyFlg   // Flags for msync
@@ -1078,7 +1224,7 @@ enum ESockDomain
 // AF_BRIDGE       = 7, // Multiprotocol bridge
 // AF_AAL5       =  8,  // Reserved for Werner's ATM
 // AF_X25       =   9,  // Reserved for X.25 project
- AF_INET6       = DCV< 10,  30  >::V, // IP version 6  // Linux 10 ?
+ AF_INET6       = VSLB( 10,  30  ), // IP version 6  // Linux 10 ?
 // AF_MAX         = 12, // For now..
 };
 
@@ -1089,7 +1235,7 @@ enum ESockType
  SOCK_RAW         = 3,  // raw-protocol interface
  SOCK_RDM         = 4,  // reliably-delivered message
  SOCK_SEQPACKET = 5,  // sequenced packet stream
- SOCK_PACKET       = DCV< 10, 0 >::V,
+ SOCK_PACKET       = VSLB( 10, 0 ),
 };
 
 enum ESockProto
@@ -1188,6 +1334,7 @@ static pid_t PXCALL getppid(void);
 // get the process group ID of the calling process
 static pid_t PXCALL getpgrp(void);    // Deprecated on ARM64
 
+// returns the PGID of the process specified by pid. If pid is zero, the process ID of the calling process is used (same as getpgrp). 
 static pid_t PXCALL getpgid(pid_t pid);
 
 // For job control
@@ -1272,68 +1419,6 @@ kill(getpid(), SIGKILL);
 static pid_t  PXCALL wait4(pid_t pid, PINT32 wstatus, int options, PVOID rusage);    // Old, should use  waitpid or waitid
 
 
-// si_code values for SIGCHLD signal.
-enum
-{
-  CLD_EXITED = 1,		// Child has exited. 
-  CLD_KILLED,			// Child was killed. 
-  CLD_DUMPED,			// Child terminated abnormally.
-  CLD_TRAPPED,			// Traced child has trapped.  
-  CLD_STOPPED,			// Child has stopped.  
-  CLD_CONTINUED			// Stopped child has continued. 
-};
- /*
-typedef struct siginfo
-  {
-    int si_signo;		// Signal number. 
-    int si_errno;		// If non-zero, an errno value associated with this signal, as defined in <errno.h>.  
-    int si_code;		// Signal code.  
-    union
-      {
-	int _pad[__SI_PAD_SIZE];	 
-	struct  // kill()
-	  {
-	    __pid_t si_pid;	// Sending process ID.  
-	    __uid_t si_uid;	// Real user ID of sending process. 
-	  } _kill;
-	struct   // POSIX.1b timers
-	  {
-	    int si_tid;		    // Timer ID. 
-	    int si_overrun;   	// Overrun count.
-	    sigval_t si_sigval;	// Signal value. 
-	  } _timer;
-	
-	struct  // POSIX.1b signals
-	  {
-	    __pid_t si_pid;	    // Sending process ID. 
-	    __uid_t si_uid;	    // Real user ID of sending process.
-	    sigval_t si_sigval;	// Signal value.  
-	  } _rt;	
-	struct   // SIGCHLD
-	  {
-	    __pid_t si_pid;	// Which child. 
-	    __uid_t si_uid;	// Real user ID of sending process. 
-	    int si_status;	// Exit value or signal. 
-	    __clock_t si_utime;
-	    __clock_t si_stime;
-	  } _sigchld;	
-	struct   // SIGILL, SIGFPE, SIGSEGV, SIGBUS.
-	  {
-	    void *si_addr;	// Faulting insn/memory ref.  
-	  } _sigfault;	
-	struct   // SIGPOLL 
-	  {
-	    long int si_band;	// Band event for SIGPOLL. 
-	    int si_fd;
-	  } _sigpoll;
-      } _sifields;
-  } siginfo_t;
-  */
-
-//static int    PXCALL waitid(idtype_t idtype, id_t id, siginfo_t *infop, int options);   // Later
-
-
-
 /*
 // Linux
  CLOCK_REALTIME                  0
@@ -1372,7 +1457,7 @@ typedef struct siginfo
 enum EClockType
 {
  CLOCK_REALTIME  = 0,        // Higher resolution than the one gettimeofday uses (nsecs)
- CLOCK_MONOTONIC = DCV< 1, 4 >::V,
+ CLOCK_MONOTONIC = VSLB( 1, 4 ),
 
 // Flags
  TIMER_ABSTIME   = 1,  // BSD?
@@ -1424,40 +1509,41 @@ enum EFutex
 {
  FUTEX_WAIT            = 0,    // BSD
  FUTEX_WAKE            = 1,    // BSD
- FUTEX_FD              = 2,    // Probably can be done on Windows
- FUTEX_REQUEUE         = 3,    // BSD (Can it be done on Windows?)
- FUTEX_CMP_REQUEUE     = 4,
- FUTEX_WAKE_OP         = 5,
- FUTEX_LOCK_PI         = 6,
- FUTEX_UNLOCK_PI       = 7,
- FUTEX_TRYLOCK_PI      = 8,
- FUTEX_WAIT_BITSET     = 9,
- FUTEX_WAKE_BITSET     = 10,
- FUTEX_WAIT_REQUEUE_PI = 11,
- FUTEX_CMP_REQUEUE_PI  = 12,
- FUTEX_LOCK_PI2        = 13,
- FUTEX_PRIVATE_FLAG    = 128,	  // Linux, new
+ // FUTEX_FD              = 2,    // Probably can be done on Windows (any use?)  // Has been removed from Linux 2.6.26 onward
+ // FUTEX_REQUEUE         = 3,    // BSD (Can it be done on Windows?)
+ // FUTEX_CMP_REQUEUE     = 4,
+ // FUTEX_WAKE_OP         = 5,
+ // FUTEX_LOCK_PI         = 6,
+ // FUTEX_UNLOCK_PI       = 7,
+ // FUTEX_TRYLOCK_PI      = 8,
+    FUTEX_WAIT_BITSET     = 9,    //  If timeout is not NULL, the structure it points to specifies an absolute timeout for the wait operation. Bitset itself is not supported
+ // FUTEX_WAKE_BITSET     = 10,
+ // FUTEX_WAIT_REQUEUE_PI = 11,
+ // FUTEX_CMP_REQUEUE_PI  = 12,
+ // FUTEX_LOCK_PI2        = 13,
+ FUTEX_PRIVATE_FLAG    = 128,	  // Linux, new  // Gives much better performance
  FUTEX_CLOCK_REALTIME  = 256,
  FUTEX_CMD_MASK        = ~(FUTEX_PRIVATE_FLAG | FUTEX_CLOCK_REALTIME),
 
- FUTEX_WAIT_PRIVATE = (FUTEX_WAIT | FUTEX_PRIVATE_FLAG),
- FUTEX_WAKE_PRIVATE = (FUTEX_WAKE | FUTEX_PRIVATE_FLAG),
- FUTEX_REQUEUE_PRIVATE = (FUTEX_REQUEUE | FUTEX_PRIVATE_FLAG),
+ // FUTEX_WAIT_PRIVATE = (FUTEX_WAIT | FUTEX_PRIVATE_FLAG),
+ // FUTEX_WAKE_PRIVATE = (FUTEX_WAKE | FUTEX_PRIVATE_FLAG),
+ // FUTEX_REQUEUE_PRIVATE = (FUTEX_REQUEUE | FUTEX_PRIVATE_FLAG),
 
- FUTEX_OP_SET       = 0,   // *(int *)UADDR2  = OPARG;
- FUTEX_OP_ADD       = 1,   // *(int *)UADDR2 += OPARG; 
- FUTEX_OP_OR        = 2,   // *(int *)UADDR2 |= OPARG; 
- FUTEX_OP_ANDN      = 3,   // *(int *)UADDR2 &= ~OPARG; 
- FUTEX_OP_XOR       = 4,   // *(int *)UADDR2 ^= OPARG; 
-
- FUTEX_OP_OPARG_SHIFT = 8,   // Use (1 << OPARG) instead of OPARG. 
-
- FUTEX_OP_CMP_EQ    = 0,   // if (oldval == CMPARG) wake 
- FUTEX_OP_CMP_NE    = 1,   // if (oldval != CMPARG) wake 
- FUTEX_OP_CMP_LT    = 2,   // if (oldval <  CMPARG) wake 
- FUTEX_OP_CMP_LE    = 3,   // if (oldval <= CMPARG) wake 
- FUTEX_OP_CMP_GT    = 4,   // if (oldval >  CMPARG) wake 
- FUTEX_OP_CMP_GE    = 5,   // if (oldval >= CMPARG) wake 
+// Not portable (Only have advantage when done in the kernel)
+ // FUTEX_OP_SET       = 0,   // *(int *)UADDR2  = OPARG;
+ // FUTEX_OP_ADD       = 1,   // *(int *)UADDR2 += OPARG; 
+ // FUTEX_OP_OR        = 2,   // *(int *)UADDR2 |= OPARG; 
+ // FUTEX_OP_ANDN      = 3,   // *(int *)UADDR2 &= ~OPARG; 
+ // FUTEX_OP_XOR       = 4,   // *(int *)UADDR2 ^= OPARG; 
+ // 
+ // FUTEX_OP_OPARG_SHIFT = 8,   // Use (1 << OPARG) instead of OPARG. 
+ // 
+ // FUTEX_OP_CMP_EQ    = 0,   // if (oldval == CMPARG) wake 
+ // FUTEX_OP_CMP_NE    = 1,   // if (oldval != CMPARG) wake 
+ // FUTEX_OP_CMP_LT    = 2,   // if (oldval <  CMPARG) wake 
+ // FUTEX_OP_CMP_LE    = 3,   // if (oldval <= CMPARG) wake 
+ // FUTEX_OP_CMP_GT    = 4,   // if (oldval >  CMPARG) wake 
+ // FUTEX_OP_CMP_GE    = 5,   // if (oldval >= CMPARG) wake 
 };
 
 // Before the thread is suspended the value of the futex variable is checked. If it does not have the same value as the val1 parameter the system call immediately returns with the error EWOULDBLOCK.
@@ -1475,17 +1561,341 @@ static sint32 PXCALL futexGD(PUINT32 uaddr, int op, uint32 val, const PTiSp time
 static sint32 PXCALL futex(PUINT32 uaddr, int op, uint32 val, const PTiSp timeout, PUINT32 uaddr2, uint32 val3);    // Linux   // timespec may be uint32_t val2 (see op)     // Returns long
 // OpenBSD:      int futex(PUINT32 uaddr, int op, uint32 val, const PTiSp timeout, PUINT32 uaddr2);
 // BSD:		  https://github.com/mumble-voip/sbcelt/blob/master/lib/futex-freebsd.c
-/*int futex_wake(int *futex) {return _umtx_op(futex, UMTX_OP_WAKE, 1, 0, 0);}
 
-int futex_wait(int *futex, int val, struct timespec *ts) {
-	int err = _umtx_op(futex, UMTX_OP_WAIT_UINT, val, 0, (void *)ts);
-	if (err != 0) {
-		if (errno == ETIMEDOUT)return FUTEX_TIMEDOUT;	
-		 else if (errno == EINTR)return FUTEX_INTERRUPTED; // XXX: unsure if umtx can be EINTR'd.	
-	}
-	return err;
-} */
+struct alignas(vptr) futex_t     // Size: 8/16 bytes   
+{
+ union {
+#ifdef SYS_WINDOWS   // Futex emulation
+#  ifdef ARCH_X64    // Have Data field as part of alignment
+  struct {
+   uint32 Value;     // Pointer-aligned   
+   uint32 Data;      // Can be used to store some user's data (like a thread ID)
+   usize  HeadDesc;  // Should be initially set to 0
+  };
+#  else     // X32: Size 8, alignment 4   // No Data field
+  struct {          
+   uint32 Value; 
+   usize  HeadDesc;
+  };
+#  endif
+  usize  SingleValue[2];   // How to make it cover the entire object as 'SingleValue = 0' ?   // Default alignment is of the largest member type size(uint128 on X64) // Use ZeroObj() on it
+#else  // Linux - real futex
+  uint32 Value; 
+  uint32 SingleValue[1];   // Used for zeroing the object on any platform: 'ftx = 0;'
+#endif
+ };
+};
 
+struct futex_ext: futex_t    // Provides a guaranteed Data field (Not used by Futex API)
+{
+#if !defined(SYS_WINDOWS) || !defined(ARCH_X64)   // No Data, 4-byte alignment of futex_t
+ uint32 Data;    // Linux: 8, Win32: 12
+#endif
+};
+
+struct futex_not    // Size: 4/8 bytes     // Do not use this with Futex API, this is for original Windows conditional variables
+{
+#if defined(SYS_WINDOWS)
+ union {
+  usize  HeadDesc;   
+  uint32 Value;      // To satisfy compile-time checks
+ };
+#else
+ uint32  Value;      // Can't ignore the variable on Linux
+#endif
+};
+
+// NOTE: Most of the Flags are just hints
+enum EFutexFlg
+{
+ fxfNoExpected    = 0x10,       // The 'expected' doesn't need to be checked
+ fxfNoWakeFIFO    = 0x20,       // No FIFO fairness for Wake() is required (Only going to do WakeAll)
+ fxfTypeMsk       = 0x0F,
+ fxfTypeAny       = 0,          // Nothing specific
+ fxfTypeMutex     = 1,
+ fxfTypeEvent     = 2,          // Conditional variable
+ fxfTypeRWLock    = 3,
+ fxfTypeCondVar   = 4,
+ fxfTypeSemaphore = 5
+};
+
+SCVR uint32 WAKE_ALL = uint32(-1);
+
+// On success, FUTEX_WAIT returns 0 if the caller was woken up. callers should always conservatively assume that a return value of 0 can mean a spurious wake-up, and use the futex word's value
+static sint32 PXCALL futex_wait(futex_t* addr, uint32 expected, timeout_t timeout_ms, uint32 flags);      // macOS doesn't have a stable/public API for timeouts
+// On success, FUTEX_WAKE returns the number of waiters that were woken up. The wake operations don't return the number of threads woken up. (Only Linux supports this.)
+static sint32 PXCALL futex_wake(futex_t* addr, uint32 count, uint32 flags);
+
+
+// SA_RESTART should be the default. Any other default is a bad default. Code that doesn't use UNIX signals will never be written with signals in mind and it won't be prepared for EINTR.
+// Unfortunately you have to explicitly request for SA_RESTART on the new sigaction() (and not the other way around).
+enum ESAFlags
+{
+ SA_NOCLDSTOP = VSLB(0x00000001, 0x00000008),  // If signum is SIGCHLD, do not receive notification when child processes stop (i.e., when they receive one of SIGSTOP, SIGTSTP, SIGTTIN or SIGTTOU) or resume (i.e., they receive SIGCONT)
+ SA_NOCLDWAIT = VSLB(0x00000002, 0x00000020),  // If signum is SIGCHLD, do not transform children into zombies when they terminate. 
+ SA_SIGINFO   = VSLB(0x00000004, 0x00000040),  // The signal handler takes three arguments, not one. In this case, sa_sigaction should be set instead of sa_handler. 
+ SA_NODEFER   = VSLB(0x40000000, 0x00000010),  // Do not prevent the signal from being received from within its own signal handler.
+ SA_ONSTACK   = VSLB(0x08000000, 0x00000001),  // Call the signal handler on an alternate signal stack provided by sigaltstack(2).
+ SA_RESTART   = VSLB(0x10000000, 0x00000002),  // Provide behavior compatible with BSD signal semantics by making certain system calls restartable across signals. (which were the default long ago) 
+ SA_RESETHAND = VSLB(0x80000000, 0x00000004),  // Restore the signal action to the default upon entry to the signal handler. Was (SA_ONESHOT )
+
+ SA_RESTORER  = VSLB(0x04000000, -1),          // Linux only
+ // SA_USERTRAMP = VSLB(-1, 0x00000100),          // BSD/XNU(kernel): do not bounce off kernel's sigtramp 
+ // SA_64REGSET  = VSLB(-1, 0x00000200),          // BSD/XNU(kernel): signal handler with SA_SIGINFO args with 64bit regs information 
+};
+
+enum SAHow
+{
+ SIG_BLOCK = 0 + bool(IsSysBSD|IsSysMacOS),  // The set of blocked signals is the union of the current set and the set argument.
+ SIG_UNBLOCK,  // The signals in set are removed from the current set of blocked signals. It is permissible to attempt to unblock a signal which is not blocked.
+ SIG_SETMASK   // The set of blocked signals is set to the argument set.
+};
+
+// Generic siginfo_t stable minimum
+// https://github.com/torvalds/linux/blob/master/include/linux/signal.h
+// Per POSIX, si_addr is only used by SIGILL, SIGFPE, SIGSEGV, and SIGBUS. Linux also provides si_addr data for SIGTRAP
+// SIGILL,SIGFPE:  si_addr is an address of the instruction
+// SIGBUS,SIGSEGV: si_addr is an address of the accessed memory
+//
+struct siginfo_t 
+{
+ sint32 signo;  // Signal number
+ sint32 errno;  // An errno value (rarely used, but POSIX)
+ sint32 code;   // Signal code (why it happened)
+
+#if defined(SYS_LINUX) || defined(SYS_ANDROID)
+ sint32 __pad0;      // 4 bytes (alignment padding)
+
+ // The union starts here. POSIX guarantees these fields 
+ // for specific signals (SIGSEGV, SIGFPE, SIGILL, SIGBUS).
+ // https://github.com/torvalds/linux/blob/master/include/uapi/asm-generic/siginfo.h
+ union {          // 112 bytes total for union on x86_64
+     // Faulting info (SIGSEGV, SIGILL, etc.)
+     struct {
+         void* addr;        // Faulting instruction or memory address
+    //    short addr_lsb;    // SYS_LINUX/ANDROID  Least significant bit of address (for some traps)
+         // More Linux-specific fields follow...
+     };// _sigfault;
+
+     // Kill info (SIGKILL, SIGINT, SIGTERM)
+     struct {
+         sint32 pid;           // Sending process ID 
+         uint32 uid;           // Real user ID of sending process
+     };// _sigkill;
+
+     // Child info (SIGCHLD)
+     struct {
+         sint32 pid;           // Child process ID
+         uint32 uid;           // User ID of child
+         sint32 status;        // Exit value or signal
+     };// _sigchld;
+     
+     // Add more padding if you need to match the actual OS size (usually 128 bytes)
+     sint32 _pad[28];      // 112 bytes (128 - 16 header bytes)
+ }; // _sdata;
+#elif defined(SYS_MACOS) || defined(SYS_BSD)
+ sint32 pid;      // NOT in union!
+ uint32 uid;
+ sint32 status;
+ void* addr;
+ union {     // union sigval si_value;      
+     int32_t _pad[16];  // 64 bytes
+ };  // _reason;
+ //long    si_band;               // band event for SIGPOLL
+#elif defined(SYS_WINDOWS) 
+ void* addr;
+#endif
+
+ /*   // Portable interface
+    // Platform-specific when needed
+#if defined(SYS_LINUX) || defined(SYS_ANDROID)
+    int16_t address_lsb() const noexcept {
+        return _sifields._sigfault.si_addr_lsb;
+    }
+#endif   */
+};
+
+/*
+        // Timer info (SI_TIMER)
+        struct {
+            int si_tid;           // Timer ID
+            int si_overrun;       // Overrun count
+            union {
+                int sival_int;    // Sigval value (integer)
+                void* sival_ptr;  // Sigval value (pointer)
+            } si_value;
+*/
+
+
+/*
+Linux (and POSIX) track three independent things per signal:
+   Disposition   - what to do when delivered (SIG_DFL, SIG_IGN, or handler)
+   Blocked mask  - whether delivery is deferred (sigprocmask / rt_sigprocmask)
+   Pending state - signal already generated but waiting
+
+Ignored (SIG_IGN):
+    Kernel throws the signal away immediately.
+    It never becomes pending.
+    It never wakes anything.
+    It never queues.
+
+Blocked (via sigprocmask):
+    Signal is generated
+    Kernel marks it pending
+    Delivery is deferred
+    When you unblock → it is delivered
+
+So blocked signals accumulate.
+
+Special case: SIGKILL / SIGSTOP:
+    cannot be ignored
+    cannot be blocked
+    kernel-enforced
+    They bypass everything.
+
+Crash signals (SIGSEGV etc):
+    are synchronous
+    ignore sigprocmask entirely
+    delivered immediately
+    So blocking SIGSEGV doesn’t prevent a fault.
+*/
+// https://man7.org/linux/man-pages/man2/sigaction.2.html
+// signum specifies the signal and can be any valid signal except SIGKILL and SIGSTOP.
+
+// MacOS: Traditionally uses a 32-bit mask (4 bytes) for its BSD-layer syscalls, though the header defines it as a uint32_t
+// glibc / musl: define sigset_t as a massive 128-byte structure (1024 bits) to allow for future expansion.
+// FreeBSD: Uses a 128-bit mask (16 bytes). If you are bypassing the FreeBSD System Call Interface and writing raw assembly, you need to provide two uint64_t values.
+// Self-Blocking: By default, the signal that triggered the handler is automatically blocked while the handler is running (unless you use the SA_NODEFER flag). 
+// sa_mask: You can specify other signals to block only during the handler's execution by populating the sa_mask field in your sigaction struct.
+
+using signal_handler_t = void (PXCALL*)(sint32 sig); 
+using signal_action_t  = void (PXCALL*)(sint32 sig, siginfo_t* info, void* ucontext);       // Linux, BSD and MacOS support it natively 
+
+// The void* context must be cast to ucontext_t*
+static void PXCALL SignalHandler(sint32 sig); 
+static void PXCALL SignalAction(sint32 sig, siginfo_t* info, void* context); 
+
+//TODO: Make sure thet these aren't actually allocated as globals
+static inline const signal_handler_t SIG_DFL = (signal_handler_t)0;
+static inline const signal_handler_t SIG_IGN = (signal_handler_t)1;
+static inline const signal_handler_t SIG_ERR = (signal_handler_t)-1;
+
+struct sigset_old_t    // 16 bytes
+{
+ uint32 bits[1];
+};
+
+struct sigset_new_t    // 16 bytes
+{
+ uint32 bits[4];
+};
+
+// https://github.com/torvalds/linux/blob/master/arch/arm/include/uapi/asm/signal.h
+template<typename SM=sigset_old_t> struct sigaction_linux_x32_t   // ARM_X32, X86_X32
+{
+ //vptr     handler;
+ SM       mask;
+ size_t   flags;
+ vptr     restorer;
+};
+
+// https://github.com/torvalds/linux/blob/master/include/uapi/asm-generic/signal.h
+// https://github.com/torvalds/linux/blob/master/arch/x86/include/uapi/asm/signal.h
+template<typename SM=sigset_new_t> struct sigaction_linux_generic_t     // Generic, X86_X64
+{
+ //vptr     handler;
+ size_t   flags;
+ vptr     restorer;     // X86,ARM,PPC have it
+ SM       mask;         // mask last for extensibility
+};
+
+// https://github.com/apple-oss-distributions/xnu/blob/main/bsd/sys/signal.h
+template<typename SM=sigset_old_t> struct sigaction_xnu_t    // MacOS, iOS
+{
+ //vptr     handler;
+ vptr     tramp;
+ SM       mask;        //  uint32_t sa_mask[4]; 
+ uint32   flags;  
+};
+
+// https://github.com/openbsd/src/blob/master/sys/sys/signal.h
+// https://github.com/NetBSD/src/blob/trunk/sys/sys/signal.h
+// https://github.com/NetBSD/src/blob/trunk/sys/compat/sys/signal.h
+template<typename SM=sigset_new_t> struct sigaction_bsd_t    // NetBSD, OpenBSD
+{
+ //vptr     handler;
+ SM       mask;        // uint32_t sa_mask[4];  // Compat: uint32 ?
+ uint32   flags;  
+};
+
+// https://github.com/freebsd/freebsd-src/blob/main/sys/sys/signal.h
+// https://github.com/DragonFlyBSD/DragonFlyBSD/blob/master/sys/sys/signal.h
+template<typename SM=sigset_new_t> struct sigaction_fbsd_t   // FreeBSD, DragonFlyBSD
+{
+ //vptr     handler;
+ uint32   flags; 
+ SM       mask;        // uint32_t sa_mask[4]; 
+};
+
+struct sigaction_t
+{
+ union {
+ signal_handler_t sighandler;
+ signal_action_t  sigaction;
+ };
+ union {
+   sigaction_linux_generic_t<> sa_linux_rst;
+   sigaction_linux_x32_t<>     sa_linux_x32;
+   sigaction_fbsd_t<>          sa_fbsd;
+   sigaction_bsd_t<>           sa_bsd;
+   sigaction_xnu_t<>           sa_xnu;
+ };
+};
+
+/*
+Crucial Warning: 
+  In modern macOS (10.14+), the kernel enforces that the tramp must be the standard libSystem trampoline for security reasons (to prevent ROP attacks). 
+  If you point tramp to your own raw assembly memory, the kernel may kill your process with a code-signing violation unless you have specific entitlements.
+
+  The Problem: On macOS, the kernel jumps to the tramp address instead of your handler. The tramp is responsible for calling your handler and then calling sigreturn.
+  The Trap: Modern macOS (especially Apple Silicon) validates that the trampoline resides in authorized memory (usually libSystem). If you point tramp to your own bare-metal assembly, the kernel may trigger a Code Signing Violation or SIGILL.
+  The Check: The kernel checks the tramp address. If it points to your .text segment, and the .text segment is marked as Executable, the kernel will allow it. If you try to point tramp to a heap/stack address, it will SIGKILL.
+  Avoiding SA_SIGINFO does not solve the trampoline requirement on macOS: Even with a simple sa_handler, the kernel still expects the tramp field to be valid because the return mechanism remains the same.
+  On iOS/macOS, the kernel expects the trampoline to be responsible for calling the handler and then returning. If your trampoline only calls sigreturn, your handler will never run.
+  On macOS/iOS, if tramp is provided, the kernel jumps there. Setting sighandler and tramp to the same assembly entry point is a common "No LibC" trick.
+
+  Use LC_UNIXTHREAD: This is the "old school" way to start a process at a specific register state (rip/pc).
+// ARM64 macOS/iOS Trampoline
+.text
+.align 4
+.global _my_sigtramp
+_my_sigtramp:
+    // At this point, the kernel has pushed the frame.
+    // x0 = signal number
+    // x1 = siginfo_t* (if SA_SIGINFO)
+    // x2 = ucontext_t*
+    
+    // 1. Call the handler (stored in the sigaction struct, 
+    //    but the kernel usually passes it in a register or 
+    //    you hardcode a wrapper).
+    // Note: For a generic stub, you'd need to know where the handler is.
+    // In a "No LibC" static binary, you might jump to a C function here:
+    bl _my_c_signal_handler 
+
+    // 2. Call sigreturn
+    mov x16, #184      // SYS_sigreturn (0x20000B8)
+    svc #0x80
+
+Default Behavior (No Flag): The kernel handles the transition from kernel mode to user mode using its own internal signal trampoline. It sets up the stack frame and ensures the program returns to the correct execution point after the handler finishes.
+With SA_USERTRAMP: You (typically via a system library like libsystem) are telling the kernel: "Don't use your default return logic; I am providing a specific user-space 'tramp' address to manage this transition".
+Darwin uses a "Comm Page" (a kernel-mapped read-only memory area) that contains a pre-verified sigreturn stub. You usually don't provide your own; the kernel handles the return via a "Tramp" address it manages.
+FreeBSD / OpenBSD / NetBSD: On these systems, the kernel typically maps a "Signal Trampoline" into the process's address space automatically. When you call sigaction, the kernel ignores your sa_restorer (if it even exists in that OS's struct) and uses its own internal trampoline.
+ 
+*/
+
+static sint32 PXCALL rt_sigaction(sint32 signum, const sigaction_t* act, sigaction_t* oldact, size_t sigsetsize);   // BSD/MacOS: (sint32 signum, const sigaction_t* act, sigaction_t* oldact); 
+//static sint32 PXCALL rt_sigprocmask(sint32 how, const PSigSet set, PSigSet oldset, size_t sigsetsize);          // BSD/MacOS: int sigprocmask(int how, const sigset_t *set, sigset_t *oset)
+static sint32 PXCALL rt_sigreturn(vptr ctx, int infostyle, int token);  // Needed only for Linux (Present in VDSO too) // rt_sigreturn - Linux: (size_t __unused)  // BSD: (const struct __ucontext *ucontextp)  // MacOS: (struct ucontext *ucontextp, int token)
 
 };
 

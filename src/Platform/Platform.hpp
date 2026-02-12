@@ -9,7 +9,6 @@ struct NPTM    // Can`t be 'struct' if we want that stubs go in the real executa
 #include "NTSYS.hpp"
 #include "POSIX.hpp"
 #include "DateTime.hpp"      // Should it be in Platform? // Unsorted Windows/Linux date and time functions
-#include "Atomics.hpp"
 #include "LogErr.hpp"        // Thish should be visible everywhere
 #include "Utils.hpp"         // Should it be in Platform? // Anything that doesn`t have a separate HPP and still doesn`t use any of system API
 #include "ModFmtMachO.hpp"
@@ -17,8 +16,10 @@ struct NPTM    // Can`t be 'struct' if we want that stubs go in the real executa
 #include "ModFmtPE.hpp"
 #include "TZif.hpp"
 #include "CLArgs.hpp"
-#include "EnvVars.hpp"
+#include "EnvVars.hpp" 
+#include "Synchro.hpp"
 #include "Threads.hpp"     // Thread definitions for "StartInfo.hpp"
+#include "Signals.hpp"  
 #include "MemUtils.hpp" 
 #include "FileUtils.hpp"   // Should it be in Platform?
 #include "Debugging.hpp"

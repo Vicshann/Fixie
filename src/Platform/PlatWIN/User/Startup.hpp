@@ -355,7 +355,24 @@ static sint InitSyscalls(void)
 //------------------------------------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------------------------------------
-enum ESFlags {sfInitialized=0x01, sfDynamicLib=0x02, sfLoadedByLdr=0x04};
+enum ESFlags {
+        sfInitialized = 0x0001,         // The framework is initialized
+        sfDynamicLib  = 0x0002,         // The framework is loaded as a DLL
+        sfLoadedByLdr = 0x0004,         // The framework module is loaded by a OS loader
+        sfConOwned    = 0x0008,         // The console is created by the framework
+
+        sfLoadedGUI   = 0x0010,         // GUI initialized (A hidden window for some console events may be needed)
+        sfServiceApp  = 0x0020,         // The app is a service
+        sfNativeApp   = 0x0040,         // The app is a native app (boot process)
+        sfDriverApp   = 0x0080,         // The app is a driver
+
+        sfConHandled  = 0x0100,         // A console event handler is installed
+        sfWndHandled  = 0x0200,         // A hidden window message handler is installed
+        sfExpHandled  = 0x0400,         // An exception handle is installed
+
+        sfTerminating = 0x80000000      // The application is terminating
+};
+
 struct SSINF       // Cannot put it on some thread`s stack. Must be persistent to be usable by exported functions
 {
  vptr   ModBase;
@@ -365,11 +382,15 @@ struct SSINF       // Cannot put it on some thread`s stack. Must be persistent t
  vptr   MainModBase;
  size_t MainModSize;
  achar  SysDrive[8];
+ uint64 SigMask;       // Mask of signals to handle
  sint32 MemPageSize;
  sint32 MemGranSize;
- sint32 UTCOffs; // In seconds
+ sint32 UTCOffs;       // In seconds
  uint32 Flags;
  vptr   pNtDll;
+ vptr   hKeyedEvent;   // Futex support only  
+ vptr   SigHndlArg;
+ NSIG::SigHandlerT SigHandler;   // User-supplied signal handler (One for all signals)
  NTHD::STDesc thd;
 
  PX::fdsc_t DevNull;
@@ -425,7 +446,7 @@ static _finline sint GetModulePath(achar* DstBuf, size_t BufSize=size_t(-1))
  return 0;
 }
 //------------------------------------------------------------------------------------------------------------
-static vptr LoadModule(const achar* Path)
+static vptr LoadLibrary(const achar* Path, bool Init=true)
 {
  static vptr paddr = nullptr;
  if(!paddr)
@@ -449,10 +470,13 @@ static sint InitStartupInfo(vptr StkFrame=nullptr, vptr ArgA=nullptr, vptr ArgB=
  if((ArgA != NT::NtCurrentPeb())&&(((size_t)ArgA & ~(MEMGRANSIZE-1)) == ((size_t)fwsinf.ModBase & ~(MEMGRANSIZE-1))))fwsinf.Flags |= sfDynamicLib;   // System passes PEB as first argument to EXE`s entry point then it is safe to exit from entry point without calling 'exit'
  fwsinf.pNtDll = NTX::GetBaseOfNtdll();
 
+ fwsinf.hKeyedEvent = nullptr;
+ if(!SAPI::NtWaitForAlertByThreadId.IsValid())SAPI::NtCreateKeyedEvent((NT::HANDLE*)&fwsinf.hKeyedEvent, -1, nullptr, 0); 
+
  UpdateTZOffsUTC();
  fwsinf.MemPageSize = MEMPAGESIZE;
  fwsinf.MemGranSize = MEMGRANSIZE;
- fwsinf.Flags  |= sfInitialized;
+ AtomicOr(&fwsinf.Flags, sfInitialized);
  return 0;
 }
 //------------------------------------------------------------------------------------------------------------

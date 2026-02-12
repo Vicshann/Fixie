@@ -40,13 +40,17 @@ struct NSYSC
 //{
 #if defined(PLT_LIN_USR) || defined(PLT_MAC_USR)
 
-template<int x86_32, int x86_64, int arm_32, int arm_64, int BSD_MAC> struct DSC   // Can be used for Kernel too
+template<int x86_32, int x86_64, int arm_32, int arm_64, int vMAC, int vBSD, int vOBSD> struct DSC   // Can be used for Kernel too  // OpenBSD have all syscalls different, required conditional compilation
 {
  static constexpr int
 #if defined(SYS_MACOS)
- V = BSD_MAC | (2 << 24)  // SYSCALL_CLASS_UNIX
-#elif defined(_SYS_BSD)
- V = BSD_MAC
+ V = vMAC | (2 << 24)  // SYSCALL_CLASS_UNIX
+#elif defined(SYS_BSD)
+#  if defined(SYS_OBSD)    // Additional clarification
+ V = vOBSD
+#  else
+ V = vBSD
+#  endif
 #else
 #  if defined(CPU_ARM)
 #    if defined(ARCH_X64)
@@ -101,22 +105,25 @@ R9  -> sixth argument
 // NOTE: *at file syscalls are avoided on purpose. Use full paths
 // NOTE: Keep only POSIX compatible syscalls. POSIX 2001, if not available then POSIX 2008
 
-// Not present on an architecture syscalls are marked as (-1), unimplemented on the entire system marked as (-2). (-3) - need to check later.
+// Not present on an architecture syscalls are marked as (-1), unimplemented on the entire system marked as (-2). (-3) - Inconsistent between variants. (-4) - need to check later.
 // NOTE: Causes InitSyscallStub to use auto instead of int as an index argument
-enum class ESysCNum: int { //                       x86_32  x86_64  arm_32  arm_64  BSD/MacOS
+enum class ESysCNum: int { //                       x86_32  x86_64  arm_32  arm_64  XNU    BSD    OpenBSD 
 //                   --- PROCESS/THREAD/DEBUG
-                           exit =             DSC<  1,      60,     1,      93,     1         >::V,
-                           exit_group =       DSC<  252,    231,    248,    94,     -1        >::V,   // Is 'exit' works as 'exit_group' on BSD?
-                           fork =             DSC<  2,      57,     2,      -1,     2         >::V,   // Memory spaces are separate but memory contents is available to the child process as CopyOnWrite
-                           vfork =            DSC<  190,    58,     190,    -1,     66        >::V,   // Same memory, suspended caller thread. // Linux: Clone: CLONE_VM | CLONE_VFORK | SIGCHLD  // It is a special case of 'clone'.  It is used to create new processes without copying the page tables of the parent process.
-                           clone =            DSC<  120,    56,     120,    220,    -1        >::V,   // Linux specific   // Thread: CLONE_VM | CLONE_FS | CLONE_FILES | CLONE_SIGHAND | CLONE_PARENT | CLONE_THREAD | CLONE_IO   // BSD?: https://reviews.freebsd.org/D31473
-                           execve =           DSC<  11,     59,     11,     221,    59        >::V,   // Can it be emulated?
-                           ptrace =           DSC<  26,     101,    26,     117,    26        >::V,   // Not quite portable
-                           kill =             DSC<  37,     62,     37,     129,    -3        >::V,
-                           tgkill =           DSC<  270,    234,    268,    131,    -3        >::V,   // tkill is obsolete
+                           exit =             DSC<  1,      60,     1,      93,     1,      -4,     -4 >::V,
+                           exit_group =       DSC<  252,    231,    248,    94,     -1,     -4,     -4 >::V,   // Is 'exit' works as 'exit_group' on BSD?
+                           fork =             DSC<  2,      57,     2,      -1,     2,      -4,     -4 >::V,   // Memory spaces are separate but memory contents is available to the child process as CopyOnWrite
+                           vfork =            DSC<  190,    58,     190,    -1,     66,     -4,     -4 >::V,   // Same memory, suspended caller thread. // Linux: Clone: CLONE_VM | CLONE_VFORK | SIGCHLD  // It is a special case of 'clone'.  It is used to create new processes without copying the page tables of the parent process.
+                           clone =            DSC<  120,    56,     120,    220,    -1,     -4,     -4 >::V,   // Linux specific   // Thread: CLONE_VM | CLONE_FS | CLONE_FILES | CLONE_SIGHAND | CLONE_PARENT | CLONE_THREAD | CLONE_IO   // BSD?: https://reviews.freebsd.org/D31473
+                           execve =           DSC<  11,     59,     11,     221,    59,     -4,     -4 >::V,   // Can it be emulated?
+                           ptrace =           DSC<  26,     101,    26,     117,    26,     -4,     -4 >::V,   // Not quite portable
+                           kill =             DSC<  37,     62,     37,     129,    -4,     -4,     -4 >::V,
+                           tgkill =           DSC<  270,    234,    268,    131,    -4,     -4,     -4 >::V,   // tkill is obsolete
+  
+                           sigaction =        DSC<  174,    13,     174,    134,    46,     46,     46  >::V,  // 46 is legacy in: DfBSD,NetBSD,FreeBSD  // Linux: rt_sigaction  // NetBSD moved the old signal syscalls (#46, #48) into a compatibility module (COMPAT_13, COMPAT_16). OpenBSD is unique because it largely avoids versioning syscall numbers. It repurposes the old numbers but updates the expected structure.
+                           sigreturn =        DSC<  173,    15,     173,    139,    184,    103,    103 >::V,  // XNU: 103 is deprecated  // Linux: rt_sigreturn  // On many modern NetBSD installations (especially minimal or security-hardened ones), these legacy syscalls are disabled or not compiled into the kernel.
 
-                        process_vm_readv =    DSC<  347,    310,    376,     270,    -2       >::V,
-                        process_vm_writev =   DSC<  348,    311,    377,     271,    -2       >::V,
+                        process_vm_readv  =   DSC<  347,    310,    376,     270,    -2,    -4,     -4 >::V,
+                        process_vm_writev =   DSC<  348,    311,    377,     271,    -2,    -4,     -4 >::V,
 // kill, tkill, tgkill
 // syslog
 // sigaction
@@ -135,105 +142,105 @@ enum class ESysCNum: int { //                       x86_32  x86_64  arm_32  arm_
 // clock_getres
 // clock_nanosleep
 // init_module, finit_module, delete_module
-                           gettid =           DSC<  224,    186,    224,    178,    -2        >::V,   // Linux-specific
-                           getpid =           DSC<  20,     39,     20,     172,    -2        >::V,
-                           getppid =          DSC<  64,     110,    64,     173,    -2        >::V,
-//                           getpgrp =          DSC<  65,     111,    65,     -1,     -2        >::V,   // Use getpgid(0) instead
-                           getpgid =          DSC<  132,    121,    132,    155,    -2        >::V,
-                           setpgid =          DSC<  57,     109,    57,     154,    -2        >::V,
-                           wait4 =            DSC< 114,      61,    114,    260,    -2        >::V,
-                           futex =            DSC< 240,     202,    240,    98,     -2        >::V,
-                           nanosleep =        DSC< 162,     35,     162,    101,    -3        >::V,
-                           clock_nanosleep =  DSC< 267,     230,    265,    115,    -3        >::V,
-                           clock_gettime =    DSC< 265,     228,    263,    113,    -3        >::V,
+                           gettid =           DSC<  224,    186,    224,    178,    -2,     -4,     -4 >::V,   // Linux-specific
+                           getpid =           DSC<  20,     39,     20,     172,    -2,     -4,     -4 >::V,
+                           getppid =          DSC<  64,     110,    64,     173,    -2,     -4,     -4 >::V,
+//                           getpgrp =          DSC<  65,     111,    65,     -1,     -2,   -4,     -4   >::V,   // Use getpgid(0) instead
+                           getpgid =          DSC<  132,    121,    132,    155,    -2,     -4,     -4 >::V,
+                           setpgid =          DSC<  57,     109,    57,     154,    -2,     -4,     -4 >::V,
+                           wait4 =            DSC< 114,      61,    114,    260,    -2,     -4,     -4 >::V,
+                           futex =            DSC< 240,     202,    240,    98,     -2,     -4,     -4 >::V,
+                           nanosleep =        DSC< 162,     35,     162,    101,    -4,     -4,     -4 >::V,
+                           clock_nanosleep =  DSC< 267,     230,    265,    115,    -4,     -4,     -4 >::V,
+                           clock_gettime =    DSC< 265,     228,    263,    113,    -4,     -4,     -4 >::V,
 //                           waitid =           DSC< 284,     247,    280,    95,     -2        >::V,    // libc uses wait4
 //                           waitpid =          DSC< 7,       -1,     -1,     -1,     -2        >::V,    // libc uses wait4
 //                getgid32      getgid         ?????? =       DSC< -1,      -1,     -1,     -1,     -1        >::V,     // User gropu to check if Root?
 //                getegid32     getegid         ?????? =       DSC< -1,      -1,     -1,     -1,     -1        >::V,
 //                   --- MEMORY
-                           mmap =             DSC<  90,     9,      -1,     222,    197       >::V,   // Not present on arm32. Ignore it on any x32 system, use mmap2 instead   // BSD: new mmap (freebsd6, November 2005)
-                           mmap2 =            DSC<  192,    -1,     192,    -1,     71        >::V,   // x32 only   // BSD: old, unimplemented on MacOS
-                           munmap =           DSC<  91,     11,     91,     215,    73        >::V,
-                           msync =            DSC<  144,    26,     144,    227,    -2        >::V,
-                           mremap =           DSC<  163,    25,     163,    216,    -1        >::V,   // Linux-specific
-                           madvise =          DSC<  219,    28,     220,    233,    75        >::V,
-                           mprotect =         DSC<  125,    10,     125,    226,    74        >::V,
-                           mlock =            DSC<  150,    149,    150,    228,    -1        >::V,   // BSD?
-                           munlock =          DSC<  151,    150,    151,    229,    -1        >::V,   // BSD?
-//                   --- NETWORK
-                           socketcall =       DSC<  102,    -1,     -1,     -1,     -1        >::V,   // On x86-32, socketcall() was historically the only entry point for the sockets API. However, starting in Linux 4.3(Nov 1, 2015), direct systemcalls are provided on x86-32 for the sockets API.
-                           socket =           DSC<  359,    41,     281,    198,    97        >::V,
-                           connect =          DSC<  362,    42,     283,    203,    98        >::V,
-                           bind =             DSC<  361,    49,     282,    200,    104       >::V,
-                           accept =           DSC<  -1,     43,     285,    202,    30        >::V,   // Not present on x86_32 ( use accept4 instead )
-                           accept4 =          DSC<  364,    288,    366,    242,    -1        >::V,   // Nonstandard Linux extension. For x86_32 only
-                           listen =           DSC<  363,    50,     284,    201,    106       >::V,
-                           shutdown =         DSC<  373,    48,     293,    210,    134       >::V,
-                           getsockopt =       DSC<  365,    55,     295,    209,    118       >::V,
-                           setsockopt =       DSC<  366,    54,     294,    208,    105       >::V,
-//                         send =             DSC<  -1,     -1,     289,    -1,     -1        >::V,   // Only on arm_32?  // sendto(sockfd, buf, len, flags, NULL, 0);   // BSD/MAC: Old, unimplemented
-                           sendto =           DSC<  369,    44,     290,    206,    133       >::V,
-                           sendmsg =          DSC<  370,    46,     296,    211,    28        >::V,
-//                         recv =             DSC<  -1,     -1,     291,    -1,     -1        >::V,   // Only on arm_32?  // recvfrom(fd, buf, len, flags, NULL, 0);     // BSD/MAC: Old, unimplemented
-                           recvfrom =         DSC<  371,    45,     292,    207,    29        >::V,
-                           recvmsg =          DSC<  372,    47,     297,    212,    27        >::V,
-//                   --- FILE/DIRECTORY/SOCKET
-                           open =             DSC<  5,      2,      5,      -1,     5         >::V,   // Not present on arm64, use openat
-                           openat =           DSC<  295,    257,    322,    56,     -1        >::V,   // P2008, for Arm64 only      // BSD/MAC: uncertain
-                           close =            DSC<  6,      3,      6,      57,     6         >::V,
-//                         creat =            DSC<  8,      85,     8,      -1,     -1        >::V,   // A call to creat() is equivalent to calling open() with flags equal to O_CREAT|O_WRONLY|O_TRUNC   // BSD/MAC: old creat, unimplemented, was 6
-                           read =             DSC<  3,      0,      3,      63,     3         >::V,
-                           readv =            DSC<  145,    19,     145,    65,     120       >::V,
-                           write =            DSC<  4,      1,      4,      64,     4         >::V,
-                           writev =           DSC<  146,    20,     146,    66,     121       >::V,
-                           lseek =            DSC<  19,     8,      19,     62,     199       >::V,   // Use llseek on X32 systems instead    // BSD/MAC: x64 offsets on x32?
-                           llseek =           DSC<  140,    -1,     140,    -1,     -1        >::V,   // x32 only            // BSD/MAC: old lseek, unimplemented, was 19
-                           mkdir =            DSC<  39,     83,     39,     -1,     136       >::V,   // mkdirat  on arm64
-                           mkdirat =          DSC<  296,    258,    323,    34,     -1        >::V,   // P2008, for Arm64 only
-                           mknod =            DSC<  14,     133,    14,     -1,     -2        >::V,   //  i.e. mknod("foobar", S_IFIFO|0666)  - create a named pipe
-                           mknodat =          DSC<  297,    259,    324,    33,     -2        >::V,   // P2008, for Arm64 only
-                           rmdir =            DSC<  40,     84,     40,     -1,     137       >::V,   // No rmdir on arm64, use unlinkat with AT_REMOVEDIR flag  // /proc/self/fd
-                           link =             DSC<  9,      86,     9,      -1,     -3        >::V,
-                           linkat =           DSC<  303,    265,    330,    37,     -3        >::V,
-                           symlink =          DSC<  83,     88,     83,     -1,     -3        >::V,
-                           symlinkat =        DSC<  304,    266,    331,    36,     -3        >::V,
-                           unlink =           DSC<  10,     87,     10,     -1,     10        >::V,   // Remove file
-                           unlinkat =         DSC<  301,    263,    328,    35,     -1        >::V,   // P2008, for Arm64 only: replaces unlink and rmdir
-                           rename =           DSC<  38,     82,     38,     -1,     128       >::V,
-                           renameat =         DSC<  302,    264,    329,    38,     -1        >::V,   // P2008, for Arm64 only
-                           readlink =         DSC<  85,     89,     85,     -1,     58        >::V,
-                           readlinkat =       DSC<  305,    267,    332,    78,     -1        >::V,   // P2008, for Arm64 only        // BSD/MAC: 473  ?
-                           access =           DSC<  33,     21,     33,     -1,     33        >::V,   // Not present on arm64, use faccessat instead
-                           faccessat =        DSC<  307,    269,    334,    48,     -1        >::V,   // P2008, for Arm64 only
-                           getdents =         DSC<  220,    217,    217,    61,     -1        >::V,   // getdents64
-                           getdirentries =    DSC<  -1,     -1,     -1,     -1,     196       >::V,   // BSD/XNU getdirentries32  BSD:[freebsd11] // Current: __sys_getdirentries (554: Ver >= 1200031)  // 32bit is ok - inode is not important for now
-                           truncate =         DSC<  193,    76,     92,     45,     -1        >::V,   // truncate64 on x32   // BSD?
-                           ftruncate =        DSC<  194,    77,     93,     46,     -1        >::V,   // ftruncate on x32    // BSD?
+                           mmap =             DSC<  90,     9,      -1,     222,    197,    -4,     -4 >::V,   // Not present on arm32. Ignore it on any x32 system, use mmap2 instead   // BSD: new mmap (freebsd6, November 2005)
+                           mmap2 =            DSC<  192,    -1,     192,    -1,     71,     -4,     -4 >::V,   // x32 only   // BSD: old, unimplemented on MacOS
+                           munmap =           DSC<  91,     11,     91,     215,    73,     -4,     -4 >::V,
+                           msync =            DSC<  144,    26,     144,    227,    -2,     -4,     -4 >::V,
+                           mremap =           DSC<  163,    25,     163,    216,    -1,     -4,     -4 >::V,   // Linux-specific
+                           madvise =          DSC<  219,    28,     220,    233,    75,     -4,     -4 >::V,
+                           mprotect =         DSC<  125,    10,     125,    226,    74,     -4,     -4 >::V,
+                           mlock =            DSC<  150,    149,    150,    228,    -1,     -4,     -4 >::V,   // BSD?
+                           munlock =          DSC<  151,    150,    151,    229,    -1,     -4,     -4 >::V,   // BSD?
+//                   --- NETWORK                                                          
+                           socketcall =       DSC<  102,    -1,     -1,     -1,     -1,     -4,     -4 >::V,   // On x86-32, socketcall() was historically the only entry point for the sockets API. However, starting in Linux 4.3(Nov 1, 2015), direct systemcalls are provided on x86-32 for the sockets API.
+                           socket =           DSC<  359,    41,     281,    198,    97,     -4,     -4 >::V,
+                           connect =          DSC<  362,    42,     283,    203,    98,     -4,     -4 >::V,
+                           bind =             DSC<  361,    49,     282,    200,    104,    -4,     -4 >::V,
+                           accept =           DSC<  -1,     43,     285,    202,    30,     -4,     -4 >::V,   // Not present on x86_32 ( use accept4 instead )
+                           accept4 =          DSC<  364,    288,    366,    242,    -1,     -4,     -4 >::V,   // Nonstandard Linux extension. For x86_32 only
+                           listen =           DSC<  363,    50,     284,    201,    106,    -4,     -4 >::V,
+                           shutdown =         DSC<  373,    48,     293,    210,    134,    -4,     -4 >::V,
+                           getsockopt =       DSC<  365,    55,     295,    209,    118,    -4,     -4 >::V,
+                           setsockopt =       DSC<  366,    54,     294,    208,    105,    -4,     -4 >::V,
+//                         send =             DSC<  -1,     -1,     289,    -1,     -1,     -4,     -4 >::V,   // Only on arm_32?  // sendto(sockfd, buf, len, flags, NULL, 0);   // BSD/MAC: Old, unimplemented
+                           sendto =           DSC<  369,    44,     290,    206,    133,    -4,     -4 >::V,
+                           sendmsg =          DSC<  370,    46,     296,    211,    28,     -4,     -4 >::V,
+//                         recv =             DSC<  -1,     -1,     291,    -1,     -1,     -4,     -4 >::V,   // Only on arm_32?  // recvfrom(fd, buf, len, flags, NULL, 0);     // BSD/MAC: Old, unimplemented
+                           recvfrom =         DSC<  371,    45,     292,    207,    29,     -4,     -4 >::V,
+                           recvmsg =          DSC<  372,    47,     297,    212,    27,     -4,     -4 >::V,
+//                   --- FILE/DIRECTORY/SOCKET                                           
+                           open =             DSC<  5,      2,      5,      -1,     5,      -4,     -4 >::V,   // Not present on arm64, use openat
+                           openat =           DSC<  295,    257,    322,    56,     -1,     -4,     -4 >::V,   // P2008, for Arm64 only      // BSD/MAC: uncertain
+                           close =            DSC<  6,      3,      6,      57,     6,      -4,     -4 >::V,
+//                         creat =            DSC<  8,      85,     8,      -1,     -1,     -4,     -4 >::V,   // A call to creat() is equivalent to calling open() with flags equal to O_CREAT|O_WRONLY|O_TRUNC   // BSD/MAC: old creat, unimplemented, was 6
+                           read =             DSC<  3,      0,      3,      63,     3,      -4,     -4 >::V,
+                           readv =            DSC<  145,    19,     145,    65,     120,    -4,     -4 >::V,
+                           write =            DSC<  4,      1,      4,      64,     4,      -4,     -4 >::V,
+                           writev =           DSC<  146,    20,     146,    66,     121,    -4,     -4 >::V,
+                           lseek =            DSC<  19,     8,      19,     62,     199,    -4,     -4 >::V,   // Use llseek on X32 systems instead    // BSD/MAC: x64 offsets on x32?
+                           llseek =           DSC<  140,    -1,     140,    -1,     -1,     -4,     -4 >::V,   // x32 only            // BSD/MAC: old lseek, unimplemented, was 19
+                           mkdir =            DSC<  39,     83,     39,     -1,     136,    -4,     -4 >::V,   // mkdirat  on arm64
+                           mkdirat =          DSC<  296,    258,    323,    34,     -1,     -4,     -4 >::V,   // P2008, for Arm64 only
+                           mknod =            DSC<  14,     133,    14,     -1,     -2,     -4,     -4 >::V,   //  i.e. mknod("foobar", S_IFIFO|0666)  - create a named pipe
+                           mknodat =          DSC<  297,    259,    324,    33,     -2,     -4,     -4 >::V,   // P2008, for Arm64 only
+                           rmdir =            DSC<  40,     84,     40,     -1,     137,    -4,     -4 >::V,   // No rmdir on arm64, use unlinkat with AT_REMOVEDIR flag  // /proc/self/fd
+                           link =             DSC<  9,      86,     9,      -1,     -4,     -4,     -4 >::V,
+                           linkat =           DSC<  303,    265,    330,    37,     -4,     -4,     -4 >::V,
+                           symlink =          DSC<  83,     88,     83,     -1,     -4,     -4,     -4 >::V,
+                           symlinkat =        DSC<  304,    266,    331,    36,     -4,     -4,     -4 >::V,
+                           unlink =           DSC<  10,     87,     10,     -1,     10,     -4,     -4 >::V,   // Remove file
+                           unlinkat =         DSC<  301,    263,    328,    35,     -1,     -4,     -4 >::V,   // P2008, for Arm64 only: replaces unlink and rmdir
+                           rename =           DSC<  38,     82,     38,     -1,     128,    -4,     -4 >::V,
+                           renameat =         DSC<  302,    264,    329,    38,     -1,     -4,     -4 >::V,   // P2008, for Arm64 only
+                           readlink =         DSC<  85,     89,     85,     -1,     58,     -4,     -4 >::V,
+                           readlinkat =       DSC<  305,    267,    332,    78,     -1,     -4,     -4 >::V,   // P2008, for Arm64 only        // BSD/MAC: 473  ?
+                           access =           DSC<  33,     21,     33,     -1,     33,     -4,     -4 >::V,   // Not present on arm64, use faccessat instead
+                           faccessat =        DSC<  307,    269,    334,    48,     -1,     -4,     -4 >::V,   // P2008, for Arm64 only
+                           getdents =         DSC<  220,    217,    217,    61,     -1,     -4,     -4 >::V,   // getdents64
+                           getdirentries =    DSC<  -1,     -1,     -1,     -1,     196,    -4,     -4 >::V,   // BSD/XNU getdirentries32  BSD:[freebsd11] // Current: __sys_getdirentries (554: Ver >= 1200031)  // 32bit is ok - inode is not important for now
+                           truncate =         DSC<  193,    76,     92,     45,     -1,     -4,     -4 >::V,   // truncate64 on x32   // BSD?
+                           ftruncate =        DSC<  194,    77,     93,     46,     -1,     -4,     -4 >::V,   // ftruncate on x32    // BSD?
 
 // Disabling this *stat* mess ('fstat' (for file descriptors) and 'fstatat'(for file names) will be enough)
 //                           stat =             DSC<  106,    4,      106,    -1,     188       >::V,   // Use fstatat on arm64 instead   // Do not use on x32 - 32bit sizes
 //                           stat64 =           DSC<  195,    -1,     195,    -1,     -1        >::V,   // x32 only  // BSD: old stat, unimplemented on MacOS, was 38
-                           fstat =            DSC<  108,    5,      108,    80,     189       >::V,   // BSD:[freebsd11]
+                           fstat =            DSC<  108,    5,      108,    80,     189,    -4,     -4 >::V,   // BSD:[freebsd11]
 //                           fstat64 =          DSC<  197,    -1,     197,    -1,     -1        >::V,   // x32 only  // BSD: old fstat, unimplemented on MacOS, was 62
-                           fstatat =          DSC<  300,    262,    327,    79,     493       >::V,   // P2008, for Arm64 only: newfstatat, fstatat64 on X32  // Replaces stat, not fstat   // BSD: since bsd12 added 552   // fstat64 in BSD?   // MAC: 469, 470(fstatat64)
-                           pipe2 =            DSC<  331,    293,    359,    59,     -2        >::V,
-                           flock =            DSC<  143,    73,     143,    32,     -2        >::V,
-                           fsync =            DSC<  118,    74,     118,    82,     -2        >::V,
-                           fdatasync =        DSC<  148,    75,     148,    83,     -2        >::V,
-                           ioctl =            DSC<  54,     16,     54,     29,     -1        >::V,   // BSD?
-                           fcntl =            DSC<  55,     72,     55,     25,     -2        >::V,
-                           ppoll =            DSC<  309,    271,    336,    73,     -3        >::V,   // Since Linux 2.6.16 (20 March, 2006)
-                           poll =             DSC<  168,    7,      168,    -1,     -3        >::V,   // No old 'poll' on Arm64    // Since Linux 2.1.23
-                           dup3 =             DSC<  330,    292,    358,    24,     -2        >::V,   // Was added to Linux in version 2.6.27
-                           dup =              DSC<  41,     32,     41,     23,     -2        >::V,
-
-                           getcwd =           DSC<  183,    79,     183,    17,     -3        >::V,
-                           chdir =            DSC<  12,     80,     12,     49,     -3        >::V,
-                           fchdir =           DSC<  133,    81,     133,    50,     -3        >::V,
-
-//                   --- DATE/TIME
-                           gettimeofday =     DSC<  78,     96,     78,     169,    -2        >::V,
-                           settimeofday =     DSC<  79,     164,    79,     170,    -2        >::V,
+                           fstatat =          DSC<  300,    262,    327,    79,     493,    -4,     -4 >::V,   // P2008, for Arm64 only: newfstatat, fstatat64 on X32  // Replaces stat, not fstat   // BSD: since bsd12 added 552   // fstat64 in BSD?   // MAC: 469, 470(fstatat64)
+                           pipe2 =            DSC<  331,    293,    359,    59,     -2,     -4,     -4 >::V,
+                           flock =            DSC<  143,    73,     143,    32,     -2,     -4,     -4 >::V,
+                           fsync =            DSC<  118,    74,     118,    82,     -2,     -4,     -4 >::V,
+                           fdatasync =        DSC<  148,    75,     148,    83,     -2,     -4,     -4 >::V,
+                           ioctl =            DSC<  54,     16,     54,     29,     -1,     -4,     -4 >::V,   // BSD?
+                           fcntl =            DSC<  55,     72,     55,     25,     -2,     -4,     -4 >::V,
+                           ppoll =            DSC<  309,    271,    336,    73,     -3,     -4,     -4 >::V,   // Since Linux 2.6.16 (20 March, 2006)  // Only for Linux ARM X64 because 'poll' is removed
+                           poll =             DSC<  168,    7,      168,    -1,     -3,     -4,     -4 >::V,   // No old 'poll' on Arm64    // Since Linux 2.1.23
+                           dup3 =             DSC<  330,    292,    358,    24,     -2,     -4,     -4 >::V,   // Was added to Linux in version 2.6.27
+                           dup =              DSC<  41,     32,     41,     23,     -2,     -4,     -4 >::V,
+                                                                                         
+                           getcwd =           DSC<  183,    79,     183,    17,     -4,     -4,     -4 >::V,
+                           chdir =            DSC<  12,     80,     12,     49,     -4,     -4,     -4 >::V,
+                           fchdir =           DSC<  133,    81,     133,    50,     -4,     -4,     -4 >::V,
+                                                                                         
+//                   --- DATE/TIME                                                       
+                           gettimeofday =     DSC<  78,     96,     78,     169,    -2,     -4,     -4 >::V,
+                           settimeofday =     DSC<  79,     164,    79,     170,    -2,     -4,     -4 >::V,
 };
 #endif
 //===========================================================================
@@ -644,11 +651,11 @@ template<uint64 val, auto ext, int num> struct SStubBase
  consteval inline SStubBase(void)  // TODO: Fill with random if PROTECT is enabled?   // TODO: Spread 'val' bits across the stub (by 2 bits, from low, store in first and last)
  {
   static_assert((sizeof(*this) % StubAlignment) == 0, "Stub size is inappropriate!");
-  if constexpr (NCFG::InitSyscalls)    // Not on Windows
+  if constexpr (NCFG.InitSyscalls)     // Initializes syscall stubs at compile time  (On Windows also requires runtime initialization)
    {
     constexpr int SCOffs = SYSCALLOFFS + DOffs;
     for(uint ctr=0,tot=MinStubSize-VOffs;ctr < tot;ctr++)this->Stub[VOffs+ctr] = syscall_tmpl[SOffs+ctr];  // Fills final part of the Stub   // NOTE: Should be inlined
-#if defined(CPU_ARM) && defined(ARCH_X32)
+#if defined(CPU_ARM) && defined(ARCH_X32)        // Windows ARM????
     if constexpr(AExNum)       // Should cover (AExNum + 1) number of uint32 at beginning of the Stub
      {
       this->Stub[0] = syscall_tmpl[0] | ArgMsk;   // PUSH with extra regs
@@ -689,6 +696,20 @@ template<uint64 val, auto ext, int num> struct SStubBase
 //-------------------------
 template<typename T> _finline T GetPtr(void) const {return (T)&Stub;}
 template<typename T> _finline T GetPtrSC(void) const {return (T)&Stub[SYSCALLOFFS];}
+//-------------------------
+bool IsValid(void) const
+{
+ if constexpr (IsSysWindows)
+  {
+   if constexpr (IsCpuX86)      // NOTE: Depends on the syscall_tmpl  // Initial stubs take a syscall number from stack, unresolved stays that way
+    {
+     if constexpr (IsArchX64)return *(uint32*)this->Stub != 0x24448B48;       
+       else return *(uint32*)this->Stub != 0x0424448B;  
+    }
+     else return false;  // TODO: Windows ARM support
+  }
+   else return true;     // No runtime resolver is needed for anything but Windows
+}
 //-------------------------
 };
 SCVR int MaxStubSize = sizeof(SStubBase<0,nullptr,0>);
